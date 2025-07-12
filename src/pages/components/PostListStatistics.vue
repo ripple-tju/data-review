@@ -21,7 +21,16 @@
       </template>
     </q-table>
     <div>
-      <AppKChart title="点赞、分享、评论趋势" :option="interactionTrendOption" :height="400" />
+      <AppKChart title="点赞趋势" :option="likeOption" :height="300" />
+    </div>
+    <div>
+      <AppKChart title="分享趋势" :option="shareOption" :height="300" />
+    </div>
+    <div>
+      <AppKChart title="评论趋势" :option="commentOption" :height="300" />
+    </div>
+    <div>
+      <AppKChart title="点赞、分享、评论趋势对比" :option="interactionTrendOption" :height="400" />
     </div>
     <div>
       <AppKChart title="每天发文量" :option="postCountOption" :height="300" />
@@ -197,12 +206,8 @@ const postCountByDay = computed(() => {
 });
 
 const postArchiveListDividedByDay = computed(() => {
-  return divideByDay(
-    postArchiveList.value.map((post) => ({
-      ...post,
-      createdAt: new Date(post.createdAt),
-      capturedAt: new Date(post.capturedAt),
-    })),
+  return divideByDay(postArchiveList.value, (postArchive) =>
+    dayjs(postArchive.capturedAt).format('YYYY-MM-DD'),
   );
 });
 
@@ -299,6 +304,141 @@ const postCountOption = computed<EChartsOption>(() => {
         data: counts,
         itemStyle: {
           color: '#95de64',
+        },
+      },
+    ],
+  };
+});
+
+// 单独的点赞趋势图
+const likeOption = computed<EChartsOption>(() => {
+  const dates = totalStatsDivided.value.map((item) => item.date);
+  const likes = totalStatsDivided.value.map((item) => item.like);
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      formatter: '{b}: {c} 点赞',
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+    },
+    yAxis: {
+      type: 'value',
+      name: '点赞数',
+    },
+    series: [
+      {
+        name: '点赞',
+        type: 'line',
+        data: likes,
+        smooth: true,
+        itemStyle: {
+          color: '#ff6b6b',
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(255, 107, 107, 0.3)' },
+              { offset: 1, color: 'rgba(255, 107, 107, 0.1)' },
+            ],
+          },
+        },
+      },
+    ],
+  };
+});
+
+// 单独的分享趋势图
+const shareOption = computed<EChartsOption>(() => {
+  const dates = totalStatsDivided.value.map((item) => item.date);
+  const shares = totalStatsDivided.value.map((item) => item.share);
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      formatter: '{b}: {c} 分享',
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+    },
+    yAxis: {
+      type: 'value',
+      name: '分享数',
+    },
+    series: [
+      {
+        name: '分享',
+        type: 'line',
+        data: shares,
+        smooth: true,
+        itemStyle: {
+          color: '#4ecdc4',
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(78, 205, 196, 0.3)' },
+              { offset: 1, color: 'rgba(78, 205, 196, 0.1)' },
+            ],
+          },
+        },
+      },
+    ],
+  };
+});
+
+// 单独的评论趋势图
+const commentOption = computed<EChartsOption>(() => {
+  const dates = totalStatsDivided.value.map((item) => item.date);
+  const comments = totalStatsDivided.value.map((item) => item.comment);
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      formatter: '{b}: {c} 评论',
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+    },
+    yAxis: {
+      type: 'value',
+      name: '评论数',
+    },
+    series: [
+      {
+        name: '评论',
+        type: 'line',
+        data: comments,
+        smooth: true,
+        itemStyle: {
+          color: '#45b7d1',
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(69, 183, 209, 0.3)' },
+              { offset: 1, color: 'rgba(69, 183, 209, 0.1)' },
+            ],
+          },
         },
       },
     ],
