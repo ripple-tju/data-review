@@ -209,14 +209,14 @@ const loadDefaultData = async () => {
   uploadStatus.value = null;
 
   try {
-    const test = await fetch('/data/facebook.gen.json')
+    const test = await fetch('/data/default.json')
       .then((response) => response.json())
       .catch((error) => {
         console.error('Error fetching data:', error);
         throw new Error('无法加载默认存档数据');
       });
 
-    const testCache = (await fetch('/data/archive-cutwords-cache.json')
+    const testCache = (await fetch('/data/default-jieba.json')
       .then((response) => response.json())
       .catch((error) => {
         console.error('Error fetching cache:', error);
@@ -226,7 +226,10 @@ const loadDefaultData = async () => {
       cut: Array<string>;
     }>;
 
-    await processData(test.slice(15000, 16000), testCache);
+    await processOldData(test, testCache);
+
+    const b = await query.value.Target('fb').getPostViewList();
+    console.log('Default data loaded:', b);
 
     uploadStatus.value = {
       type: 'success',
@@ -253,6 +256,31 @@ const processData = async (
 
   // 解析并设置查询
   const parsedData = parseRippleForQuery(archiveData);
+  query.value = Query(parsedData);
+
+  // 获取身份列表和帖子列表
+  idList.value = await query.value.Target('fb').getIdentityViewList();
+  allPostView.value = await query.value.Target('fb').getPostViewList();
+
+  // 按身份分组帖子
+  postViewListGroupByIdentity.value = await Promise.all(
+    idList.value.map(async (id) => ({
+      name: id.archive[0]?.name || 'Unknown',
+      postViewList: await query.value.Target('fb').getPostViewListByIdentityId(id.identity.id),
+    })),
+  );
+};
+
+// 数据处理核心逻辑
+const processOldData = async (
+  archiveData: any,
+  cutwordData: Array<{ id: string; cut: Array<string> }>,
+) => {
+  // 设置分词缓存
+  cutwordCache.value = cutwordData;
+
+  // 解析并设置查询
+  const parsedData = parseForQuery(archiveData);
   query.value = Query(parsedData);
 
   // 获取身份列表和帖子列表
