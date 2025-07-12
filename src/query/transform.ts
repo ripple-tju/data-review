@@ -105,6 +105,7 @@ function transformData(data: Array<z.infer<typeof RawPeriodData>>): Array<Entity
     const identityArchive: IdentityArchive.Type = {
       id: v4(),
       // createdAt: group[0]!.createdAt,
+      capturedAt: createdAt,
       createdAt: createdAt,
       // identity: identityWithUUID.uuid,
       identity: identityWithUUID.id,
@@ -142,7 +143,8 @@ function transformData(data: Array<z.infer<typeof RawPeriodData>>): Array<Entity
         const postArchive: PostArchive.Type = {
           id: v4(),
           // createdAt: item.capturedAt,
-          createdAt: item.capturedAt,
+          createdAt: item.createdAt,
+          capturedAt: item.capturedAt,
           content: item.content ?? '',
           like: item.index.like ?? 0,
           comment: item.index.comment ?? 0,

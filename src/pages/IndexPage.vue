@@ -1,11 +1,11 @@
 <template>
   <q-page class="column items-center justify-evenly">
     <div>
-      <h3>所有账号</h3>
+      <h3>全平台身份</h3>
       <AppPostListStatistics :query="query" :postViewList="allPostView" />
     </div>
     <div v-for="(item, index) in postViewListGroupByIdentity" :key="index">
-      <h3>{{ item.name }}</h3>
+      <h3>身份：{{ item.name }}</h3>
       <AppPostListStatistics :query="query" :postViewList="item.postViewList" />
     </div>
   </q-page>
