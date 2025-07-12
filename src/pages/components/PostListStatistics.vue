@@ -36,7 +36,7 @@
       <AppKChart title="每天发文量" :option="postCountOption" :height="300" />
     </div>
     <div>
-      <h6>词云</h6>
+      <AppKChart title="词云" :option="wordCloudOption" :height="400" />
     </div>
     <div>
       <AppKChart title="推文交互分布散点图 (点赞 vs 评论)" :option="scatterOption" :height="500" />
@@ -52,8 +52,7 @@
       />
     </div>
     <div>
-      <h6>词云</h6>
-      {{ wordOccurrence }}
+      <AppKChart title="词云" :option="wordCloudOption" :height="400" />
     </div>
   </div>
 </template>
@@ -880,6 +879,70 @@ const scatter3DOption = computed(() => {
       },
     ],
   };
+});
+
+// 词云图配置
+const wordCloudOption = computed(() => {
+  // 过滤出现频率较高的词汇，避免词云过于拥挤
+  const filteredWords = wordOccurrence.value
+    .filter((item) => item.count > 1) // 只显示出现2次以上的词汇
+    .sort((a, b) => b.count - a.count) // 按频率降序排列
+    .slice(0, 100); // 最多显示100个词汇
+
+  // 转换为词云数据格式
+  const wordCloudData = filteredWords.map((item) => ({
+    name: item.word,
+    value: item.count,
+  }));
+
+  return {
+    tooltip: {
+      formatter: function (params: any) {
+        return `<strong>${params.data.name}</strong><br/>出现次数: ${params.data.value}`;
+      },
+    },
+    series: [
+      {
+        type: 'wordCloud',
+        gridSize: 2,
+        sizeRange: [12, 50],
+        rotationRange: [-90, 90],
+        shape: 'pentagon',
+        width: '100%',
+        height: '100%',
+        drawOutOfBound: false,
+        layoutAnimation: true,
+        textStyle: {
+          fontFamily: 'sans-serif',
+          fontWeight: 'bold',
+          color: function () {
+            // 随机颜色
+            const colors = [
+              '#ff6b6b',
+              '#4ecdc4',
+              '#45b7d1',
+              '#96ceb4',
+              '#ffd93d',
+              '#ff8a80',
+              '#82b1ff',
+              '#b39ddb',
+              '#f8bbd9',
+              '#c5e1a5',
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+          },
+        },
+        emphasis: {
+          focus: 'self',
+          textStyle: {
+            shadowBlur: 10,
+            shadowColor: '#333',
+          },
+        },
+        data: wordCloudData,
+      },
+    ],
+  } as any; // 使用 any 类型避免 TypeScript 类型检查问题
 });
 </script>
 

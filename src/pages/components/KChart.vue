@@ -38,6 +38,7 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import * as echarts from 'echarts';
 import 'echarts-gl'; // 引入3D图表支持
+import 'echarts-wordcloud'; // 引入词云图支持
 import type { EChartsOption } from 'echarts';
 import { useQuasar } from 'quasar';
 
