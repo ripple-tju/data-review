@@ -39,16 +39,7 @@
       <h6>词云</h6>
     </div>
     <div>
-      <h6>推文交互分布散点图</h6>
-      {{
-        latestPostArchiveList.map((post) => {
-          return {
-            like: post.like,
-            comment: post.comment,
-            id: post.id,
-          };
-        })
-      }}
+      <AppKChart title="推文交互分布散点图 (点赞 vs 评论)" :option="scatterOption" :height="500" />
     </div>
   </div>
 </template>
@@ -455,6 +446,110 @@ const commentOption = computed<EChartsOption>(() => {
         },
       },
     ],
+  };
+});
+
+// 推文交互散点图 (点赞 vs 评论)
+const scatterOption = computed<EChartsOption>(() => {
+  const scatterData = latestPostArchiveList.value
+    .filter((post) => (post.like ?? 0) > 0 || (post.comment ?? 0) > 0) // 过滤掉没有互动的推文
+    .map((post) => [
+      Math.max(post.like ?? 1, 1), // 点赞数，最小值为1以适配对数轴
+      Math.max(post.comment ?? 1, 1), // 评论数，最小值为1以适配对数轴
+      post.content?.substring(0, 50) + '...' || '无内容', // 推文内容预览
+      post.id, // 推文ID
+    ]);
+
+  return {
+    title: {
+      text: '推文互动分布',
+      subtext: '横轴: 点赞数 (对数轴) | 纵轴: 评论数 (对数轴)',
+      left: 'center',
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: function (params: any) {
+        const [likes, comments, content] = params.data;
+        return `
+          <div style="max-width: 300px;">
+            <strong>推文内容:</strong><br/>
+            ${content}<br/>
+            <strong>点赞:</strong> ${likes}<br/>
+            <strong>评论:</strong> ${comments}
+          </div>
+        `;
+      },
+    },
+    xAxis: {
+      type: 'log',
+      name: '点赞数',
+      nameLocation: 'middle',
+      nameGap: 30,
+      min: 1,
+      axisLabel: {
+        formatter: '{value}',
+      },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: '#e0e0e0',
+          type: 'dashed',
+        },
+      },
+    },
+    yAxis: {
+      type: 'log',
+      name: '评论数',
+      nameLocation: 'middle',
+      nameGap: 50,
+      min: 1,
+      axisLabel: {
+        formatter: '{value}',
+      },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: '#e0e0e0',
+          type: 'dashed',
+        },
+      },
+    },
+    series: [
+      {
+        name: '推文互动',
+        type: 'scatter',
+        data: scatterData,
+        symbolSize: function (data: any) {
+          // 根据点赞数和评论数的总和调整点的大小
+          const total = data[0] + data[1];
+          return Math.min(Math.max(Math.log10(total) * 8, 6), 25);
+        },
+        itemStyle: {
+          color: function (params: any) {
+            // 根据互动强度使用不同颜色
+            const total = params.data[0] + params.data[1];
+            if (total > 100) return '#ff4757'; // 高互动 - 红色
+            if (total > 50) return '#ffa726'; // 中高互动 - 橙色
+            if (total > 20) return '#66bb6a'; // 中等互动 - 绿色
+            return '#42a5f5'; // 低互动 - 蓝色
+          },
+          opacity: 0.7,
+        },
+        emphasis: {
+          itemStyle: {
+            opacity: 1,
+            borderColor: '#333',
+            borderWidth: 2,
+          },
+        },
+      },
+    ],
+    grid: {
+      left: '10%',
+      right: '10%',
+      bottom: '15%',
+      top: '20%',
+    },
   };
 });
 </script>
