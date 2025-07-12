@@ -162,7 +162,6 @@ const columns = Object.entries(ViewDataSchema.shape)
   .sort(([a], [b]) => order.value.indexOf(a as Key) - order.value.indexOf(b as Key))
   .map(([key, value]) => {
     const column = _columns.find((item) => item.name === key);
-    console.log('column', [key, value], value.description, ViewDataSchema.shape);
     return {
       name: key,
       label: GetLabel(value.description!),

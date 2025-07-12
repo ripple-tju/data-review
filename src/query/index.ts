@@ -13,6 +13,13 @@ import {
 import { sortByCreatedAt, getDateStrList, getRangeValue } from './utils';
 import { parseForQuery } from './transform';
 
+export type DataSet = {
+  identityList: Array<Identity.Type>;
+  postList: Array<Post.Type>;
+  identityArchiveList: Array<IdentityArchive.Type>;
+  postArchiveList: Array<PostArchive.Type>;
+};
+
 export type ValueWithSampleTime<T> = {
   value: T;
   at: Date;
@@ -56,8 +63,16 @@ const generateMock = (_: any): ValueWithPeriod<number> => {
 // 	return getter(b) - getter(a);
 // };
 
-export const Query = (PeriodData: unknown) => {
-  const { data: parsed, lastCreatedAt, firstCreatedAt } = parseForQuery(PeriodData);
+export const Query = ({
+  data: parsed,
+  lastCreatedAt,
+  firstCreatedAt,
+}: {
+  data: DataSet;
+  lastCreatedAt: Date | undefined;
+  firstCreatedAt: Date | undefined;
+}) => {
+  // const { data: parsed, lastCreatedAt, firstCreatedAt } = parseForQuery(PeriodData);
 
   const TARGET_LIST: (TargetData & {
     brand: TargetBrandData;

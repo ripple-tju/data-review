@@ -1,5 +1,4 @@
 import { z } from 'zod';
-
 import { v4 } from 'uuid';
 import { Identity, IdentityArchive, Post, PostArchive } from 'src/specification';
 // import { generateMock } from '@anatine/zod-mock';
@@ -12,21 +11,11 @@ import { IDENTITY_LIST } from 'src/specification/IdentityData';
 // console.log(avatarImgModules);
 // import { avatarImgModules } from 'src/backend/transform';
 
-const IdentityWithUUID = Identity.Schema.extend({
-  uuid: z.string(),
-  createdAt: z.date(),
-});
-
-const PostWithUUID = Post.Schema.extend({
-  uuid: z.string(),
-  createdAt: z.date(),
-});
-
 export const RippleFormat = z.object({
-  // capturedAt: z.string(),
-  // createdAt: z.string(),
-  capturedAt: z.date(),
-  createdAt: z.date(),
+  capturedAt: z.string(),
+  createdAt: z.string(),
+  // capturedAt: z.date(),
+  // createdAt: z.date(),
   comment: z.number().nullable(),
   content: z.string().optional(),
   id: z.string(),
@@ -40,10 +29,10 @@ export const RippleFormat = z.object({
   view: z.number().nullable(),
 });
 
-type EntityData = {
-  identity: z.infer<typeof IdentityWithUUID>;
+export type EntityData = {
+  identity: Identity.Type;
   identityArchive: IdentityArchive.Type;
-  postList: Array<z.infer<typeof PostWithUUID>>;
+  postList: Array<Post.Type>;
   postArchiveList: Array<PostArchive.Type>;
 };
 
@@ -51,6 +40,7 @@ function parseRawData(PeriodData: unknown) {
   const array = z.array(z.any()).parse(PeriodData);
 
   const rawList = array
+    .slice(0, 5000) // Limit to 1000 items for performance
     .map((i) => {
       try {
         return RippleFormat.parse(i);
@@ -68,11 +58,7 @@ function transformData(data: Array<z.infer<typeof RippleFormat>>): Array<EntityD
   const rawList = data.filter((item) => item !== null);
 
   const withUUID = rawList.map((r) => {
-    return RippleFormat.parse({
-      ...r,
-      capturedAt: new Date(r.capturedAt),
-      createdAt: new Date(r.createdAt),
-    });
+    return RippleFormat.parse(r);
   });
 
   const createdAt = new Date();
@@ -86,9 +72,8 @@ function transformData(data: Array<z.infer<typeof RippleFormat>>): Array<EntityD
       throw new Error('Identity not found for id: ' + identityId);
     }
 
-    const identityWithUUID: z.infer<typeof IdentityWithUUID> = {
+    const identityWithUUID: Identity.Type = {
       id: identityId,
-      uuid: v4(),
       // createdAt: group[0]!.createdAt,
       createdAt: createdAt,
     };
@@ -115,14 +100,13 @@ function transformData(data: Array<z.infer<typeof RippleFormat>>): Array<EntityD
     };
 
     const { postList, postArchiveList } = group.reduce<{
-      postList: Array<z.infer<typeof PostWithUUID>>;
+      postList: Array<Post.Type>;
       postArchiveList: Array<PostArchive.Type>;
     }>(
       (acc, item) => {
-        const postWithUUID: z.infer<typeof PostWithUUID> = {
+        const postWithUUID: Post.Type = {
           id: item.id,
-          uuid: item.id,
-          createdAt: item.createdAt,
+          createdAt: new Date(item.createdAt),
           author: identityWithUUID.id,
           // root: postUUID,
           // parent: postUUID,
@@ -131,10 +115,10 @@ function transformData(data: Array<z.infer<typeof RippleFormat>>): Array<EntityD
         };
 
         const postArchive: PostArchive.Type = {
-          id: v4(),
+          id: item.id,
           // createdAt: item.capturedAt,
-          createdAt: item.createdAt,
-          capturedAt: item.capturedAt,
+          createdAt: new Date(item.createdAt),
+          capturedAt: new Date(item.capturedAt),
           content: item.content ?? '',
           like: item.react ?? 0,
           comment: item.comment ?? 0,
@@ -147,7 +131,7 @@ function transformData(data: Array<z.infer<typeof RippleFormat>>): Array<EntityD
 
         const existPost = acc.postList.find((i) => i.id === postWithUUID.id);
         if (!existPost) {
-          acc.postList.push(PostWithUUID.parse(postWithUUID));
+          acc.postList.push(Post.Schema.parse(postWithUUID));
 
           // push pa with new post id
         } else {
@@ -165,7 +149,7 @@ function transformData(data: Array<z.infer<typeof RippleFormat>>): Array<EntityD
     );
 
     return {
-      identity: IdentityWithUUID.parse(identityWithUUID),
+      identity: Identity.Schema.parse(identityWithUUID),
       identityArchive: IdentityArchive.Schema.parse(identityArchive),
       postList,
       postArchiveList,
@@ -176,14 +160,14 @@ function transformData(data: Array<z.infer<typeof RippleFormat>>): Array<EntityD
 }
 
 function parseData(entityList: Array<EntityData>): {
-  identityList: Array<z.infer<typeof IdentityWithUUID>>;
-  postList: Array<z.infer<typeof PostWithUUID>>;
+  identityList: Array<Identity.Type>;
+  postList: Array<Post.Type>;
   identityArchiveList: Array<IdentityArchive.Type>;
   postArchiveList: Array<PostArchive.Type>;
 } {
   const { identityList, postList, identityArchiveList, postArchiveList } = entityList.reduce<{
-    identityList: Array<z.infer<typeof IdentityWithUUID>>;
-    postList: Array<z.infer<typeof PostWithUUID>>;
+    identityList: Array<Identity.Type>;
+    postList: Array<Post.Type>;
     identityArchiveList: Array<IdentityArchive.Type>;
     postArchiveList: Array<PostArchive.Type>;
   }>(

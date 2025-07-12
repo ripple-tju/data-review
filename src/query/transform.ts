@@ -54,9 +54,9 @@ export const RawPeriodDataWithUUID = RawPeriodData.extend({
 });
 
 type EntityData = {
-  identity: z.infer<typeof IdentityWithUUID>;
+  identity: Identity.Type;
   identityArchive: IdentityArchive.Type;
-  postList: Array<z.infer<typeof PostWithUUID>>;
+  postList: Array<Post.Type>;
   postArchiveList: Array<PostArchive.Type>;
 };
 
@@ -77,7 +77,12 @@ function parseRawData(PeriodData: unknown) {
   return rawList;
 }
 
-function transformData(data: Array<z.infer<typeof RawPeriodData>>): Array<EntityData> {
+function transformData(data: Array<z.infer<typeof RawPeriodData>>): Array<{
+  identity: z.infer<typeof IdentityWithUUID>;
+  identityArchive: IdentityArchive.Type;
+  postList: Array<z.infer<typeof PostWithUUID>>;
+  postArchiveList: Array<PostArchive.Type>;
+}> {
   const rawList = data.filter((item) => item !== null);
 
   const withUUID = rawList.map((r) => {
@@ -184,9 +189,16 @@ function transformData(data: Array<z.infer<typeof RawPeriodData>>): Array<Entity
   return entityList;
 }
 
-function parseData(entityList: Array<EntityData>): {
-  identityList: Array<z.infer<typeof IdentityWithUUID>>;
-  postList: Array<z.infer<typeof PostWithUUID>>;
+function parseData(
+  entityList: Array<{
+    identity: z.infer<typeof IdentityWithUUID>;
+    identityArchive: IdentityArchive.Type;
+    postList: Array<z.infer<typeof PostWithUUID>>;
+    postArchiveList: Array<PostArchive.Type>;
+  }>,
+): {
+  identityList: Array<Identity.Type>;
+  postList: Array<Post.Type>;
   identityArchiveList: Array<IdentityArchive.Type>;
   postArchiveList: Array<PostArchive.Type>;
 } {

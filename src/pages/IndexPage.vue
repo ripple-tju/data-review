@@ -15,9 +15,11 @@
 import { onMounted, ref } from 'vue';
 import AppPostListStatistics from './components/PostListStatistics.vue';
 import { Query, QueryInterface } from 'src/query';
+import { parseForQuery } from 'src/query/transform';
+import { parseRippleForQuery } from 'src/query/transformRipple';
 import * as Spec from 'src/specification';
 
-const query = ref<QueryInterface>(Query([]));
+const query = ref<QueryInterface>(Query(parseRippleForQuery([])));
 const idList = ref<Array<Spec.IdentityView.Type>>([]);
 const allPostView = ref<Array<Spec.PostView.Type>>([]);
 const postViewListGroupByIdentity = ref<
@@ -34,7 +36,16 @@ onMounted(async () => {
       console.error('Error fetching data:', error);
     });
 
-  query.value = Query(data);
+  const test = await fetch('/data/facebook.gen.json')
+    .then((response) => response.json())
+    .catch((error) => {
+      console.error('Error fetching data:', error);
+    });
+
+  console.log('test', test);
+
+  // query.value = Query(parseForQuery(data));
+  query.value = Query(parseRippleForQuery(test));
   idList.value = await query.value.Target('fb').getIdentityViewList();
   allPostView.value = await query.value.Target('fb').getPostViewList();
   postViewListGroupByIdentity.value = await Promise.all(
