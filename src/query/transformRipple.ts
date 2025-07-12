@@ -40,7 +40,6 @@ function parseRawData(PeriodData: unknown) {
   const array = z.array(z.any()).parse(PeriodData);
 
   const rawList = array
-    .slice(0, 5000) // Limit to 1000 items for performance
     .map((i) => {
       try {
         return RippleFormat.parse(i);
@@ -239,7 +238,7 @@ export function parseRippleForQuery(sliceData: unknown) {
   const parsedData = parseRawData(sliceData);
   const transformedData = transformData(parsedData);
 
-  console.time('divideByDay');
+  console.time('parseRippleForQuery:divideByDay');
   const sorted = parsedData
     .map((i) => ({ ...i, createdAt: new Date(i.capturedAt) }))
     .sort(sortByCreatedAt);
@@ -260,7 +259,7 @@ export function parseRippleForQuery(sliceData: unknown) {
       },
     ),
   );
-  console.timeEnd('divideByDay');
+  console.timeEnd('parseRippleForQuery:divideByDay');
 
   return { data, firstCreatedAt, lastCreatedAt };
 }

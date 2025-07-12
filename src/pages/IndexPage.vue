@@ -45,7 +45,9 @@ onMounted(async () => {
   console.log('test', test);
 
   // query.value = Query(parseForQuery(data));
-  query.value = Query(parseRippleForQuery(test));
+  const bb = parseRippleForQuery(test);
+  console.log('bb', bb);
+  query.value = Query(parseRippleForQuery(test.slice(0, 15000)));
   idList.value = await query.value.Target('fb').getIdentityViewList();
   allPostView.value = await query.value.Target('fb').getPostViewList();
   postViewListGroupByIdentity.value = await Promise.all(
