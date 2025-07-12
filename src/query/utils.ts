@@ -19,57 +19,57 @@ import dayjs from 'dayjs';
 // };
 
 const defaultGetDateStr = <T extends { createdAt: Date }>(item: T) =>
-	dayjs(item.createdAt).format('YYYY-MM-DD');
+  dayjs(item.createdAt).format('YYYY-MM-DD');
 
 export const getDateStrList = <D extends string | Date>(range: {
-	from: D;
-	to: D;
+  from: D;
+  to: D;
 }): Array<string> => {
-	const from = dayjs(range.from);
-	const to = dayjs(range.to);
-	const diffDays = to.diff(from, 'day') + 1;
+  const from = dayjs(range.from);
+  const to = dayjs(range.to);
+  const diffDays = to.diff(from, 'day') + 1;
 
-	return Array.from({ length: diffDays }, (_, index) =>
-		from.add(index, 'day').format('YYYY-MM-DD'),
-	);
+  return Array.from({ length: diffDays }, (_, index) =>
+    from.add(index, 'day').format('YYYY-MM-DD'),
+  );
 };
 
-export const divideByDay = <T extends { createdAt: Date }>(
-	list: Array<T>,
-	getDateStr: (item: T) => string = defaultGetDateStr,
+export const divideByDay = <T>(
+  list: Array<T>,
+  getDateStr: (item: T) => string = defaultGetDateStr as any,
 ) => {
-	const groupByed = Object.groupBy(list, (item) => getDateStr(item));
-	return Object.entries(groupByed).map(([date, itemList]) => ({
-		date,
-		itemList,
-	}));
+  const groupByed = Object.groupBy(list, (item) => getDateStr(item));
+  return Object.entries(groupByed).map(([date, itemList]) => ({
+    date,
+    itemList: itemList ?? [],
+  }));
 };
 
 export const getRangeValue = <T extends { createdAt: Date }, D extends string | Date>(
-	list: Array<T>,
-	range: {
-		from: D;
-		to: D;
-	},
-	getDateStr: (item: T) => string = defaultGetDateStr,
+  list: Array<T>,
+  range: {
+    from: D;
+    to: D;
+  },
+  getDateStr: (item: T) => string = defaultGetDateStr,
 ) => {
-	const dateStrList = getDateStrList(range);
-	const divided = divideByDay(list, getDateStr);
+  const dateStrList = getDateStrList(range);
+  const divided = divideByDay(list, getDateStr);
 
-	return dateStrList.map((dateStr) => {
-		const items = divided.find((item) => item.date === dateStr)?.itemList || [];
-		return {
-			date: dateStr,
-			length: items.length,
-			itemList: items,
-		};
-	});
+  return dateStrList.map((dateStr) => {
+    const items = divided.find((item) => item.date === dateStr)?.itemList || [];
+    return {
+      date: dateStr,
+      length: items.length,
+      itemList: items,
+    };
+  });
 };
 
 export const sortByCreatedAt = <T extends { createdAt: Date }>(
-	a: T,
-	b: T,
-	getter: (item: T) => number = (item) => item.createdAt.getTime(),
+  a: T,
+  b: T,
+  getter: (item: T) => number = (item) => item.createdAt.getTime(),
 ) => {
-	return getter(b) - getter(a);
+  return getter(b) - getter(a);
 };

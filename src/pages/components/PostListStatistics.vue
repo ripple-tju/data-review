@@ -21,16 +21,10 @@
       </template>
     </q-table>
     <div>
-      <h6>点赞</h6>
+      <AppKChart title="点赞、分享、评论趋势" :option="interactionTrendOption" :height="400" />
     </div>
     <div>
-      <h6>分享</h6>
-    </div>
-    <div>
-      <h6>评论</h6>
-    </div>
-    <div>
-      <h6>每天发文量</h6>
+      <AppKChart title="每天发文量" :option="postCountOption" :height="300" />
     </div>
     <div>
       <h6>词云</h6>
@@ -50,6 +44,8 @@ import AppKChart from './KChart.vue';
 import { QueryInterface } from 'src/query';
 import { computed, ref } from 'vue';
 import * as Spec from 'src/specification';
+import { divideByDay } from 'src/query/utils';
+import type { EChartsOption } from 'echarts';
 
 const LabelMap = {
   'specification.data.PostArchive.content': '推文内容',
@@ -184,7 +180,129 @@ const { query, postViewList } = defineProps<{
 }>();
 
 const postArchiveList = computed(() => {
-  return postViewList.map((post) => post.archive[0]);
+  return postViewList.map((post) => post.archive[0]!);
+});
+
+const postViewDivideByDay = computed(() => {
+  return divideByDay(postViewList, (postView) =>
+    dayjs(postView.post.createdAt).format('YYYY-MM-DD'),
+  );
+});
+
+const postCountByDay = computed(() => {
+  return postViewDivideByDay.value.map((day) => ({
+    date: day.date,
+    count: day.itemList.length,
+  }));
+});
+
+const postArchiveListDividedByDay = computed(() => {
+  return divideByDay(
+    postArchiveList.value.map((post) => ({
+      ...post,
+      createdAt: new Date(post.createdAt),
+      capturedAt: new Date(post.capturedAt),
+    })),
+  );
+});
+
+const totalStatsDivided = computed(() => {
+  return postArchiveListDividedByDay.value.map((day) => {
+    const date = day.date;
+    const stat = day.itemList.reduce(
+      (stats, post) => ({
+        like: stats.like + (post.like ?? 0),
+        share: stats.share + (post.share ?? 0),
+        comment: stats.comment + (post.comment ?? 0),
+      }),
+      { like: 0, share: 0, comment: 0 },
+    );
+    return {
+      date,
+      ...stat,
+    };
+  });
+});
+
+// ECharts 配置选项
+const interactionTrendOption = computed<EChartsOption>(() => {
+  const dates = totalStatsDivided.value.map((item) => item.date);
+  const likes = totalStatsDivided.value.map((item) => item.like);
+  const shares = totalStatsDivided.value.map((item) => item.share);
+  const comments = totalStatsDivided.value.map((item) => item.comment);
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+    },
+    legend: {
+      data: ['点赞', '分享', '评论'],
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+    },
+    yAxis: {
+      type: 'value',
+    },
+    series: [
+      {
+        name: '点赞',
+        type: 'line',
+        data: likes,
+        smooth: true,
+        itemStyle: {
+          color: '#ff6b6b',
+        },
+      },
+      {
+        name: '分享',
+        type: 'line',
+        data: shares,
+        smooth: true,
+        itemStyle: {
+          color: '#4ecdc4',
+        },
+      },
+      {
+        name: '评论',
+        type: 'line',
+        data: comments,
+        smooth: true,
+        itemStyle: {
+          color: '#45b7d1',
+        },
+      },
+    ],
+  };
+});
+
+const postCountOption = computed<EChartsOption>(() => {
+  const dates = postCountByDay.value.map((item) => item.date);
+  const counts = postCountByDay.value.map((item) => item.count);
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+    },
+    yAxis: {
+      type: 'value',
+    },
+    series: [
+      {
+        name: '发文量',
+        type: 'bar',
+        data: counts,
+        itemStyle: {
+          color: '#95de64',
+        },
+      },
+    ],
+  };
 });
 </script>
 
