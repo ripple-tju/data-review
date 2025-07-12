@@ -1,43 +1,31 @@
 <template>
   <q-page class="row items-center justify-evenly">
-    <example-component
-      title="Example component"
-      active
-      :todos="todos"
-      :meta="meta"
-    ></example-component>
+    {{ idList.map((id) => id.archive[0]?.name).join(', ') }}
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import type { Todo, Meta } from 'components/models';
 import ExampleComponent from 'components/ExampleComponent.vue';
+import { Query } from 'src/query';
+import * as Spec from 'src/specification';
 
-const todos = ref<Todo[]>([
-  {
-    id: 1,
-    content: 'ct1'
-  },
-  {
-    id: 2,
-    content: 'ct2'
-  },
-  {
-    id: 3,
-    content: 'ct3'
-  },
-  {
-    id: 4,
-    content: 'ct4'
-  },
-  {
-    id: 5,
-    content: 'ct5'
-  }
-]);
+const query = ref(Query([]));
+const idList = ref<Array<Spec.IdentityView.Type>>([]);
+
+onMounted(async () => {
+  const data = await fetch('/data/default.json')
+    .then((response) => response.json())
+    .catch((error) => {
+      console.error('Error fetching data:', error);
+    });
+
+  query.value = Query(data);
+  idList.value = await query.value.Target('fb').getIdentityViewList();
+});
 
 const meta = ref<Meta>({
-  totalCount: 1200
+  totalCount: 1200,
 });
 </script>
