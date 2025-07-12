@@ -1,18 +1,31 @@
 <template>
-  <q-page class="row items-center justify-evenly">
-    {{ idList.map((id) => id.archive[0]?.name).join(', ') }}
+  <q-page class="column items-center justify-evenly">
+    <div>
+      <h3>所有账号</h3>
+      <AppPostListStatistics :query="query" :postViewList="allPostView" />
+    </div>
+    <div v-for="(item, index) in postViewListGroupByIdentity" :key="index">
+      <h3>{{ item.name }}</h3>
+      <AppPostListStatistics :query="query" :postViewList="item.postViewList" />
+    </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import type { Todo, Meta } from 'components/models';
-import ExampleComponent from 'components/ExampleComponent.vue';
-import { Query } from 'src/query';
+import AppPostListStatistics from './components/PostListStatistics.vue';
+import { Query, QueryInterface } from 'src/query';
 import * as Spec from 'src/specification';
 
-const query = ref(Query([]));
+const query = ref<QueryInterface>(Query([]));
 const idList = ref<Array<Spec.IdentityView.Type>>([]);
+const allPostView = ref<Array<Spec.PostView.Type>>([]);
+const postViewListGroupByIdentity = ref<
+  Array<{
+    name: string;
+    postViewList: Array<Spec.PostView.Type>;
+  }>
+>([]);
 
 onMounted(async () => {
   const data = await fetch('/data/default.json')
@@ -23,9 +36,12 @@ onMounted(async () => {
 
   query.value = Query(data);
   idList.value = await query.value.Target('fb').getIdentityViewList();
-});
-
-const meta = ref<Meta>({
-  totalCount: 1200,
+  allPostView.value = await query.value.Target('fb').getPostViewList();
+  postViewListGroupByIdentity.value = await Promise.all(
+    idList.value.map(async (id) => ({
+      name: id.archive[0]?.name || 'Unknown',
+      postViewList: await query.value.Target('fb').getPostViewListByIdentityId(id.identity.id),
+    })),
+  );
 });
 </script>

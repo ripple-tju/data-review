@@ -555,3 +555,5 @@ export const Query = (PeriodData: unknown) => {
     ),
   });
 };
+
+export type QueryInterface = ReturnType<typeof Query>;
