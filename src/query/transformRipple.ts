@@ -4,6 +4,7 @@ import { v4 } from 'uuid';
 import { Identity, IdentityArchive, Post, PostArchive } from 'src/specification';
 // import { generateMock } from '@anatine/zod-mock';
 import { sortByCreatedAt, getRangeValue } from './utils';
+import { IDENTITY_LIST } from 'src/specification/IdentityData';
 // export const avatarImgModules = import.meta.glob('assets/avatars/*.{jpg,png}', {
 // 	eager: true,
 // 	as: 'url',
@@ -21,36 +22,22 @@ const PostWithUUID = Post.Schema.extend({
   createdAt: z.date(),
 });
 
-export const RawPeriodData = z.object({
-  id: z.string(),
-  capturedAt: z.string(),
-  createdAt: z.string(),
-  content: z.string().optional(),
-  url: z.string(),
-  index: z.object({
-    like: z.number().nullable(),
-    comment: z.number().nullable(),
-    share: z.number().nullable(),
-    read: z.number().nullable(),
-    favorite: z.number().nullable(),
-  }),
-  author: z.object({
-    id: z.string(),
-    name: z.string(),
-  }),
-});
-
-export const RawPeriodDataWithUUID = RawPeriodData.extend({
-  uuid: z.string(),
+export const RippleFormat = z.object({
+  // capturedAt: z.string(),
+  // createdAt: z.string(),
   capturedAt: z.date(),
   createdAt: z.date(),
-  index: z.object({
-    like: z.number().default(0).nullable(),
-    comment: z.number().default(0).nullable(),
-    share: z.number().default(0).nullable(),
-    read: z.number().default(0).nullable(),
-    favorite: z.number().default(0).nullable(),
-  }),
+  comment: z.number().nullable(),
+  content: z.string().optional(),
+  id: z.string(),
+  identityId: z.string(),
+  plainId: z.string(),
+  play: z.number().nullable(),
+  react: z.number().nullable(),
+  share: z.number().nullable(),
+  title: z.string().nullable(),
+  url: z.string(),
+  view: z.number().nullable(),
 });
 
 type EntityData = {
@@ -66,7 +53,7 @@ function parseRawData(PeriodData: unknown) {
   const rawList = array
     .map((i) => {
       try {
-        return RawPeriodData.parse(i);
+        return RippleFormat.parse(i);
       } catch (e) {
         console.error('Invalid data', e, i);
         return null;
@@ -77,26 +64,30 @@ function parseRawData(PeriodData: unknown) {
   return rawList;
 }
 
-function transformData(data: Array<z.infer<typeof RawPeriodData>>): Array<EntityData> {
+function transformData(data: Array<z.infer<typeof RippleFormat>>): Array<EntityData> {
   const rawList = data.filter((item) => item !== null);
 
   const withUUID = rawList.map((r) => {
-    return RawPeriodDataWithUUID.parse({
+    return RippleFormat.parse({
       ...r,
       capturedAt: new Date(r.capturedAt),
       createdAt: new Date(r.createdAt),
-      uuid: v4(),
     });
   });
 
   const createdAt = new Date();
-  const groupByUser = Object.groupBy(withUUID, (i) => i.author.id);
+  const groupByUser = Object.groupBy(withUUID, (i) => i.identityId);
   const entityList = Object.keys(groupByUser).map((userId) => {
     const group = groupByUser[userId]!;
-    const user = group[0]!.author;
+    const identityId = group[0]!.identityId;
+    const identity = IDENTITY_LIST.find((i) => i.id === identityId);
+
+    if (!identity) {
+      throw new Error('Identity not found for id: ' + identityId);
+    }
 
     const identityWithUUID: z.infer<typeof IdentityWithUUID> = {
-      id: user.id,
+      id: identityId,
       uuid: v4(),
       // createdAt: group[0]!.createdAt,
       createdAt: createdAt,
@@ -109,13 +100,13 @@ function transformData(data: Array<z.infer<typeof RawPeriodData>>): Array<Entity
       createdAt: createdAt,
       // identity: identityWithUUID.uuid,
       identity: identityWithUUID.id,
-      name: user.name,
+      name: identity.name,
       // avatar: generateMock(
       //   z.object({
       //     avatar: z.string(),
       //   }),
       // ).avatar,
-      avatar: `https://api.dicebear.com/5.x/initials/svg?seed=${user.name}`,
+      avatar: `https://api.dicebear.com/5.x/initials/svg?seed=${identity.name}`,
       // follower: 0,
       // following: 0,
       follower: Math.floor(Math.random() * 1000),
@@ -128,10 +119,9 @@ function transformData(data: Array<z.infer<typeof RawPeriodData>>): Array<Entity
       postArchiveList: Array<PostArchive.Type>;
     }>(
       (acc, item) => {
-        const postUUID = v4();
         const postWithUUID: z.infer<typeof PostWithUUID> = {
           id: item.id,
-          uuid: postUUID,
+          uuid: item.id,
           createdAt: item.createdAt,
           author: identityWithUUID.id,
           // root: postUUID,
@@ -146,12 +136,13 @@ function transformData(data: Array<z.infer<typeof RawPeriodData>>): Array<Entity
           createdAt: item.createdAt,
           capturedAt: item.capturedAt,
           content: item.content ?? '',
-          like: item.index.like ?? 0,
-          comment: item.index.comment ?? 0,
-          share: item.index.share ?? 0,
-          favorite: item.index.favorite ?? 0,
+          like: item.react ?? 0,
+          comment: item.comment ?? 0,
+          share: item.share ?? 0,
+          //no data for favorite
+          favorite: 0,
           post: postWithUUID.id,
-          view: item.index.read ?? 0,
+          view: item.view ?? 0,
         };
 
         const existPost = acc.postList.find((i) => i.id === postWithUUID.id);
@@ -232,6 +223,36 @@ function parseData(entityList: Array<EntityData>): {
 
 export function parseForQuery(PeriodData: unknown) {
   const parsedData = parseRawData(PeriodData);
+  const transformedData = transformData(parsedData);
+
+  console.time('divideByDay');
+  const sorted = parsedData
+    .map((i) => ({ ...i, createdAt: new Date(i.capturedAt) }))
+    .sort(sortByCreatedAt);
+
+  const firstCreatedAt = sorted.at(-1)?.createdAt;
+  const lastCreatedAt = sorted.at(0)?.createdAt;
+
+  const data = parseData(transformedData);
+  console.log(
+    'Data parsed successfully',
+    data,
+    firstCreatedAt,
+    getRangeValue(
+      parsedData.map((i) => ({ ...i, createdAt: new Date(i.capturedAt) })),
+      {
+        from: firstCreatedAt ?? new Date(),
+        to: new Date(),
+      },
+    ),
+  );
+  console.timeEnd('divideByDay');
+
+  return { data, firstCreatedAt, lastCreatedAt };
+}
+
+export function parseRippleForQuery(sliceData: unknown) {
+  const parsedData = parseRawData(sliceData);
   const transformedData = transformData(parsedData);
 
   console.time('divideByDay');
