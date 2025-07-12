@@ -209,9 +209,9 @@ const postArchiveList = computed(() => {
   return postViewList.flatMap((postView) => postView.archive);
 });
 
-const calcPercentageGrowth = (latest: number, earliest: number, a: any, b: any) => {
+const calcPercentageGrowth = (latest: number, earliest: number, dayCount: number) => {
   if (earliest === 0) return 0;
-  const growth = ((latest - earliest) / earliest) * 100;
+  const growth = (latest - earliest) / dayCount;
   // if (growth < 0) {
   //   console.log(
   //     `Negative growth detected: latest=${latest}, earliest=${earliest}, a=${JSON.stringify(
@@ -235,7 +235,7 @@ const calcPercentageGrowth = (latest: number, earliest: number, a: any, b: any) 
   //     )}`,
   //   );
   // }
-  return `${growth.toFixed(2)}%`;
+  return growth;
 };
 
 const latestPostArchiveList = computed(() => {
@@ -250,20 +250,26 @@ const latestPostArchiveList = computed(() => {
     const likeGrowthRate = calcPercentageGrowth(
       latestArchive?.like ?? 0,
       earliestArchive?.like ?? 0,
-      latestArchive,
-      earliestArchive,
+      latestArchive?.capturedAt && earliestArchive?.capturedAt
+        ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+            (1000 * 60 * 60 * 24)
+        : 1, // 默认1天，避免除以0
     );
     const shareGrowthRate = calcPercentageGrowth(
       latestArchive?.share ?? 0,
       earliestArchive?.share ?? 0,
-      latestArchive,
-      earliestArchive,
+      latestArchive?.capturedAt && earliestArchive?.capturedAt
+        ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+            (1000 * 60 * 60 * 24)
+        : 1, // 默认1天，避免除以0
     );
     const commentGrowthRate = calcPercentageGrowth(
       latestArchive?.comment ?? 0,
       earliestArchive?.comment ?? 0,
-      latestArchive,
-      earliestArchive,
+      latestArchive?.capturedAt && earliestArchive?.capturedAt
+        ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+            (1000 * 60 * 60 * 24)
+        : 1, // 默认1天，避免除以0
     );
 
     return {
