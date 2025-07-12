@@ -51,6 +51,10 @@
         :height="600"
       />
     </div>
+    <div>
+      <h6>词云</h6>
+      {{ wordOccurrence }}
+    </div>
   </div>
 </template>
 
@@ -65,6 +69,15 @@ import { computed, ref } from 'vue';
 import * as Spec from 'src/specification';
 import { divideByDay } from 'src/query/utils';
 import type { EChartsOption } from 'echarts';
+
+const { query, postViewList, cutWordCache } = defineProps<{
+  query: QueryInterface;
+  postViewList: Array<Spec.PostView.Type>;
+  cutWordCache: Array<{
+    id: Spec.PostArchive.Type['id'];
+    cut: Array<string>;
+  }>;
+}>();
 
 const LabelMap = {
   'specification.data.PostArchive.content': '推文内容',
@@ -193,17 +206,34 @@ const columns = Object.entries(ViewDataSchema.shape)
     } as any,
   ]);
 
-const { query, postViewList } = defineProps<{
-  query: QueryInterface;
-  postViewList: Array<Spec.PostView.Type>;
-}>();
-
 const postArchiveList = computed(() => {
   return postViewList.flatMap((postView) => postView.archive);
 });
 
 const latestPostArchiveList = computed(() => {
   return postViewList.map((post) => post.archive[0]!);
+});
+
+const latestPostArchiveCutWordList = computed(() => {
+  return latestPostArchiveList.value.map((post) => {
+    const cut = cutWordCache.find((item) => item.id === post.id)?.cut || [];
+    return {
+      ...post,
+      cut,
+    };
+  });
+});
+
+const wordOccurrence = computed(() => {
+  const groupByed = Object.groupBy(
+    latestPostArchiveCutWordList.value.flatMap((post) => post.cut),
+    (word) => word,
+  );
+
+  return Object.entries(groupByed).map(([word, occurrences]) => ({
+    word,
+    count: occurrences?.length ?? 0,
+  }));
 });
 
 const postViewDivideByDay = computed(() => {

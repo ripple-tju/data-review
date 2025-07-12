@@ -2,11 +2,19 @@
   <q-page class="column items-center justify-evenly">
     <div>
       <h3>全平台身份</h3>
-      <AppPostListStatistics :query="query" :postViewList="allPostView" />
+      <AppPostListStatistics
+        :query="query"
+        :postViewList="allPostView"
+        :cutWordCache="cutwordCache"
+      />
     </div>
     <div v-for="(item, index) in postViewListGroupByIdentity" :key="index">
       <h3>身份：{{ item.name }}</h3>
-      <AppPostListStatistics :query="query" :postViewList="item.postViewList" />
+      <AppPostListStatistics
+        :query="query"
+        :postViewList="item.postViewList"
+        :cutWordCache="cutwordCache"
+      />
     </div>
   </q-page>
 </template>
@@ -28,6 +36,12 @@ const postViewListGroupByIdentity = ref<
     postViewList: Array<Spec.PostView.Type>;
   }>
 >([]);
+const cutwordCache = ref<
+  Array<{
+    id: Spec.PostArchive.Type['id'];
+    cut: Array<string>;
+  }>
+>([]);
 
 onMounted(async () => {
   const data = await fetch('/data/default.json')
@@ -41,6 +55,17 @@ onMounted(async () => {
     .catch((error) => {
       console.error('Error fetching data:', error);
     });
+
+  const cache = (await fetch('/data/archive-cutwords-cache.json')
+    .then((response) => response.json())
+    .catch((error) => {
+      console.error('Error fetching cache:', error);
+    })) as Array<{
+    id: Spec.PostArchive.Type['id'];
+    cut: Array<string>;
+  }>;
+
+  cutwordCache.value = cache;
 
   console.log('test', test);
 
