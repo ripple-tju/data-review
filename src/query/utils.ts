@@ -73,3 +73,11 @@ export const sortByCreatedAt = <T extends { createdAt: Date }>(
 ) => {
   return getter(b) - getter(a);
 };
+
+export const sortByCapturedAt = <T extends { capturedAt: Date }>(
+  a: T,
+  b: T,
+  getter: (item: T) => number = (item) => item.capturedAt.getTime(),
+) => {
+  return getter(b) - getter(a);
+};

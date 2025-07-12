@@ -214,7 +214,25 @@ const calcPercentageGrowth = (latest: number, earliest: number, a: any, b: any) 
   const growth = ((latest - earliest) / earliest) * 100;
   // if (growth < 0) {
   //   console.log(
-  //     `Negative growth detected: latest=${latest}, earliest=${earliest}, a=${JSON.stringify(a, null, 2)}, b=${JSON.stringify(b, null, 2)}`,
+  //     `Negative growth detected: latest=${latest}, earliest=${earliest}, a=${JSON.stringify(
+  //       {
+  //         capturedAt: a.capturedAt,
+  //         like: a.like,
+  //         share: a.share,
+  //         comment: a.comment,
+  //       },
+  //       null,
+  //       2,
+  //     )}, b=${JSON.stringify(
+  //       {
+  //         capturedAt: b.capturedAt,
+  //         like: b.like,
+  //         share: b.share,
+  //         comment: b.comment,
+  //       },
+  //       null,
+  //       2,
+  //     )}`,
   //   );
   // }
   return `${growth.toFixed(2)}%`;
@@ -222,8 +240,12 @@ const calcPercentageGrowth = (latest: number, earliest: number, a: any, b: any) 
 
 const latestPostArchiveList = computed(() => {
   return postViewList.map((post) => {
-    const latestArchive = post.archive.at(0);
-    const earliestArchive = post.archive.at(-1);
+    const sortedArchive = post.archive;
+    // .sort(
+    //   (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+    // );
+    const latestArchive = sortedArchive.at(0);
+    const earliestArchive = sortedArchive.at(-1);
 
     const likeGrowthRate = calcPercentageGrowth(
       latestArchive?.like ?? 0,

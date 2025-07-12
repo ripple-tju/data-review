@@ -10,7 +10,7 @@ import {
   // DemoRawPeriodData,
   type IdentityStatisticsView,
 } from 'src/specification';
-import { sortByCreatedAt, getDateStrList, getRangeValue } from './utils';
+import { sortByCreatedAt, getDateStrList, getRangeValue, sortByCapturedAt } from './utils';
 import { parseForQuery } from './transform';
 
 export type DataSet = {
@@ -54,14 +54,6 @@ export type ValueWithPeriod<T> = {
 const generateMock = (_: any): ValueWithPeriod<number> => {
   return { value: 1, at: new Date() };
 };
-
-// const sortByCreatedAt = <T extends { createdAt: string }>(
-// 	a: T,
-// 	b: T,
-// 	getter: (item: T) => number = (item) => new Date(item.createdAt).getTime(),
-// ) => {
-// 	return getter(b) - getter(a);
-// };
 
 export const Query = ({
   data: parsed,
@@ -356,7 +348,7 @@ export const Query = ({
                   post: p,
                   archive: target.postArchiveList
                     .filter((pa) => pa.post === p.id)
-                    .sort(sortByCreatedAt),
+                    .sort(sortByCapturedAt),
                 };
               }),
             );
@@ -370,7 +362,7 @@ export const Query = ({
 
             const result: PostView.Type = {
               post,
-              archive: target.postArchiveList.filter((ia) => ia.post === id).sort(sortByCreatedAt),
+              archive: target.postArchiveList.filter((ia) => ia.post === id).sort(sortByCapturedAt),
             };
 
             return await Promise.resolve(PostView.Schema.parse(result));
@@ -382,7 +374,7 @@ export const Query = ({
                   identity: p,
                   archive: target.identityArchiveList
                     .filter((ia) => ia.identity === p.id)
-                    .sort(sortByCreatedAt),
+                    .sort(sortByCapturedAt),
                 };
               }),
             );
@@ -398,7 +390,7 @@ export const Query = ({
               identity,
               archive: target.identityArchiveList
                 .filter((ia) => ia.identity === id)
-                .sort(sortByCreatedAt),
+                .sort(sortByCapturedAt),
             };
 
             return await Promise.resolve(IdentityView.Schema.parse(result));
@@ -426,7 +418,7 @@ export const Query = ({
                 const createdAt = new Date(p.post.createdAt);
                 const createdAtInRange = createdAt >= start && createdAt <= end;
 
-                const sortedByCapturedAt = p.archive.sort(sortByCreatedAt);
+                const sortedByCapturedAt = p.archive.sort(sortByCapturedAt);
 
                 const firstCapturedAtAfterGrowth = sortedByCapturedAt.find((i) => {
                   const capturedAt = new Date(i.createdAt);
