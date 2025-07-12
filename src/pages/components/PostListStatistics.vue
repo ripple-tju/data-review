@@ -235,7 +235,7 @@ const calcPercentageGrowth = (latest: number, earliest: number, dayCount: number
   //     )}`,
   //   );
   // }
-  return growth;
+  return growth.toFixed(3);
 };
 
 const latestPostArchiveList = computed(() => {
