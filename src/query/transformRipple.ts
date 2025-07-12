@@ -235,8 +235,13 @@ export function parseForQuery(PeriodData: unknown) {
 }
 
 export function parseRippleForQuery(sliceData: unknown) {
+  console.time('parseRippleForQuery:parseRawData');
   const parsedData = parseRawData(sliceData);
+  console.timeEnd('parseRippleForQuery:parseRawData');
+
+  console.time('parseRippleForQuery:transformData');
   const transformedData = transformData(parsedData);
+  console.timeEnd('parseRippleForQuery:transformData');
 
   console.time('parseRippleForQuery:divideByDay');
   const sorted = parsedData
