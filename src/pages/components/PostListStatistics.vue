@@ -41,6 +41,9 @@
     <div>
       <AppKChart title="推文交互分布散点图 (点赞 vs 评论)" :option="scatterOption" :height="500" />
     </div>
+    <div>
+      <AppKChart title="推文交互分布热力图 (点赞 vs 评论)" :option="heatmapOption" :height="500" />
+    </div>
   </div>
 </template>
 
@@ -550,6 +553,170 @@ const scatterOption = computed<EChartsOption>(() => {
       bottom: '15%',
       top: '20%',
     },
+  };
+});
+
+// 推文交互热力图 (点赞 vs 评论)
+const heatmapOption = computed<EChartsOption>(() => {
+  // 获取有效的互动数据
+  const validPosts = latestPostArchiveList.value.filter(
+    (post) => (post.like ?? 0) > 0 || (post.comment ?? 0) > 0,
+  );
+
+  // 确定数据范围
+  const maxLikes = Math.max(...validPosts.map((post) => post.like ?? 0));
+  const maxComments = Math.max(...validPosts.map((post) => post.comment ?? 0));
+
+  // 创建分组区间
+  const likeBins = 20; // 点赞数分20个区间
+  const commentBins = 20; // 评论数分20个区间
+
+  const likeStep = Math.ceil(maxLikes / likeBins);
+  const commentStep = Math.ceil(maxComments / commentBins);
+
+  // 创建热力图数据矩阵
+  const heatmapData: number[][] = [];
+  const likeLabels: string[] = [];
+  const commentLabels: string[] = [];
+
+  // 生成标签
+  for (let i = 0; i < likeBins; i++) {
+    const start = i * likeStep;
+    const end = (i + 1) * likeStep;
+    likeLabels.push(`${start}-${end}`);
+  }
+
+  for (let i = 0; i < commentBins; i++) {
+    const start = i * commentStep;
+    const end = (i + 1) * commentStep;
+    commentLabels.push(`${start}-${end}`);
+  }
+
+  // 初始化数据矩阵
+  const dataMatrix: number[][] = Array(commentBins)
+    .fill(0)
+    .map(() => Array(likeBins).fill(0));
+
+  // 填充数据
+  validPosts.forEach((post) => {
+    const likes = post.like ?? 0;
+    const comments = post.comment ?? 0;
+
+    const likeIndex = Math.min(Math.floor(likes / likeStep), likeBins - 1);
+    const commentIndex = Math.min(Math.floor(comments / commentStep), commentBins - 1);
+
+    if (dataMatrix[commentIndex] && dataMatrix[commentIndex][likeIndex] !== undefined) {
+      dataMatrix[commentIndex][likeIndex]++;
+    }
+  });
+
+  // 转换为ECharts热力图数据格式
+  for (let i = 0; i < commentBins; i++) {
+    for (let j = 0; j < likeBins; j++) {
+      const value = dataMatrix[i]?.[j];
+      if (value && value > 0) {
+        heatmapData.push([j, i, value]);
+      }
+    }
+  }
+
+  return {
+    title: {
+      text: '推文互动分布热力图',
+      subtext: '颜色深度表示该区间内推文数量密度',
+      left: 'center',
+    },
+    tooltip: {
+      position: 'top',
+      formatter: function (params: any) {
+        const [likeIndex, commentIndex, count] = params.data;
+        const likeRange = likeLabels[likeIndex];
+        const commentRange = commentLabels[commentIndex];
+        return `
+          <div>
+            <strong>点赞范围:</strong> ${likeRange}<br/>
+            <strong>评论范围:</strong> ${commentRange}<br/>
+            <strong>推文数量:</strong> ${count}
+          </div>
+        `;
+      },
+    },
+    grid: {
+      height: '70%',
+      top: '15%',
+      left: '15%',
+      right: '15%',
+    },
+    xAxis: {
+      type: 'category',
+      data: likeLabels,
+      name: '点赞数区间',
+      nameLocation: 'middle',
+      nameGap: 40,
+      axisLabel: {
+        rotate: 45,
+        fontSize: 10,
+      },
+      splitArea: {
+        show: true,
+      },
+    },
+    yAxis: {
+      type: 'category',
+      data: commentLabels,
+      name: '评论数区间',
+      nameLocation: 'middle',
+      nameGap: 60,
+      axisLabel: {
+        fontSize: 10,
+      },
+      splitArea: {
+        show: true,
+      },
+    },
+    visualMap: {
+      min: 0,
+      max: heatmapData.length > 0 ? Math.max(...heatmapData.map((item) => item[2] ?? 0)) : 10,
+      calculable: true,
+      orient: 'vertical',
+      left: 'right',
+      top: 'middle',
+      inRange: {
+        color: [
+          '#313695',
+          '#4575b4',
+          '#74add1',
+          '#abd9e9',
+          '#e0f3f8',
+          '#ffffbf',
+          '#fee090',
+          '#fdae61',
+          '#f46d43',
+          '#d73027',
+          '#a50026',
+        ],
+      },
+      text: ['高密度', '低密度'],
+      textStyle: {
+        fontSize: 12,
+      },
+    },
+    series: [
+      {
+        name: '推文分布',
+        type: 'heatmap',
+        data: heatmapData,
+        label: {
+          show: false,
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+      },
+    ],
   };
 });
 </script>
