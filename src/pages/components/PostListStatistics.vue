@@ -209,8 +209,48 @@ const postArchiveList = computed(() => {
   return postViewList.flatMap((postView) => postView.archive);
 });
 
+const calcPercentageGrowth = (latest: number, earliest: number, a: any, b: any) => {
+  if (earliest === 0) return 0;
+  const growth = ((latest - earliest) / earliest) * 100;
+  // if (growth < 0) {
+  //   console.log(
+  //     `Negative growth detected: latest=${latest}, earliest=${earliest}, a=${JSON.stringify(a, null, 2)}, b=${JSON.stringify(b, null, 2)}`,
+  //   );
+  // }
+  return `${growth.toFixed(2)}%`;
+};
+
 const latestPostArchiveList = computed(() => {
-  return postViewList.map((post) => post.archive[0]!);
+  return postViewList.map((post) => {
+    const latestArchive = post.archive.at(0);
+    const earliestArchive = post.archive.at(-1);
+
+    const likeGrowthRate = calcPercentageGrowth(
+      latestArchive?.like ?? 0,
+      earliestArchive?.like ?? 0,
+      latestArchive,
+      earliestArchive,
+    );
+    const shareGrowthRate = calcPercentageGrowth(
+      latestArchive?.share ?? 0,
+      earliestArchive?.share ?? 0,
+      latestArchive,
+      earliestArchive,
+    );
+    const commentGrowthRate = calcPercentageGrowth(
+      latestArchive?.comment ?? 0,
+      earliestArchive?.comment ?? 0,
+      latestArchive,
+      earliestArchive,
+    );
+
+    return {
+      ...latestArchive,
+      likeGrowthRate,
+      shareGrowthRate,
+      commentGrowthRate,
+    };
+  });
 });
 
 const latestPostArchiveCutWordList = computed(() => {
@@ -224,10 +264,33 @@ const latestPostArchiveCutWordList = computed(() => {
 });
 
 const wordOccurrence = computed(() => {
+  console.time('wordOccurrence');
   const groupByed = Object.groupBy(
-    latestPostArchiveCutWordList.value.flatMap((post) => post.cut),
+    latestPostArchiveCutWordList.value
+      .flatMap((post) => post.cut)
+      .filter((word) => {
+        // 过滤长度、URL、@用户名
+        if (word.length <= 1 || word.startsWith('http') || word.startsWith('@')) {
+          return false;
+        }
+
+        // 过滤中英文标点符号
+        const punctuationRegex =
+          /^[\u3000-\u303F\uFF00-\uFFEF\u2000-\u206F\u0020-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u007E]+$/;
+        if (punctuationRegex.test(word)) {
+          return false;
+        }
+
+        // 过滤纯数字
+        if (/^\d+$/.test(word)) {
+          return false;
+        }
+
+        return true;
+      }),
     (word) => word,
   );
+  console.timeEnd('wordOccurrence');
 
   return Object.entries(groupByed).map(([word, occurrences]) => ({
     word,

@@ -72,6 +72,8 @@ onMounted(async () => {
   // query.value = Query(parseForQuery(data));
   const bb = parseRippleForQuery(test);
   console.log('bb', bb);
+  const seeAllPostView = await Query(bb).Target('fb').getPostViewList();
+  console.log('seeAllPostView', seeAllPostView);
   query.value = Query(parseRippleForQuery(test.slice(0, 15000)));
   idList.value = await query.value.Target('fb').getIdentityViewList();
   allPostView.value = await query.value.Target('fb').getPostViewList();
