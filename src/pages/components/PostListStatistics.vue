@@ -7,7 +7,7 @@
       :pagination="{
         rowsPerPage: 10,
       }"
-      :rows="postArchiveList"
+      :rows="latestPostArchiveList"
       :columns="columns"
       class="fixed-layout-table"
     >
@@ -40,6 +40,15 @@
     </div>
     <div>
       <h6>推文交互分布散点图</h6>
+      {{
+        latestPostArchiveList.map((post) => {
+          return {
+            like: post.like,
+            comment: post.comment,
+            id: post.id,
+          };
+        })
+      }}
     </div>
   </div>
 </template>
@@ -189,6 +198,10 @@ const { query, postViewList } = defineProps<{
 }>();
 
 const postArchiveList = computed(() => {
+  return postViewList.flatMap((postView) => postView.archive);
+});
+
+const latestPostArchiveList = computed(() => {
   return postViewList.map((post) => post.archive[0]!);
 });
 
