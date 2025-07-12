@@ -37,12 +37,13 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import * as echarts from 'echarts';
+import 'echarts-gl'; // 引入3D图表支持
 import type { EChartsOption } from 'echarts';
 import { useQuasar } from 'quasar';
 
 const props = defineProps<{
   title: string;
-  option: EChartsOption;
+  option: any; // 支持包括3D图表在内的所有ECharts选项
   height?: number;
 }>();
 

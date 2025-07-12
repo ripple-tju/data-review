@@ -44,6 +44,13 @@
     <div>
       <AppKChart title="推文交互分布热力图 (点赞 vs 评论)" :option="heatmapOption" :height="500" />
     </div>
+    <div>
+      <AppKChart
+        title="推文交互分布3D散点图 (点赞 : 评论 : 分享)"
+        :option="scatter3DOption"
+        :height="600"
+      />
+    </div>
   </div>
 </template>
 
@@ -713,6 +720,131 @@ const heatmapOption = computed<EChartsOption>(() => {
           itemStyle: {
             shadowBlur: 10,
             shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+      },
+    ],
+  };
+});
+
+// 推文交互3D散点图 (点赞 : 评论 : 分享)
+const scatter3DOption = computed(() => {
+  // 获取有效的互动数据，确保至少有一种互动
+  const validPosts = latestPostArchiveList.value.filter(
+    (post) => (post.like ?? 0) > 0 || (post.comment ?? 0) > 0 || (post.share ?? 0) > 0,
+  );
+
+  // 准备3D散点图数据
+  const scatter3DData = validPosts.map((post) => ({
+    value: [
+      Math.max(post.like ?? 1, 1), // X轴: 点赞数，最小值为1
+      Math.max(post.comment ?? 1, 1), // Y轴: 评论数，最小值为1
+      Math.max(post.share ?? 1, 1), // Z轴: 分享数，最小值为1
+    ],
+    name: post.content?.substring(0, 30) + '...' || '无内容',
+    itemStyle: {
+      opacity: 0.8,
+    },
+  }));
+
+  return {
+    title: {
+      text: '推文互动3D分布',
+      subtext: 'X轴: 点赞数 | Y轴: 评论数 | Z轴: 分享数',
+      left: 'center',
+    },
+    tooltip: {
+      formatter: function (params: any) {
+        const [likes, comments, shares] = params.data.value;
+        return `
+          <div style="max-width: 300px;">
+            <strong>推文内容:</strong><br/>
+            ${params.data.name}<br/>
+            <strong>点赞:</strong> ${likes}<br/>
+            <strong>评论:</strong> ${comments}<br/>
+            <strong>分享:</strong> ${shares}
+          </div>
+        `;
+      },
+    },
+    grid3D: {
+      boxWidth: 100,
+      boxHeight: 100,
+      boxDepth: 100,
+      alpha: 20,
+      beta: 40,
+      viewControl: {
+        projection: 'perspective',
+        autoRotate: false,
+        distance: 200,
+        alpha: 20,
+        beta: 40,
+        center: [0, 0, 0],
+        panMouseButton: 'left',
+        rotateMouseButton: 'right',
+      },
+      light: {
+        main: {
+          intensity: 1.2,
+          shadow: true,
+          shadowQuality: 'high',
+        },
+        ambient: {
+          intensity: 0.3,
+        },
+      },
+    },
+    xAxis3D: {
+      name: '点赞数',
+      type: 'log',
+      min: 1,
+      axisLabel: {
+        formatter: '{value}',
+      },
+    },
+    yAxis3D: {
+      name: '评论数',
+      type: 'log',
+      min: 1,
+      axisLabel: {
+        formatter: '{value}',
+      },
+    },
+    zAxis3D: {
+      name: '分享数',
+      type: 'log',
+      min: 1,
+      axisLabel: {
+        formatter: '{value}',
+      },
+    },
+    series: [
+      {
+        type: 'scatter3D',
+        data: scatter3DData,
+        symbolSize: function (data: any) {
+          // 根据总互动量调整点的大小
+          const total = data[0] + data[1] + data[2];
+          return Math.min(Math.max(Math.log10(total) * 5, 4), 20);
+        },
+        itemStyle: {
+          color: function (params: any) {
+            // 根据总互动强度使用不同颜色
+            const [likes, comments, shares] = params.data.value;
+            const total = likes + comments + shares;
+
+            if (total > 200) return '#e74c3c'; // 超高互动 - 红色
+            if (total > 100) return '#f39c12'; // 高互动 - 橙色
+            if (total > 50) return '#f1c40f'; // 中高互动 - 黄色
+            if (total > 20) return '#2ecc71'; // 中等互动 - 绿色
+            if (total > 10) return '#3498db'; // 中低互动 - 蓝色
+            return '#9b59b6'; // 低互动 - 紫色
+          },
+          opacity: 0.8,
+        },
+        emphasis: {
+          itemStyle: {
+            opacity: 1,
           },
         },
       },
