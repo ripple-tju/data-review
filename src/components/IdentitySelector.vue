@@ -106,7 +106,7 @@
               <q-item-section>
                 <q-item-label>
                   <span class="text-weight-medium">
-                    {{ identity.name || '(无名称)' }}
+                    {{ identity.name || identity.code || '(无名称)' }}
                   </span>
                   <q-badge
                     v-if="isChineseMedia(identity)"

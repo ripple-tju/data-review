@@ -100,6 +100,18 @@
 
     <!-- 数据展示区域 -->
     <div v-if="analysisResults" style="width: 100%">
+      <!-- 调试信息 -->
+      <div class="q-pa-md q-mb-md" style="background: #f5f5f5; border-radius: 4px">
+        <div class="text-caption">
+          <strong>调试信息：</strong><br />
+          全平台帖子数量：{{ analysisResults.filteredAllPostView.length }}<br />
+          身份组数量：{{ analysisResults.filteredPostViewListGroupByIdentity.length }}<br />
+          身份组名称：{{
+            analysisResults.filteredPostViewListGroupByIdentity.map((g) => g.name).join(', ')
+          }}
+        </div>
+      </div>
+
       <div>
         <h3>
           全平台身份统计
@@ -178,7 +190,7 @@ const uploadStatus = ref<{
 } | null>(null);
 
 // 🔥 [身份筛选] 处理选择的身份进行数据分析
-const processSelectedData = () => {
+const processSelectedData = async () => {
   if (selectedIdentityIds.value.length === 0) {
     return;
   }
@@ -193,17 +205,29 @@ const processSelectedData = () => {
     // 过滤全平台数据
     const filteredAllPostView = allPostView.value.filter((postView) =>
       selectedIdentityIds.value.includes(postView.post.author),
-    );
+    ); // 过滤分组数据 - 直接根据选择的身份ID重新生成分组
+    console.log('🔍 [调试] 开始重新生成选中身份的分组数据...');
 
-    // 过滤分组数据
-    const filteredPostViewListGroupByIdentity = postViewListGroupByIdentity.value.filter(
-      (group) => {
-        const matchingIdentity = idList.value.find(
-          (identity) => (identity.archive[0]?.name || 'Unknown') === group.name,
+    const filteredPostViewListGroupByIdentity = [];
+
+    for (const selectedId of selectedIdentityIds.value) {
+      // 找到对应的身份信息
+      const identity = idList.value.find((id) => id.identity.id === selectedId);
+      if (identity) {
+        // 获取该身份的帖子列表
+        const postViewList = await query.value.Target('fb').getPostViewListByIdentityId(selectedId);
+        const identityName = identity.archive[0]?.name || 'Unknown';
+
+        console.log(
+          `🔍 [调试] 为身份 "${identityName}" (${selectedId}) 生成分组，帖子数量: ${postViewList.length}`,
         );
-        return matchingIdentity && selectedIdentityIds.value.includes(matchingIdentity.identity.id);
-      },
-    );
+
+        filteredPostViewListGroupByIdentity.push({
+          name: identityName,
+          postViewList: postViewList,
+        });
+      }
+    }
 
     // 保存分析结果
     analysisResults.value = {
@@ -215,6 +239,7 @@ const processSelectedData = () => {
     console.log(`🔍 [身份分析] 数据分析完成，耗时: ${(analysisEnd - analysisStart).toFixed(2)}ms`);
     console.log(`🔍 [身份分析] 筛选后帖子数量: ${filteredAllPostView.length}`);
     console.log(`🔍 [身份分析] 筛选后身份组数量: ${filteredPostViewListGroupByIdentity.length}`);
+    console.log(`🔍 [身份分析] 筛选后身份组详情:`, filteredPostViewListGroupByIdentity);
   } catch (error) {
     console.error('身份数据分析失败:', error);
   } finally {

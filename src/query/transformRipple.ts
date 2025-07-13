@@ -84,7 +84,7 @@ function transformData(data: Array<z.infer<typeof RippleFormat>>): Array<EntityD
       createdAt: createdAt,
       // identity: identityWithUUID.uuid,
       identity: identityWithUUID.id,
-      name: identity.name,
+      name: identity.name || identity.code || 'Unknown',
       // avatar: generateMock(
       //   z.object({
       //     avatar: z.string(),
