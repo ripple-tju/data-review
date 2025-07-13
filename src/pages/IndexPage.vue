@@ -312,31 +312,24 @@
           </div>
 
           <!-- 只显示选中的身份统计，避免同时渲染多个图表 -->
-          <div v-if="selectedIdentityForView">
-            <div
-              v-for="(item, index) in analysisResults.filteredPostViewListGroupByIdentity"
-              :key="index"
-            >
-              <div v-if="item.name === selectedIdentityForView">
-                <div class="row items-center q-mb-md">
-                  <h3 class="q-ma-none">身份：{{ item.name }}</h3>
-                  <q-chip
-                    color="info"
-                    text-color="white"
-                    icon="article"
-                    :label="`${item.postViewList.length} 个帖子`"
-                    class="q-ml-sm"
-                  />
-                </div>
-                <AppPostListStatistics
-                  v-if="activeTab === 'byIdentity'"
-                  :query="query"
-                  :postViewList="item.postViewList"
-                  :cutWordCache="cutwordCache"
-                  :key="'identity-' + item.name"
-                />
-              </div>
+          <div v-if="currentIdentityData">
+            <div class="row items-center q-mb-md">
+              <h3 class="q-ma-none">身份：{{ currentIdentityData.name }}</h3>
+              <q-chip
+                color="info"
+                text-color="white"
+                icon="article"
+                :label="`${currentIdentityData.postViewList.length} 个帖子`"
+                class="q-ml-sm"
+              />
             </div>
+            <AppPostListStatistics
+              v-if="activeTab === 'byIdentity'"
+              :query="query"
+              :postViewList="currentIdentityData.postViewList"
+              :cutWordCache="cutwordCache"
+              :key="'identity-' + currentIdentityData.name"
+            />
           </div>
 
           <!-- 未选择身份时的提示 -->
@@ -516,6 +509,103 @@ const identityOptions = computed(() => {
   }));
 });
 
+// 🔥 [优化] 计算当前选中身份的数据 - 避免在模板中重复计算
+const currentIdentityData = computed(() => {
+  if (!selectedIdentityForView.value || !analysisResults.value) return null;
+  
+  return analysisResults.value.filteredPostViewListGroupByIdentity.find(
+    item => item.name === selectedIdentityForView.value
+  ) || null;
+});
+
+// 🔥 [优化] 计算筛选后的帖子数据 - 使用computed避免重复计算
+const getFilteredPostView = () => {
+  console.log('📊 [数据筛选] 开始计算筛选后的帖子数据...');
+  
+  // 获取基础筛选数据
+  let filteredAllPostView = allPostView.value.filter((postView) =>
+    selectedIdentityIds.value.includes(postView.post.author),
+  );
+
+  // 如果选择了特定日期，进一步筛选
+  if (selectedDates.value.length > 0) {
+    filteredAllPostView = filteredAllPostView
+      .map((postView) => {
+        // 只保留在选定日期范围内的存档
+        const filteredArchives = postView.archive.filter((archive) => {
+          try {
+            const isoString = new Date(archive.capturedAt).toISOString();
+            const archiveDate = isoString.split('T')[0];
+            return archiveDate && selectedDates.value.includes(archiveDate);
+          } catch {
+            return false;
+          }
+        });
+
+        return {
+          ...postView,
+          archive: filteredArchives,
+        };
+      })
+      .filter((postView) => postView.archive.length > 0); // 移除没有有效存档的帖子
+  }
+
+  console.log(`📊 [数据筛选] 帖子数据筛选完成，结果: ${filteredAllPostView.length} 个帖子`);
+  return filteredAllPostView;
+};
+
+// 🔥 [优化] 计算筛选后的分组数据 - 使用缓存避免重复API调用
+const getFilteredGroupByIdentity = () => {
+  console.log('📊 [数据筛选] 开始计算筛选后的分组数据...');
+  
+  const filteredPostViewListGroupByIdentity = [];
+
+  for (const selectedId of selectedIdentityIds.value) {
+    // 找到对应的身份信息
+    const identity = idList.value.find((id) => id.identity.id === selectedId);
+    if (identity) {
+      // 从已有的分组数据中查找，避免重复API调用
+      const existingGroup = postViewListGroupByIdentity.value.find(
+        group => group.name === (identity.archive[0]?.name || 'Unknown')
+      );
+      
+      if (existingGroup) {
+        console.log(`📊 [数据筛选] 使用缓存数据为身份 "${existingGroup.name}" (${selectedId})，帖子数量: ${existingGroup.postViewList.length}`);
+        
+        // 如果有日期筛选，对帖子进行日期筛选
+        let postViewList = existingGroup.postViewList;
+        if (selectedDates.value.length > 0) {
+          postViewList = postViewList
+            .map((postView) => {
+              const filteredArchives = postView.archive.filter((archive) => {
+                try {
+                  const isoString = new Date(archive.capturedAt).toISOString();
+                  const archiveDate = isoString.split('T')[0];
+                  return archiveDate && selectedDates.value.includes(archiveDate);
+                } catch {
+                  return false;
+                }
+              });
+              return {
+                ...postView,
+                archive: filteredArchives,
+              };
+            })
+            .filter((postView) => postView.archive.length > 0);
+        }
+
+        filteredPostViewListGroupByIdentity.push({
+          name: existingGroup.name,
+          postViewList: postViewList,
+        });
+      }
+    }
+  }
+
+  console.log(`📊 [数据筛选] 分组数据筛选完成，结果: ${filteredPostViewListGroupByIdentity.length} 个分组`);
+  return filteredPostViewListGroupByIdentity;
+};
+
 // 日期筛选相关状态
 const dateStats = ref<
   Array<{
@@ -561,7 +651,7 @@ const uploadStatus = ref<{
 } | null>(null);
 
 // 🔥 [身份筛选] 处理选择的身份进行数据分析
-const processSelectedData = async () => {
+const processSelectedData = () => {
   if (selectedIdentityIds.value.length === 0) {
     return;
   }
@@ -574,55 +664,9 @@ const processSelectedData = async () => {
     console.log('🔍 [身份分析] 选择的身份ID:', selectedIdentityIds.value);
     console.log('🔍 [日期分析] 选择的日期:', selectedDates.value);
 
-    // 获取基础筛选数据
-    let filteredAllPostView = allPostView.value.filter((postView) =>
-      selectedIdentityIds.value.includes(postView.post.author),
-    );
-
-    // 如果选择了特定日期，进一步筛选
-    if (selectedDates.value.length > 0) {
-      filteredAllPostView = filteredAllPostView
-        .map((postView) => {
-          // 只保留在选定日期范围内的存档
-          const filteredArchives = postView.archive.filter((archive) => {
-            try {
-              const isoString = new Date(archive.capturedAt).toISOString();
-              const archiveDate = isoString.split('T')[0];
-              return archiveDate && selectedDates.value.includes(archiveDate);
-            } catch {
-              return false;
-            }
-          });
-
-          return {
-            ...postView,
-            archive: filteredArchives,
-          };
-        })
-        .filter((postView) => postView.archive.length > 0); // 移除没有有效存档的帖子
-    } // 过滤分组数据 - 直接根据选择的身份ID重新生成分组
-    console.log('🔍 [调试] 开始重新生成选中身份的分组数据...');
-
-    const filteredPostViewListGroupByIdentity = [];
-
-    for (const selectedId of selectedIdentityIds.value) {
-      // 找到对应的身份信息
-      const identity = idList.value.find((id) => id.identity.id === selectedId);
-      if (identity) {
-        // 获取该身份的帖子列表
-        const postViewList = await query.value.Target('fb').getPostViewListByIdentityId(selectedId);
-        const identityName = identity.archive[0]?.name || 'Unknown';
-
-        console.log(
-          `🔍 [调试] 为身份 "${identityName}" (${selectedId}) 生成分组，帖子数量: ${postViewList.length}`,
-        );
-
-        filteredPostViewListGroupByIdentity.push({
-          name: identityName,
-          postViewList: postViewList,
-        });
-      }
-    }
+    // 使用 computed 计算筛选后的数据，避免重复计算
+    const filteredAllPostView = getFilteredPostView();
+    const filteredPostViewListGroupByIdentity = getFilteredGroupByIdentity();
 
     // 保存分析结果
     analysisResults.value = {
@@ -634,7 +678,6 @@ const processSelectedData = async () => {
     console.log(`🔍 [身份分析] 数据分析完成，耗时: ${(analysisEnd - analysisStart).toFixed(2)}ms`);
     console.log(`🔍 [身份分析] 筛选后帖子数量: ${filteredAllPostView.length}`);
     console.log(`🔍 [身份分析] 筛选后身份组数量: ${filteredPostViewListGroupByIdentity.length}`);
-    console.log(`🔍 [身份分析] 筛选后身份组详情:`, filteredPostViewListGroupByIdentity);
   } catch (error) {
     console.error('身份数据分析失败:', error);
   } finally {
@@ -810,6 +853,22 @@ watch(
     }
   },
   { immediate: false },
+);
+
+// 🔥 [优化] 监听分析结果变化，自动选择第一个身份用于查看
+watch(
+  () => analysisResults.value?.filteredPostViewListGroupByIdentity,
+  (newGroups) => {
+    if (newGroups && newGroups.length > 0 && !selectedIdentityForView.value) {
+      // 自动选择第一个身份
+      const firstGroup = newGroups[0];
+      if (firstGroup && firstGroup.name) {
+        selectedIdentityForView.value = firstGroup.name;
+        console.log(`🎯 [自动选择] 自动选择第一个身份用于查看: ${firstGroup.name}`);
+      }
+    }
+  },
+  { immediate: true }
 );
 
 // 根据作者ID查找作者名字
@@ -1277,6 +1336,8 @@ const processOldData = async (
 };
 
 // WebGL上下文清理函数
+let cleanupTimer: NodeJS.Timeout | null = null;
+
 const cleanupWebGLContexts = () => {
   console.log('🧹 [WebGL清理] 开始清理WebGL上下文...');
   const canvases = document.querySelectorAll('canvas');
@@ -1296,20 +1357,37 @@ const cleanupWebGLContexts = () => {
   console.log(`🧹 [WebGL清理] 清理完成，清理了 ${cleanedCount} 个WebGL上下文`);
 };
 
-// 监听标签页切换，清理WebGL上下文
+// 🔥 [优化] 防抖WebGL清理，避免频繁清理
+const debouncedCleanup = () => {
+  if (cleanupTimer) {
+    clearTimeout(cleanupTimer);
+  }
+  
+  cleanupTimer = setTimeout(() => {
+    cleanupWebGLContexts();
+    cleanupTimer = null;
+  }, 200); // 200ms 防抖
+};
+
+// 监听标签页切换，防抖清理WebGL上下文
 watch(activeTab, (newTab, oldTab) => {
   if (oldTab && newTab !== oldTab) {
     console.log(`🔄 [标签切换] 从 ${oldTab} 切换到 ${newTab}`);
-    // 延迟清理以确保旧组件已卸载
-    setTimeout(() => {
-      cleanupWebGLContexts();
-    }, 100);
+    debouncedCleanup();
   }
 });
 
-// 组件卸载时清理WebGL上下文
+// 组件卸载时清理WebGL上下文和定时器
 onUnmounted(() => {
-  console.log('🚪 [组件卸载] 清理所有WebGL上下文');
+  console.log('🚪 [组件卸载] 清理所有WebGL上下文和定时器');
+  
+  // 清理定时器
+  if (cleanupTimer) {
+    clearTimeout(cleanupTimer);
+    cleanupTimer = null;
+  }
+  
+  // 立即清理WebGL上下文
   cleanupWebGLContexts();
 });
 
