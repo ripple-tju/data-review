@@ -578,7 +578,7 @@ const filteredDateStats = computed(() => {
   console.log('📅 [日期分析] 筛选后日期统计分析完成:', {
     totalDays: stats.length,
     totalArchives: filteredArchives.length,
-    selectedIdentities: selectedIdentityIds.value.length
+    selectedIdentities: selectedIdentityIds.value.length,
   });
 
   return stats;
@@ -682,15 +682,19 @@ const selectRecentDates = (days: number) => {
 };
 
 // 监听身份选择变化，自动更新日期选择
-watch(selectedIdentityIds, (newIds: string[]) => {
-  if (newIds.length > 0) {
-    // 当身份选择变化时，默认选择所有可用日期
-    selectedDates.value = filteredDateStats.value.map((stat) => stat.date);
-  } else {
-    // 如果没有选择身份，清空日期选择
-    selectedDates.value = [];
-  }
-}, { immediate: false });
+watch(
+  selectedIdentityIds,
+  (newIds: string[]) => {
+    if (newIds.length > 0) {
+      // 当身份选择变化时，默认选择所有可用日期
+      selectedDates.value = filteredDateStats.value.map((stat) => stat.date);
+    } else {
+      // 如果没有选择身份，清空日期选择
+      selectedDates.value = [];
+    }
+  },
+  { immediate: false },
+);
 
 // 根据作者ID查找作者名字
 const getAuthorNameById = (authorId: string): string => {

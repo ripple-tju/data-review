@@ -207,6 +207,7 @@ const postArchiveList = computed(() => {
 });
 
 const calcPercentageGrowth = (latest: number, earliest: number, dayCount: number) => {
+  if (dayCount === 0) return latest;
   if (earliest === 0) return 0;
   const growth = (latest - earliest) / dayCount;
   // if (growth < 0) {
@@ -232,6 +233,11 @@ const calcPercentageGrowth = (latest: number, earliest: number, dayCount: number
   //     )}`,
   //   );
   // }
+  if (Number.isNaN(growth)) {
+    console.log(
+      `Negative growth detected: latest=${latest}, earliest=${earliest}, dayCount=${dayCount}`,
+    );
+  }
   return growth.toFixed(3);
 };
 
