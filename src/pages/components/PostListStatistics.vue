@@ -36,10 +36,10 @@
       <AppKChart title="每天发文量" :option="postCountOption" :height="300" />
     </div>
     <div>
-      <AppKChart title="推文交互分布散点图 (点赞 vs 评论)" :option="scatterOption" :height="500" />
+      <AppKChart title="推文交互分布散点图 (点赞 : 评论)" :option="scatterOption" :height="500" />
     </div>
     <div>
-      <AppKChart title="推文交互分布热力图 (点赞 vs 评论)" :option="heatmapOption" :height="500" />
+      <AppKChart title="推文交互分布热力图 (点赞 : 评论)" :option="heatmapOption" :height="500" />
     </div>
     <div>
       <AppKChart
@@ -261,30 +261,34 @@ const latestPostArchiveList = computed(() => {
     const latestArchive = sortedArchive.at(0);
     const earliestArchive = sortedArchive.at(-1);
 
-    const likeGrowthRate = calcPercentageGrowth(
-      latestArchive?.like ?? 0,
-      earliestArchive?.like ?? 0,
-      latestArchive?.capturedAt && earliestArchive?.capturedAt
-        ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
-            (1000 * 60 * 60 * 24)
-        : 1, // 默认1天，避免除以0
-    );
-    const shareGrowthRate = calcPercentageGrowth(
-      latestArchive?.share ?? 0,
-      earliestArchive?.share ?? 0,
-      latestArchive?.capturedAt && earliestArchive?.capturedAt
-        ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
-            (1000 * 60 * 60 * 24)
-        : 1, // 默认1天，避免除以0
-    );
-    const commentGrowthRate = calcPercentageGrowth(
-      latestArchive?.comment ?? 0,
-      earliestArchive?.comment ?? 0,
-      latestArchive?.capturedAt && earliestArchive?.capturedAt
-        ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
-            (1000 * 60 * 60 * 24)
-        : 1, // 默认1天，避免除以0
-    );
+    // const likeGrowthRate = calcPercentageGrowth(
+    //   latestArchive?.like ?? 0,
+    //   earliestArchive?.like ?? 0,
+    //   latestArchive?.capturedAt && earliestArchive?.capturedAt
+    //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+    //         (1000 * 60 * 60 * 24)
+    //     : 1, // 默认1天，避免除以0
+    // );
+    // const shareGrowthRate = calcPercentageGrowth(
+    //   latestArchive?.share ?? 0,
+    //   earliestArchive?.share ?? 0,
+    //   latestArchive?.capturedAt && earliestArchive?.capturedAt
+    //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+    //         (1000 * 60 * 60 * 24)
+    //     : 1, // 默认1天，避免除以0
+    // );
+    // const commentGrowthRate = calcPercentageGrowth(
+    //   latestArchive?.comment ?? 0,
+    //   earliestArchive?.comment ?? 0,
+    //   latestArchive?.capturedAt && earliestArchive?.capturedAt
+    //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+    //         (1000 * 60 * 60 * 24)
+    //     : 1, // 默认1天，避免除以0
+    // );
+
+    const likeGrowthRate = latestArchive!.like / 5;
+    const shareGrowthRate = latestArchive!.share / 5;
+    const commentGrowthRate = latestArchive!.comment / 5;
 
     //认同度暂时使用假数据 评论数高于30的，0.8向下浮动0.1，向上浮动0.2。评论数低于30的都为null
     const endorsement = latestArchive?.comment
