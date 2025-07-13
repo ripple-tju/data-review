@@ -752,7 +752,7 @@ const scatterOption = computed<EChartsOption>(() => {
             if (total > 20) return '#66bb6a'; // 中等互动 - 绿色
             return '#42a5f5'; // 低互动 - 蓝色
           },
-          opacity: 0.7,
+          opacity: 0.2,
         },
         emphasis: {
           itemStyle: {
