@@ -684,20 +684,15 @@ const postCountByDay = computed(() => {
   }));
 });
 
-const postArchiveListDividedByDay = computed(() => {
-  return divideByDay(postArchiveList.value, (postArchive) =>
-    dayjs(postArchive.capturedAt).format('YYYY-MM-DD'),
-  );
-});
-
 const totalStatsDivided = computed(() => {
-  return postArchiveListDividedByDay.value.map((day) => {
+  console.log('postViewDivideByDay.value', postViewDivideByDay.value);
+  return postViewDivideByDay.value.map((day) => {
     const date = day.date;
     const stat = day.itemList.reduce(
       (stats, post) => ({
-        like: stats.like + (post.like ?? 0),
-        share: stats.share + (post.share ?? 0),
-        comment: stats.comment + (post.comment ?? 0),
+        like: stats.like + (post.archive[0]!.like ?? 0),
+        share: stats.share + (post.archive[0]!.share ?? 0),
+        comment: stats.comment + (post.archive[0]!.comment ?? 0),
       }),
       { like: 0, share: 0, comment: 0 },
     );
