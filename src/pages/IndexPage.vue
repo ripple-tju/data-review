@@ -94,7 +94,7 @@
             日期筛选器
           </div>
           <div class="text-caption q-mb-md text-grey">
-            存档数据时间范围: {{ dateRange?.earliest }} 至 {{ dateRange?.latest }} (共
+            帖子创建时间范围: {{ dateRange?.earliest }} 至 {{ dateRange?.latest }} (共
             {{ filteredDateStats.length }} 天，基于已选身份)
           </div>
 
@@ -146,7 +146,7 @@
               color="grey"
               text-color="white"
               icon="archive"
-              :label="`存档总计: ${filteredDateStats.reduce((sum, stat) => sum + stat.archiveCount, 0)} 个`"
+              :label="`关联存档: ${filteredDateStats.reduce((sum, stat) => sum + stat.archiveCount, 0)} 个`"
             />
             <q-chip
               color="info"
@@ -160,7 +160,7 @@
           <div class="date-list" style="max-height: 300px; overflow-y: auto">
             <q-list bordered separator dense>
               <q-item-label header class="text-weight-bold">
-                日期列表 ({{ filteredDateStats.length }} 天，已选身份的数据)
+                日期列表 ({{ filteredDateStats.length }} 天，已选身份的帖子创建日期)
               </q-item-label>
 
               <q-item
@@ -183,7 +183,7 @@
                   </q-item-label>
                   <q-item-label caption>
                     <span class="text-grey-7">
-                      📁 存档: {{ dateStat.archiveCount }} 个 | 📝 帖子: {{ dateStat.postCount }} 个
+                      帖子: {{ dateStat.postCount }} 个 | 关联存档: {{ dateStat.archiveCount }} 个
                     </span>
                   </q-item-label>
                 </q-item-section>
@@ -520,43 +520,34 @@ const currentIdentityData = computed(() => {
   );
 });
 
-// 🔥 [优化] 计算筛选后的帖子数据 - 使用computed避免重复计算
+// 🔥 [优化] 计算筛选后的帖子数据 - 按帖子创建时间筛选
 const getFilteredPostView = () => {
   console.log('📊 [数据筛选] 开始计算筛选后的帖子数据...');
 
-  // 获取基础筛选数据
+  // 获取基础筛选数据（按身份筛选）
   let filteredAllPostView = allPostView.value.filter((postView) =>
     selectedIdentityIds.value.includes(postView.post.author),
   );
 
-  // 如果选择了特定日期，进一步筛选
+  // 如果选择了特定日期，按帖子创建时间进一步筛选
   if (selectedDates.value.length > 0) {
-    filteredAllPostView = filteredAllPostView
-      .map((postView) => {
-        // 只保留在选定日期范围内的存档
-        const filteredArchives = postView.archive.filter((archive) => {
-          try {
-            const isoString = new Date(archive.capturedAt).toISOString();
-            const archiveDate = isoString.split('T')[0];
-            return archiveDate && selectedDates.value.includes(archiveDate);
-          } catch {
-            return false;
-          }
-        });
-
-        return {
-          ...postView,
-          archive: filteredArchives,
-        };
-      })
-      .filter((postView) => postView.archive.length > 0); // 移除没有有效存档的帖子
+    filteredAllPostView = filteredAllPostView.filter((postView) => {
+      try {
+        if (!postView.post.createdAt) return false;
+        const isoString = new Date(postView.post.createdAt).toISOString();
+        const postDate = isoString.split('T')[0];
+        return postDate && selectedDates.value.includes(postDate);
+      } catch {
+        return false;
+      }
+    });
   }
 
   console.log(`📊 [数据筛选] 帖子数据筛选完成，结果: ${filteredAllPostView.length} 个帖子`);
   return filteredAllPostView;
 };
 
-// 🔥 [优化] 计算筛选后的分组数据 - 使用缓存避免重复API调用
+// 🔥 [优化] 计算筛选后的分组数据 - 按帖子创建时间筛选
 const getFilteredGroupByIdentity = () => {
   console.log('📊 [数据筛选] 开始计算筛选后的分组数据...');
 
@@ -576,26 +567,19 @@ const getFilteredGroupByIdentity = () => {
           `📊 [数据筛选] 使用缓存数据为身份 "${existingGroup.name}" (${selectedId})，帖子数量: ${existingGroup.postViewList.length}`,
         );
 
-        // 如果有日期筛选，对帖子进行日期筛选
+        // 如果有日期筛选，按帖子创建时间对帖子进行筛选
         let postViewList = existingGroup.postViewList;
         if (selectedDates.value.length > 0) {
-          postViewList = postViewList
-            .map((postView) => {
-              const filteredArchives = postView.archive.filter((archive) => {
-                try {
-                  const isoString = new Date(archive.capturedAt).toISOString();
-                  const archiveDate = isoString.split('T')[0];
-                  return archiveDate && selectedDates.value.includes(archiveDate);
-                } catch {
-                  return false;
-                }
-              });
-              return {
-                ...postView,
-                archive: filteredArchives,
-              };
-            })
-            .filter((postView) => postView.archive.length > 0);
+          postViewList = postViewList.filter((postView) => {
+            try {
+              if (!postView.post.createdAt) return false;
+              const isoString = new Date(postView.post.createdAt).toISOString();
+              const postDate = isoString.split('T')[0];
+              return postDate && selectedDates.value.includes(postDate);
+            } catch {
+              return false;
+            }
+          });
         }
 
         filteredPostViewListGroupByIdentity.push({
@@ -705,21 +689,22 @@ const filteredDateStats = computed(() => {
     return [];
   }
 
-  console.log('📅 [日期分析] 开始分析筛选后的存档日期统计...');
+  console.log('📅 [日期分析] 开始分析筛选后的帖子日期统计...');
 
-  // 收集选择身份的存档数据
-  const filteredArchives: Array<Spec.PostArchive.Type> = [];
+  // 收集选择身份的帖子数据（基于帖子创建时间）
+  const filteredPosts: Array<Spec.PostView.Type> = [];
   allPostView.value.forEach((postView) => {
     // 只包含选择的身份
     if (selectedIdentityIds.value.includes(postView.post.author)) {
-      filteredArchives.push(...postView.archive);
+      filteredPosts.push(postView);
     }
   });
 
-  // 使用 divideByDay 按日期分组存档
-  const archivesByDate = divideByDay(filteredArchives, (archive) => {
+  // 使用 divideByDay 按帖子创建日期分组
+  const postsByDate = divideByDay(filteredPosts, (postView) => {
     try {
-      const isoString = new Date(archive.capturedAt).toISOString();
+      if (!postView.post.createdAt) return '';
+      const isoString = new Date(postView.post.createdAt).toISOString();
       const datePart = isoString.split('T')[0];
       return datePart || '';
     } catch {
@@ -728,28 +713,30 @@ const filteredDateStats = computed(() => {
   }).filter((item) => item.date !== ''); // 过滤掉无效日期
 
   // 统计每个日期的信息
-  const stats = archivesByDate
+  const stats = postsByDate
     .map(({ date, itemList }) => {
-      // 计算该日期下唯一帖子数量
-      const uniquePostIds = new Set(itemList.map((archive) => archive.post));
+      // 计算该日期的帖子数量和总存档数量
+      const postCount = itemList.length;
+      const archiveCount = itemList.reduce((sum, postView) => sum + postView.archive.length, 0);
+
       return {
         date,
-        archiveCount: itemList.length,
-        postCount: uniquePostIds.size,
+        postCount,
+        archiveCount,
       };
     })
     .sort((a, b) => a.date.localeCompare(b.date)); // 按日期排序
 
-  console.log('📅 [日期分析] 筛选后日期统计分析完成:', {
+  console.log('📅 [日期分析] 筛选后帖子日期统计分析完成:', {
     totalDays: stats.length,
-    totalArchives: filteredArchives.length,
+    totalPosts: filteredPosts.length,
     selectedIdentities: selectedIdentityIds.value.length,
   });
 
   return stats;
 });
 
-// 🔥 [日期分析] 分析所有存档数据的日期统计（用于初始化）
+// 🔥 [日期分析] 分析所有帖子数据的日期统计（用于初始化）
 const analyzeDateStats = () => {
   if (allPostView.value.length === 0) {
     dateStats.value = [];
@@ -758,18 +745,13 @@ const analyzeDateStats = () => {
     return;
   }
 
-  console.log('📅 [日期分析] 开始分析存档日期统计...');
+  console.log('📅 [日期分析] 开始分析帖子日期统计...');
 
-  // 收集所有存档数据
-  const allArchives: Array<Spec.PostArchive.Type> = [];
-  allPostView.value.forEach((postView) => {
-    allArchives.push(...postView.archive);
-  });
-
-  // 使用 divideByDay 按日期分组存档
-  const archivesByDate = divideByDay(allArchives, (archive) => {
+  // 使用 divideByDay 按帖子创建日期分组
+  const postsByDate = divideByDay(allPostView.value, (postView) => {
     try {
-      const isoString = new Date(archive.capturedAt).toISOString();
+      if (!postView.post.createdAt) return '';
+      const isoString = new Date(postView.post.createdAt).toISOString();
       const datePart = isoString.split('T')[0];
       return datePart || '';
     } catch {
@@ -778,14 +760,16 @@ const analyzeDateStats = () => {
   }).filter((item) => item.date !== ''); // 过滤掉无效日期
 
   // 统计每个日期的信息
-  const stats = archivesByDate
+  const stats = postsByDate
     .map(({ date, itemList }) => {
-      // 计算该日期下唯一帖子数量
-      const uniquePostIds = new Set(itemList.map((archive) => archive.post));
+      // 计算该日期的帖子数量和总存档数量
+      const postCount = itemList.length;
+      const archiveCount = itemList.reduce((sum, postView) => sum + postView.archive.length, 0);
+
       return {
         date,
-        archiveCount: itemList.length,
-        postCount: uniquePostIds.size,
+        postCount,
+        archiveCount,
       };
     })
     .sort((a, b) => a.date.localeCompare(b.date)); // 按日期排序
@@ -809,9 +793,9 @@ const analyzeDateStats = () => {
     selectedDates.value = [];
   }
 
-  console.log('📅 [日期分析] 日期统计分析完成:', {
+  console.log('📅 [日期分析] 帖子日期统计分析完成:', {
     totalDays: stats.length,
-    totalArchives: allArchives.length,
+    totalPosts: allPostView.value.length,
     dateRange: dateRange.value,
   });
 };
