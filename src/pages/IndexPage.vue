@@ -1312,60 +1312,24 @@ const processOldData = async (
   analyzeDateStats();
 };
 
-// WebGL上下文清理函数
-let cleanupTimer: NodeJS.Timeout | null = null;
-
-const cleanupWebGLContexts = () => {
-  console.log('🧹 [WebGL清理] 开始清理WebGL上下文...');
-  const canvases = document.querySelectorAll('canvas');
-  let cleanedCount = 0;
-
-  canvases.forEach((canvas) => {
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (gl && gl instanceof WebGLRenderingContext) {
-      const loseContext = gl.getExtension('WEBGL_lose_context');
-      if (loseContext) {
-        loseContext.loseContext();
-        cleanedCount++;
-      }
-    }
-  });
-
-  console.log(`🧹 [WebGL清理] 清理完成，清理了 ${cleanedCount} 个WebGL上下文`);
-};
-
-// 🔥 [优化] 防抖WebGL清理，避免频繁清理
-const debouncedCleanup = () => {
-  if (cleanupTimer) {
-    clearTimeout(cleanupTimer);
-  }
-
-  cleanupTimer = setTimeout(() => {
-    cleanupWebGLContexts();
-    cleanupTimer = null;
-  }, 200); // 200ms 防抖
-};
-
-// 监听标签页切换，防抖清理WebGL上下文
-watch(activeTab, (newTab, oldTab) => {
+// 🔥 [优化] 简化的 WebGL 上下文清理策略
+// 移除主动清理，让浏览器自动管理上下文，避免干扰 ECharts-GL 的内部状态
+const handleTabSwitch = (newTab: string, oldTab: string) => {
   if (oldTab && newTab !== oldTab) {
     console.log(`🔄 [标签切换] 从 ${oldTab} 切换到 ${newTab}`);
-    debouncedCleanup();
+    // 简单的延迟，让当前标签页的渲染完全停止
+    setTimeout(() => {
+      console.log('🎯 [标签切换] 切换完成，依赖浏览器自动管理 WebGL 上下文');
+    }, 100);
   }
-});
+};
 
-// 组件卸载时清理WebGL上下文和定时器
+// 监听标签页切换
+watch(activeTab, handleTabSwitch);
+
+// 组件卸载时的清理
 onUnmounted(() => {
-  console.log('🚪 [组件卸载] 清理所有WebGL上下文和定时器');
-
-  // 清理定时器
-  if (cleanupTimer) {
-    clearTimeout(cleanupTimer);
-    cleanupTimer = null;
-  }
-
-  // 立即清理WebGL上下文
-  cleanupWebGLContexts();
+  console.log('🚪 [组件卸载] 组件卸载，依赖浏览器自动清理 WebGL 上下文');
 });
 
 onMounted(async () => {
