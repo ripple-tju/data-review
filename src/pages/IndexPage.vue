@@ -512,16 +512,18 @@ const identityOptions = computed(() => {
 // 🔥 [优化] 计算当前选中身份的数据 - 避免在模板中重复计算
 const currentIdentityData = computed(() => {
   if (!selectedIdentityForView.value || !analysisResults.value) return null;
-  
-  return analysisResults.value.filteredPostViewListGroupByIdentity.find(
-    item => item.name === selectedIdentityForView.value
-  ) || null;
+
+  return (
+    analysisResults.value.filteredPostViewListGroupByIdentity.find(
+      (item) => item.name === selectedIdentityForView.value,
+    ) || null
+  );
 });
 
 // 🔥 [优化] 计算筛选后的帖子数据 - 使用computed避免重复计算
 const getFilteredPostView = () => {
   console.log('📊 [数据筛选] 开始计算筛选后的帖子数据...');
-  
+
   // 获取基础筛选数据
   let filteredAllPostView = allPostView.value.filter((postView) =>
     selectedIdentityIds.value.includes(postView.post.author),
@@ -557,7 +559,7 @@ const getFilteredPostView = () => {
 // 🔥 [优化] 计算筛选后的分组数据 - 使用缓存避免重复API调用
 const getFilteredGroupByIdentity = () => {
   console.log('📊 [数据筛选] 开始计算筛选后的分组数据...');
-  
+
   const filteredPostViewListGroupByIdentity = [];
 
   for (const selectedId of selectedIdentityIds.value) {
@@ -566,12 +568,14 @@ const getFilteredGroupByIdentity = () => {
     if (identity) {
       // 从已有的分组数据中查找，避免重复API调用
       const existingGroup = postViewListGroupByIdentity.value.find(
-        group => group.name === (identity.archive[0]?.name || 'Unknown')
+        (group) => group.name === (identity.archive[0]?.name || 'Unknown'),
       );
-      
+
       if (existingGroup) {
-        console.log(`📊 [数据筛选] 使用缓存数据为身份 "${existingGroup.name}" (${selectedId})，帖子数量: ${existingGroup.postViewList.length}`);
-        
+        console.log(
+          `📊 [数据筛选] 使用缓存数据为身份 "${existingGroup.name}" (${selectedId})，帖子数量: ${existingGroup.postViewList.length}`,
+        );
+
         // 如果有日期筛选，对帖子进行日期筛选
         let postViewList = existingGroup.postViewList;
         if (selectedDates.value.length > 0) {
@@ -602,7 +606,9 @@ const getFilteredGroupByIdentity = () => {
     }
   }
 
-  console.log(`📊 [数据筛选] 分组数据筛选完成，结果: ${filteredPostViewListGroupByIdentity.length} 个分组`);
+  console.log(
+    `📊 [数据筛选] 分组数据筛选完成，结果: ${filteredPostViewListGroupByIdentity.length} 个分组`,
+  );
   return filteredPostViewListGroupByIdentity;
 };
 
@@ -868,7 +874,7 @@ watch(
       }
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // 根据作者ID查找作者名字
@@ -1362,7 +1368,7 @@ const debouncedCleanup = () => {
   if (cleanupTimer) {
     clearTimeout(cleanupTimer);
   }
-  
+
   cleanupTimer = setTimeout(() => {
     cleanupWebGLContexts();
     cleanupTimer = null;
@@ -1380,13 +1386,13 @@ watch(activeTab, (newTab, oldTab) => {
 // 组件卸载时清理WebGL上下文和定时器
 onUnmounted(() => {
   console.log('🚪 [组件卸载] 清理所有WebGL上下文和定时器');
-  
+
   // 清理定时器
   if (cleanupTimer) {
     clearTimeout(cleanupTimer);
     cleanupTimer = null;
   }
-  
+
   // 立即清理WebGL上下文
   cleanupWebGLContexts();
 });

@@ -29,9 +29,9 @@
     <div>
       <AppKChart title="评论趋势" :option="commentOption" :height="300" />
     </div>
-    <div>
+    <!-- <div>
       <AppKChart title="点赞、分享、评论趋势对比" :option="interactionTrendOption" :height="400" />
-    </div>
+    </div> -->
     <div>
       <AppKChart title="每天发文量" :option="postCountOption" :height="300" />
     </div>
