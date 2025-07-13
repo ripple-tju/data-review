@@ -534,8 +534,9 @@ const getFilteredPostView = () => {
     filteredAllPostView = filteredAllPostView.filter((postView) => {
       try {
         if (!postView.post.createdAt) return false;
-        const isoString = new Date(postView.post.createdAt).toISOString();
-        const postDate = isoString.split('T')[0];
+        // 使用本地时区避免时区转换问题
+        const date = new Date(postView.post.createdAt);
+        const postDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         return postDate && selectedDates.value.includes(postDate);
       } catch {
         return false;
@@ -573,8 +574,9 @@ const getFilteredGroupByIdentity = () => {
           postViewList = postViewList.filter((postView) => {
             try {
               if (!postView.post.createdAt) return false;
-              const isoString = new Date(postView.post.createdAt).toISOString();
-              const postDate = isoString.split('T')[0];
+              // 使用本地时区避免时区转换问题
+              const date = new Date(postView.post.createdAt);
+              const postDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
               return postDate && selectedDates.value.includes(postDate);
             } catch {
               return false;
@@ -704,8 +706,9 @@ const filteredDateStats = computed(() => {
   const postsByDate = divideByDay(filteredPosts, (postView) => {
     try {
       if (!postView.post.createdAt) return '';
-      const isoString = new Date(postView.post.createdAt).toISOString();
-      const datePart = isoString.split('T')[0];
+      // 使用本地时区避免时区转换问题
+      const date = new Date(postView.post.createdAt);
+      const datePart = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       return datePart || '';
     } catch {
       return '';
@@ -751,8 +754,9 @@ const analyzeDateStats = () => {
   const postsByDate = divideByDay(allPostView.value, (postView) => {
     try {
       if (!postView.post.createdAt) return '';
-      const isoString = new Date(postView.post.createdAt).toISOString();
-      const datePart = isoString.split('T')[0];
+      // 使用本地时区避免时区转换问题
+      const date = new Date(postView.post.createdAt);
+      const datePart = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       return datePart || '';
     } catch {
       return '';
