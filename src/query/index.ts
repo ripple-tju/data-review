@@ -66,6 +66,63 @@ export const Query = ({
 }) => {
   // const { data: parsed, lastCreatedAt, firstCreatedAt } = parseForQuery(PeriodData);
 
+  // 🔥 [性能优化] 在Query函数调用时一次性构建所有索引，避免重复计算
+  console.time('🔥 [性能优化] 构建全部数据索引');
+
+  // 解析数据
+  const identityList = Identity.Schema.array().parse(parsed.identityList);
+  const identityArchiveList = IdentityArchive.Schema.array().parse(parsed.identityArchiveList);
+  const postList = Post.Schema.array().parse(parsed.postList);
+  const postArchiveList = PostArchive.Schema.array().parse(parsed.postArchiveList);
+
+  // 构建 identityArchivesByIdentityId 索引
+  console.time('🔥 [性能优化] 构建 identityArchivesByIdentityId 索引');
+  const identityArchivesByIdentityId = new Map<string, Array<IdentityArchive.Type>>();
+  for (const archive of identityArchiveList) {
+    if (!identityArchivesByIdentityId.has(archive.identity)) {
+      identityArchivesByIdentityId.set(archive.identity, []);
+    }
+    identityArchivesByIdentityId.get(archive.identity)!.push(archive);
+  }
+  // 预排序每个身份的存档
+  for (const [, archives] of identityArchivesByIdentityId) {
+    archives.sort(sortByCapturedAt);
+  }
+  console.timeEnd('🔥 [性能优化] 构建 identityArchivesByIdentityId 索引');
+  console.log(
+    `🔥 [性能优化] identityArchivesByIdentityId 索引包含 ${identityArchivesByIdentityId.size} 个身份`,
+  );
+
+  // 构建 postArchivesByPostId 索引
+  console.time('🔥 [性能优化] 构建 postArchivesByPostId 索引');
+  const postArchivesByPostId = new Map<string, Array<PostArchive.Type>>();
+  for (const archive of postArchiveList) {
+    if (!postArchivesByPostId.has(archive.post)) {
+      postArchivesByPostId.set(archive.post, []);
+    }
+    postArchivesByPostId.get(archive.post)!.push(archive);
+  }
+  // 预排序每个帖子的存档
+  for (const [, archives] of postArchivesByPostId) {
+    archives.sort(sortByCapturedAt);
+  }
+  console.timeEnd('🔥 [性能优化] 构建 postArchivesByPostId 索引');
+  console.log(`🔥 [性能优化] postArchivesByPostId 索引包含 ${postArchivesByPostId.size} 个帖子`);
+
+  // 构建 postsByAuthorId 索引
+  console.time('🔥 [性能优化] 构建 postsByAuthorId 索引');
+  const postsByAuthorId = new Map<string, Array<Post.Type>>();
+  for (const post of postList) {
+    if (!postsByAuthorId.has(post.author)) {
+      postsByAuthorId.set(post.author, []);
+    }
+    postsByAuthorId.get(post.author)!.push(post);
+  }
+  console.timeEnd('🔥 [性能优化] 构建 postsByAuthorId 索引');
+  console.log(`🔥 [性能优化] postsByAuthorId 索引包含 ${postsByAuthorId.size} 个作者`);
+
+  console.timeEnd('🔥 [性能优化] 构建全部数据索引');
+
   const TARGET_LIST: (TargetData & {
     brand: TargetBrandData;
     stats: TargetStatsData;
@@ -74,6 +131,10 @@ export const Query = ({
     identityArchiveList: Array<IdentityArchive.Type>;
     postList: Array<Post.Type>;
     postArchiveList: Array<PostArchive.Type>;
+    // 性能优化：预建立索引（从外部传入，避免重复构建）
+    identityArchivesByIdentityId: Map<string, Array<IdentityArchive.Type>>;
+    postArchivesByPostId: Map<string, Array<PostArchive.Type>>;
+    postsByAuthorId: Map<string, Array<Post.Type>>;
   })[] = [
     {
       name: 'Facebook',
@@ -97,10 +158,14 @@ export const Query = ({
         },
       },
       // rawList,
-      identityList: Identity.Schema.array().parse(parsed.identityList),
-      identityArchiveList: IdentityArchive.Schema.array().parse(parsed.identityArchiveList),
-      postList: Post.Schema.array().parse(parsed.postList),
-      postArchiveList: PostArchive.Schema.array().parse(parsed.postArchiveList),
+      identityList,
+      identityArchiveList,
+      postList,
+      postArchiveList,
+      // 🔥 [性能优化] 直接使用预构建的索引，避免重复计算
+      identityArchivesByIdentityId,
+      postArchivesByPostId,
+      postsByAuthorId,
     },
     {
       name: 'X',
@@ -128,6 +193,9 @@ export const Query = ({
       identityArchiveList: [],
       postList: [],
       postArchiveList: [],
+      identityArchivesByIdentityId: new Map(),
+      postArchivesByPostId: new Map(),
+      postsByAuthorId: new Map(),
     },
     {
       name: 'Youtube',
@@ -155,6 +223,9 @@ export const Query = ({
       identityArchiveList: [],
       postList: [],
       postArchiveList: [],
+      identityArchivesByIdentityId: new Map(),
+      postArchivesByPostId: new Map(),
+      postsByAuthorId: new Map(),
     },
   ];
 
@@ -205,43 +276,46 @@ export const Query = ({
             return await Promise.resolve({ ...target.brand });
           },
           async getHotPostTop(limit: number = 10): Promise<Array<PostView.Type>> {
-            return await Promise.resolve(
-              target.postList
-                .sort(() => Math.random() - 0.5)
-                .slice(0, limit)
-                .map((p) => {
-                  return {
-                    post: p,
-                    archive: target.postArchiveList.filter((pa) => pa.post === p.id),
-                  };
-                }),
-            );
+            console.time('🔥 [性能优化] getHotPostTop');
+            const result = target.postList
+              .sort(() => Math.random() - 0.5)
+              .slice(0, limit)
+              .map((p) => {
+                return {
+                  post: p,
+                  archive: target.postArchivesByPostId.get(p.id) || [],
+                };
+              });
+            console.timeEnd('🔥 [性能优化] getHotPostTop');
+            return await Promise.resolve(result);
           },
           async getLastPostTop(limit: number = 10): Promise<Array<PostView.Type>> {
-            return await Promise.resolve(
-              target.postList
-                .sort(() => Math.random() - 0.5)
-                .slice(0, limit)
-                .map((p) => {
-                  return {
-                    post: p,
-                    archive: target.postArchiveList.filter((ia) => ia.post === p.id),
-                  };
-                }),
-            );
+            console.time('🔥 [性能优化] getLastPostTop');
+            const result = target.postList
+              .sort(() => Math.random() - 0.5)
+              .slice(0, limit)
+              .map((p) => {
+                return {
+                  post: p,
+                  archive: target.postArchivesByPostId.get(p.id) || [],
+                };
+              });
+            console.timeEnd('🔥 [性能优化] getLastPostTop');
+            return await Promise.resolve(result);
           },
           async getLastIdentityTop(limit: number = 10): Promise<Array<IdentityView.Type>> {
-            return await Promise.resolve(
-              target.identityList
-                .sort(() => Math.random() - 0.5)
-                .slice(0, limit)
-                .map((p) => {
-                  return {
-                    identity: p,
-                    archive: target.identityArchiveList.filter((ia) => ia.identity === p.id),
-                  };
-                }),
-            );
+            console.time('🔥 [性能优化] getLastIdentityTop');
+            const result = target.identityList
+              .sort(() => Math.random() - 0.5)
+              .slice(0, limit)
+              .map((p) => {
+                return {
+                  identity: p,
+                  archive: target.identityArchivesByIdentityId.get(p.id) || [],
+                };
+              });
+            console.timeEnd('🔥 [性能优化] getLastIdentityTop');
+            return await Promise.resolve(result);
           },
           async getNewArchiveCountByPeriod(
             limit: number = 10,
@@ -342,68 +416,83 @@ export const Query = ({
             return await Promise.resolve(PostView.Schema.array().parse(result));
           },
           async getPostViewList(): Promise<Array<PostView.Type>> {
-            return await Promise.resolve(
-              target.postList.map((p) => {
-                return {
-                  post: p,
-                  archive: target.postArchiveList
-                    .filter((pa) => pa.post === p.id)
-                    .sort(sortByCapturedAt),
-                };
-              }),
-            );
+            console.time('🔥 [性能优化] getPostViewList');
+            const result = target.postList.map((p) => {
+              return {
+                post: p,
+                archive: target.postArchivesByPostId.get(p.id) || [],
+              };
+            });
+            console.timeEnd('🔥 [性能优化] getPostViewList');
+            return await Promise.resolve(result);
           },
           async getPostViewById(id: string): Promise<PostView.Type | null> {
+            console.time('🔥 [性能优化] getPostViewById');
             const post = target.postList.find((i) => i.id === id);
 
             if (post === undefined) {
+              console.timeEnd('🔥 [性能优化] getPostViewById');
               return null;
             }
 
             const result: PostView.Type = {
               post,
-              archive: target.postArchiveList.filter((ia) => ia.post === id).sort(sortByCapturedAt),
+              archive: target.postArchivesByPostId.get(id) || [],
             };
 
+            console.timeEnd('🔥 [性能优化] getPostViewById');
             return await Promise.resolve(PostView.Schema.parse(result));
           },
           async getIdentityViewList(): Promise<Array<IdentityView.Type>> {
-            return await Promise.resolve(
-              target.identityList.map((p) => {
-                return {
-                  identity: p,
-                  archive: target.identityArchiveList
-                    .filter((ia) => ia.identity === p.id)
-                    .sort(sortByCapturedAt),
-                };
-              }),
-            );
+            console.time('🔥 [性能优化] getIdentityViewList');
+            const result = target.identityList.map((p) => {
+              return {
+                identity: p,
+                archive: target.identityArchivesByIdentityId.get(p.id) || [],
+              };
+            });
+            console.timeEnd('🔥 [性能优化] getIdentityViewList');
+            return await Promise.resolve(result);
           },
           async getIdentityViewById(id: string): Promise<IdentityView.Type | null> {
+            console.time('🔥 [性能优化] getIdentityViewById');
             const identity = target.identityList.find((i) => i.id === id);
 
             if (identity === undefined) {
+              console.timeEnd('🔥 [性能优化] getIdentityViewById');
               return null;
             }
 
             const result: IdentityView.Type = {
               identity,
-              archive: target.identityArchiveList
-                .filter((ia) => ia.identity === id)
-                .sort(sortByCapturedAt),
+              archive: target.identityArchivesByIdentityId.get(id) || [],
             };
 
+            console.timeEnd('🔥 [性能优化] getIdentityViewById');
             return await Promise.resolve(IdentityView.Schema.parse(result));
           },
           async getPostViewListByIdentityId(authorId: string): Promise<Array<PostView.Type>> {
-            const pvList = await this.getPostViewList();
-            return pvList
-              .filter((p) => p.post.author === authorId)
-              .sort((a, b) => {
-                const apa = a.archive.at(0)?.like ?? 0;
-                const apb = b.archive.at(0)?.like ?? 0;
-                return apb - apa;
-              });
+            console.time('🔥 [性能优化] getPostViewListByIdentityId');
+
+            // 使用索引直接获取该身份的所有帖子
+            const authorPosts = target.postsByAuthorId.get(authorId) || [];
+
+            const pvList = authorPosts.map((post) => ({
+              post,
+              archive: target.postArchivesByPostId.get(post.id) || [],
+            }));
+
+            const result = pvList.sort((a, b) => {
+              const apa = a.archive.at(0)?.like ?? 0;
+              const apb = b.archive.at(0)?.like ?? 0;
+              return apb - apa;
+            });
+
+            console.timeEnd('🔥 [性能优化] getPostViewListByIdentityId');
+            console.log(
+              `🔥 [性能优化] getPostViewListByIdentityId 返回 ${result.length} 个帖子 (作者: ${authorId})`,
+            );
+            return await Promise.resolve(result);
           },
           async getHotPostList(
             range: number = DAY * 7,
@@ -489,35 +578,29 @@ export const Query = ({
           // 	return Promise.resolve(Object.values(userStatistic));
           // },
           async getIdentityStatisticsViewList(): Promise<Array<IdentityStatisticsView.Type>> {
-            console.time('getIdentityStatisticsViewList');
-            console.time('getIdentityViewList');
+            console.time('🔥 [性能优化] getIdentityStatisticsViewList - 总耗时');
+
+            console.time('🔥 [性能优化] getIdentityViewList');
             const identityList = await this.getIdentityViewList();
-            console.timeEnd('getIdentityViewList');
+            console.timeEnd('🔥 [性能优化] getIdentityViewList');
 
-            console.time('getPostViewList');
-            const postViewList = await this.getPostViewList();
-            console.timeEnd('getPostViewList');
-            const postViewListByIdentityId = Object.groupBy(postViewList, (i) => i.post.author);
-
+            console.time('🔥 [性能优化] 构建用户统计数据');
             const userStatistic = identityList.map((iv) => {
               const identityId = iv.identity.id;
               const identityName = iv.archive[iv.archive.length - 1]!.name;
 
-              console.time('getPostViewListByIdentityId' + identityId);
-              const postViewList = postViewListByIdentityId[identityId]!;
-              console.timeEnd('getPostViewListByIdentityId' + identityId);
+              // 直接使用索引获取该身份的帖子列表，避免 O(n) 查找
+              const authorPosts = target.postsByAuthorId.get(identityId) || [];
 
-              console.log(postViewListByIdentityId, identityId);
+              const postViewListWithLatestArchive = authorPosts.map((post) => {
+                const postArchives = target.postArchivesByPostId.get(post.id) || [];
+                const latestArchive = postArchives[postArchives.length - 1];
 
-              const postViewListWithLatestArchive = postViewList.map((pv) => {
-                const r = {
-                  post: pv.post,
-                  archive: pv.archive[pv.archive.length - 1]!,
+                return {
+                  post,
+                  archive: latestArchive!,
                 };
-                return r;
               });
-
-              console.log('postViewListWithLatestArchive', postViewListWithLatestArchive);
 
               const { like, comment, share, view, favorite } = postViewListWithLatestArchive.reduce(
                 (acc, pv) => {
@@ -547,7 +630,13 @@ export const Query = ({
 
               return result;
             });
-            console.timeEnd('getIdentityStatisticsViewList');
+
+            console.timeEnd('🔥 [性能优化] 构建用户统计数据');
+            console.timeEnd('🔥 [性能优化] getIdentityStatisticsViewList - 总耗时');
+            console.log(
+              `🔥 [性能优化] getIdentityStatisticsViewList 返回 ${userStatistic.length} 个用户统计`,
+            );
+
             return userStatistic;
           },
         };

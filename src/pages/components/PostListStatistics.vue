@@ -294,17 +294,32 @@ const latestPostArchiveCutWordList = computed(() => {
   const startTime = performance.now();
   console.log('🔄 [PostStatistics] 开始计算 latestPostArchiveCutWordList...');
 
+  // 🔥 [性能优化] 将cutWordCache转换为Map索引，避免O(n²)查找
+  const indexBuildStart = performance.now();
+  const cutWordMap = new Map<string, Array<string>>();
+  for (const item of cutWordCache) {
+    cutWordMap.set(item.id, item.cut);
+  }
+  const indexBuildEnd = performance.now();
+  console.log(
+    `🔥 [性能优化] cutWordCache索引构建耗时: ${(indexBuildEnd - indexBuildStart).toFixed(2)}ms，索引了 ${cutWordMap.size} 个条目`,
+  );
+
+  const mapStart = performance.now();
   const result = latestPostArchiveList.value.map((post) => {
-    const cut = cutWordCache.find((item) => item.id === post.id)?.cut || [];
+    // 🔥 [性能优化] 使用Map直接查找，O(1)时间复杂度，添加空值检查
+    const cut = post.id ? cutWordMap.get(post.id) || [] : [];
     return {
       ...post,
       cut,
     };
   });
+  const mapEnd = performance.now();
+  console.log(`🔥 [性能优化] 数据映射耗时: ${(mapEnd - mapStart).toFixed(2)}ms`);
 
   const endTime = performance.now();
   console.log(
-    `🔄 [PostStatistics] latestPostArchiveCutWordList 计算完成，耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 条记录`,
+    `🔄 [PostStatistics] latestPostArchiveCutWordList 计算完成，总耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 条记录`,
   );
   return result;
 });
@@ -321,24 +336,24 @@ const wordOccurrence = computed(() => {
     `🔄 [PostStatistics] 词汇展平完成，耗时: ${(flatMapEnd - flatMapStart).toFixed(2)}ms，获得 ${words.length} 个词汇`,
   );
 
+  // 🔥 [性能优化] 预编译正则表达式，避免重复编译
+  const punctuationRegex =
+    /^[\u3000-\u303F\uFF00-\uFFEF\u2000-\u206F\u0020-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u007E]+$/;
+  const digitRegex = /^\d+$/;
+
   const filterStart = performance.now();
   const filteredWords = words.filter((word) => {
-    // 过滤长度、URL、@用户名
-    if (word.length <= 1 || word.startsWith('http') || word.startsWith('@')) {
-      return false;
-    }
+    // 🔥 [性能优化] 快速基本检查（最常见的过滤条件优先）
+    if (word.length <= 1) return false;
 
-    // 过滤中英文标点符号
-    const punctuationRegex =
-      /^[\u3000-\u303F\uFF00-\uFFEF\u2000-\u206F\u0020-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u007E]+$/;
-    if (punctuationRegex.test(word)) {
-      return false;
-    }
+    // 快速字符检查，避免正则表达式
+    const firstChar = word[0];
+    if (firstChar === 'h' && word.startsWith('http')) return false;
+    if (firstChar === '@') return false;
 
-    // 过滤纯数字
-    if (/^\d+$/.test(word)) {
-      return false;
-    }
+    // 🔥 [性能优化] 使用预编译的正则表达式
+    if (punctuationRegex.test(word)) return false;
+    if (digitRegex.test(word)) return false;
 
     return true;
   });
@@ -347,17 +362,25 @@ const wordOccurrence = computed(() => {
     `🔄 [PostStatistics] 词汇过滤完成，耗时: ${(filterEnd - filterStart).toFixed(2)}ms，剩余 ${filteredWords.length} 个有效词汇`,
   );
 
+  // 🔥 [性能优化] 使用Map手动统计词频，比Object.groupBy更高效
   const groupStart = performance.now();
-  const groupByed = Object.groupBy(filteredWords, (word) => word);
+  const wordCountMap = new Map<string, number>();
+  for (const word of filteredWords) {
+    const count = wordCountMap.get(word) || 0;
+    wordCountMap.set(word, count + 1);
+  }
   const groupEnd = performance.now();
   console.log(
-    `🔄 [PostStatistics] 词汇分组完成，耗时: ${(groupEnd - groupStart).toFixed(2)}ms，获得 ${Object.keys(groupByed).length} 个不同词汇`,
+    '🔥 [性能优化] 词汇分组完成，耗时:',
+    (groupEnd - groupStart).toFixed(2) + 'ms，获得',
+    wordCountMap.size,
+    '个不同词汇',
   );
 
   const mapStart = performance.now();
-  const result = Object.entries(groupByed).map(([word, occurrences]) => ({
+  const result = Array.from(wordCountMap.entries()).map(([word, count]) => ({
     word,
-    count: occurrences?.length ?? 0,
+    count,
   }));
   const mapEnd = performance.now();
   console.log(`🔄 [PostStatistics] 词频统计完成，耗时: ${(mapEnd - mapStart).toFixed(2)}ms`);
