@@ -78,7 +78,7 @@
       class="identity-filter-section q-pa-md"
       style="width: 100%; max-width: 800px"
     >
-      <IdentitySelector v-model="selectedIdentityIds" />
+      <IdentitySelector v-model="selectedIdentityIds" :all-post-view="allPostView" />
 
       <!-- 数据处理按钮 -->
       <div class="text-center q-mt-md">

@@ -36,14 +36,6 @@
             @click="invertSelection"
             icon="swap_horiz"
           />
-          <q-btn
-            size="sm"
-            color="positive"
-            outline
-            label="仅选中国媒体"
-            @click="selectChineseMedia"
-            icon="flag"
-          />
         </div>
 
         <!-- 搜索框 -->
@@ -108,18 +100,16 @@
                   <span class="text-weight-medium">
                     {{ identity.name || identity.code || '(无名称)' }}
                   </span>
-                  <q-badge
-                    v-if="isChineseMedia(identity)"
-                    color="red"
-                    text-color="white"
-                    label="中国媒体"
-                    class="q-ml-sm"
-                  />
                 </q-item-label>
                 <q-item-label caption>
                   <span class="text-grey-7"> 代码: {{ identity.code || '(无代码)' }} </span>
                   <br />
                   <span class="text-grey-6 text-caption"> ID: {{ identity.id }} </span>
+                  <br />
+                  <span class="text-info text-caption">
+                    📝 帖子: {{ getIdentityStats(identity.id).postCount }} 条 | 📁 存档:
+                    {{ getIdentityStats(identity.id).archiveCount }} 个
+                  </span>
                 </q-item-label>
               </q-item-section>
 
@@ -144,10 +134,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { IDENTITY_LIST, EXCLUDE_IDENTITY_LIST } from 'src/specification/IdentityData';
+import * as Spec from 'src/specification';
 
 // Props
-defineProps<{
+const props = defineProps<{
   modelValue?: string[];
+  allPostView?: Array<Spec.PostView.Type>; // 添加帖子数据用于统计
 }>();
 
 // Emits
@@ -165,6 +157,41 @@ const availableIdentities = computed(() => {
   return IDENTITY_LIST.filter((identity) => !excludeIds.has(identity.id));
 });
 
+// 预计算所有身份的统计信息（使用计算属性缓存，避免重复计算）
+const identityStatsMap = computed(() => {
+  const statsMap = new Map<string, { postCount: number; archiveCount: number }>();
+
+  if (!props.allPostView) {
+    // 如果没有数据，为所有可用身份返回0统计
+    availableIdentities.value.forEach((identity) => {
+      statsMap.set(identity.id, { postCount: 0, archiveCount: 0 });
+    });
+    return statsMap;
+  }
+
+  // 初始化所有身份的统计为0
+  availableIdentities.value.forEach((identity) => {
+    statsMap.set(identity.id, { postCount: 0, archiveCount: 0 });
+  });
+
+  // 遍历所有帖子，累加每个作者的统计信息
+  props.allPostView.forEach((postView) => {
+    const authorId = postView.post.author;
+    if (statsMap.has(authorId)) {
+      const currentStats = statsMap.get(authorId)!;
+      currentStats.postCount += 1;
+      currentStats.archiveCount += postView.archive?.length || 0;
+    }
+  });
+
+  return statsMap;
+});
+
+// 获取身份统计信息的快速查找函数
+const getIdentityStats = (identityId: string) => {
+  return identityStatsMap.value.get(identityId) || { postCount: 0, archiveCount: 0 };
+};
+
 // 根据搜索文本过滤身份
 const filteredIdentities = computed(() => {
   if (!searchText.value.trim()) {
@@ -180,36 +207,6 @@ const filteredIdentities = computed(() => {
     return name.includes(searchLower) || code.includes(searchLower) || id.includes(searchLower);
   });
 });
-
-// 判断是否为中国媒体
-const isChineseMedia = (identity: (typeof IDENTITY_LIST)[0]) => {
-  const chineseCodes = [
-    'iZhejiang',
-    'XH.NewsAgency',
-    'ChinaGlobalTVNetwork',
-    'globaltimesnews',
-    'chinadaily',
-    'peopledaily',
-    'ChinaNewsService',
-    'EDNewsChina',
-    'iChongqing',
-    'hihainan1',
-    'LoveFujian',
-    'guangmingdailyChina',
-    'guangdongtoday',
-    'ShandongprovinceChina',
-    'DateTianjin',
-    'thesilkroadshaanxi',
-    'MeetJiangxi',
-    'discovergansu',
-    'TianshanFairyland',
-    'Guizhouecho',
-    'GoJiangsu',
-    'shanghaieyeSMG',
-  ];
-
-  return chineseCodes.includes(identity.code || '') || /[\u4e00-\u9fff]/.test(identity.name || '');
-};
 
 // 方法
 const toggleIdentity = (identityId: string) => {
@@ -238,13 +235,6 @@ const invertSelection = () => {
   emit('update:modelValue', [...selectedIdentities.value]);
 };
 
-const selectChineseMedia = () => {
-  selectedIdentities.value = availableIdentities.value
-    .filter((identity) => isChineseMedia(identity))
-    .map((identity) => identity.id);
-  emit('update:modelValue', [...selectedIdentities.value]);
-};
-
 // 监听外部传入的值变化
 watch(
   () => selectedIdentities.value,
@@ -253,14 +243,6 @@ watch(
   },
   { deep: true },
 );
-
-// 初始化：默认选择所有中国媒体
-const initializeSelection = () => {
-  selectChineseMedia();
-};
-
-// 组件挂载时初始化
-initializeSelection();
 </script>
 
 <style lang="scss" scoped>
