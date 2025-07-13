@@ -55,15 +55,18 @@ const generateMock = (_: any): ValueWithPeriod<number> => {
   return { value: 1, at: new Date() };
 };
 
-export const Query = ({
-  data: parsed,
-  lastCreatedAt,
-  firstCreatedAt,
-}: {
-  data: DataSet;
-  lastCreatedAt: Date | undefined;
-  firstCreatedAt: Date | undefined;
-}) => {
+export const Query = (
+  {
+    data: parsed,
+    lastCreatedAt,
+    firstCreatedAt,
+  }: {
+    data: DataSet;
+    lastCreatedAt: Date | undefined;
+    firstCreatedAt: Date | undefined;
+  },
+  archiveFillDay: number = 5,
+) => {
   // const { data: parsed, lastCreatedAt, firstCreatedAt } = parseForQuery(PeriodData);
 
   // 🔥 [性能优化] 在Query函数调用时一次性构建所有索引，避免重复计算
@@ -102,10 +105,108 @@ export const Query = ({
     }
     postArchivesByPostId.get(archive.post)!.push(archive);
   }
+
+  // 🔥 [数据补全] 对每个帖子的存档进行缺失日期补全处理
+  console.time('🔥 [数据补全] 补全帖子存档缺失日期');
+  const ARCHIVE_DAYS_RANGE = archiveFillDay - 1; // N天范围，可根据需要调整
+
+  for (const [postId, archives] of postArchivesByPostId) {
+    // 先按时间排序
+    archives.sort(sortByCapturedAt);
+
+    // 找到对应的帖子信息以获取创建时间
+    const post = postList.find((p) => p.id === postId);
+    if (!post) continue;
+
+    const postCreatedAt = new Date(post.createdAt);
+    const endDate = new Date(postCreatedAt.getTime() + ARCHIVE_DAYS_RANGE * DAY);
+
+    // 生成从帖子创建日期起N天的完整日期列表（按天）
+    const expectedDates: string[] = [];
+    for (let d = new Date(postCreatedAt); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      if (dateStr) {
+        expectedDates.push(dateStr); // YYYY-MM-DD格式
+      }
+    }
+
+    // 创建日期到存档的映射
+    const archivesByDate = new Map<string, PostArchive.Type>();
+    for (const archive of archives) {
+      const archiveDate = new Date(archive.createdAt).toISOString().split('T')[0];
+      if (archiveDate && !archivesByDate.has(archiveDate)) {
+        archivesByDate.set(archiveDate, archive);
+      }
+    }
+
+    // 补全缺失的日期
+    const supplementedArchives: Array<PostArchive.Type> = [];
+
+    for (const expectedDate of expectedDates) {
+      if (archivesByDate.has(expectedDate)) {
+        // 该日期有存档，直接使用
+        supplementedArchives.push(archivesByDate.get(expectedDate)!);
+      } else {
+        // 该日期缺失存档，需要寻找最近的存档
+        let foundArchive: PostArchive.Type | null = null;
+
+        // 1. 先往前寻找最近的存档
+        for (let i = expectedDates.indexOf(expectedDate) - 1; i >= 0; i--) {
+          const prevDate = expectedDates[i];
+          if (prevDate && archivesByDate.has(prevDate)) {
+            foundArchive = archivesByDate.get(prevDate)!;
+            break;
+          }
+        }
+
+        // 2. 如果往前没找到，往后寻找最近的存档
+        if (!foundArchive) {
+          for (let i = expectedDates.indexOf(expectedDate) + 1; i < expectedDates.length; i++) {
+            const nextDate = expectedDates[i];
+            if (nextDate && archivesByDate.has(nextDate)) {
+              foundArchive = archivesByDate.get(nextDate)!;
+              break;
+            }
+          }
+        }
+
+        // 3. 如果在范围内还是没找到，使用最近的任何存档
+        if (!foundArchive && archives.length > 0) {
+          // 找距离当前日期最近的存档
+          const currentDate = new Date(expectedDate);
+          foundArchive = archives.reduce((closest, archive) => {
+            const archiveDate = new Date(archive.createdAt);
+            const closestDate = new Date(closest.createdAt);
+            return Math.abs(archiveDate.getTime() - currentDate.getTime()) <
+              Math.abs(closestDate.getTime() - currentDate.getTime())
+              ? archive
+              : closest;
+          });
+        }
+
+        // 4. 如果找到了存档，创建该日期的补全存档
+        if (foundArchive) {
+          const supplementedArchive: PostArchive.Type = {
+            ...foundArchive,
+            id: `${foundArchive.id}_补全_${expectedDate}`, // 生成新的ID以避免冲突
+            createdAt: new Date(`${expectedDate}T00:00:00.000Z`), // 设置为目标日期
+          };
+          supplementedArchives.push(supplementedArchive);
+        }
+      }
+    }
+
+    // 更新该帖子的存档列表
+    postArchivesByPostId.set(postId, supplementedArchives);
+  }
+  console.timeEnd('🔥 [数据补全] 补全帖子存档缺失日期');
+
   // 预排序每个帖子的存档
+  console.time('🔥 [性能优化] 预排序帖子存档');
   for (const [, archives] of postArchivesByPostId) {
     archives.sort(sortByCapturedAt);
   }
+  console.timeEnd('🔥 [性能优化] 预排序帖子存档');
   console.timeEnd('🔥 [性能优化] 构建 postArchivesByPostId 索引');
   console.log(`🔥 [性能优化] postArchivesByPostId 索引包含 ${postArchivesByPostId.size} 个帖子`);
 
