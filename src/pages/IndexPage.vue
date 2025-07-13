@@ -79,7 +79,138 @@
       style="width: 100%; max-width: 800px"
     >
       <IdentitySelector v-model="selectedIdentityIds" :all-post-view="allPostView" />
+    </div>
 
+    <!-- 日期筛选区域 -->
+    <div
+      v-if="selectedIdentityIds.length > 0 && filteredDateStats.length > 0"
+      class="date-filter-section q-pa-md"
+      style="width: 100%; max-width: 800px"
+    >
+      <q-card class="q-pa-md">
+        <q-card-section>
+          <div class="text-h6 q-mb-md">
+            <q-icon name="event" class="q-mr-sm" />
+            日期筛选器
+          </div>
+          <div class="text-caption q-mb-md text-grey">
+            存档数据时间范围: {{ dateRange?.earliest }} 至 {{ dateRange?.latest }} (共
+            {{ filteredDateStats.length }} 天，基于已选身份)
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="row q-gutter-sm q-mb-md">
+            <q-btn
+              size="sm"
+              color="primary"
+              outline
+              label="全选"
+              @click="selectAllDates"
+              icon="select_all"
+            />
+            <q-btn
+              size="sm"
+              color="negative"
+              outline
+              label="全不选"
+              @click="selectNoneDates"
+              icon="deselect"
+            />
+            <q-btn
+              size="sm"
+              color="secondary"
+              outline
+              label="最近7天"
+              @click="selectRecentDates(7)"
+              icon="today"
+            />
+            <q-btn
+              size="sm"
+              color="secondary"
+              outline
+              label="最近30天"
+              @click="selectRecentDates(30)"
+              icon="date_range"
+            />
+          </div>
+
+          <!-- 统计信息 -->
+          <div class="row q-gutter-md q-mb-md">
+            <q-chip
+              color="primary"
+              text-color="white"
+              icon="event_available"
+              :label="`已选择: ${selectedDates.length} 天`"
+            />
+            <q-chip
+              color="grey"
+              text-color="white"
+              icon="archive"
+              :label="`存档总计: ${filteredDateStats.reduce((sum, stat) => sum + stat.archiveCount, 0)} 个`"
+            />
+            <q-chip
+              color="info"
+              text-color="white"
+              icon="article"
+              :label="`帖子总计: ${filteredDateStats.reduce((sum, stat) => sum + stat.postCount, 0)} 个`"
+            />
+          </div>
+
+          <!-- 日期列表 -->
+          <div class="date-list" style="max-height: 300px; overflow-y: auto">
+            <q-list bordered separator dense>
+              <q-item-label header class="text-weight-bold">
+                日期列表 ({{ filteredDateStats.length }} 天，已选身份的数据)
+              </q-item-label>
+
+              <q-item
+                v-for="dateStat in filteredDateStats"
+                :key="dateStat.date"
+                clickable
+                @click="toggleDate(dateStat.date)"
+                :class="{ 'bg-blue-1': selectedDates.includes(dateStat.date) }"
+              >
+                <q-item-section side>
+                  <q-checkbox
+                    :model-value="selectedDates.includes(dateStat.date)"
+                    @update:model-value="toggleDate(dateStat.date)"
+                  />
+                </q-item-section>
+
+                <q-item-section>
+                  <q-item-label>
+                    <span class="text-weight-medium">{{ dateStat.date }}</span>
+                  </q-item-label>
+                  <q-item-label caption>
+                    <span class="text-grey-7">
+                      📁 存档: {{ dateStat.archiveCount }} 个 | 📝 帖子: {{ dateStat.postCount }} 个
+                    </span>
+                  </q-item-label>
+                </q-item-section>
+
+                <q-item-section side>
+                  <q-chip
+                    v-if="selectedDates.includes(dateStat.date)"
+                    size="sm"
+                    color="positive"
+                    text-color="white"
+                    icon="check"
+                    label="已选"
+                  />
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
+        </q-card-section>
+      </q-card>
+    </div>
+
+    <!-- 数据处理按钮区域 -->
+    <div
+      v-if="allPostView.length > 0"
+      class="process-button-section q-pa-md"
+      style="width: 100%; max-width: 800px"
+    >
       <!-- 数据处理按钮 -->
       <div class="text-center q-mt-md">
         <q-btn
@@ -93,7 +224,8 @@
           class="q-px-xl"
         />
         <div class="text-caption q-mt-xs text-grey">
-          已选择 {{ selectedIdentityIds.length }} 个身份，点击开始分析
+          已选择 {{ selectedIdentityIds.length }} 个身份 和
+          {{ selectedDates.length }} 个日期，点击开始分析
         </div>
       </div>
     </div>
@@ -231,12 +363,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import AppPostListStatistics from './components/PostListStatistics.vue';
 import IdentitySelector from 'src/components/IdentitySelector.vue';
 import { Query, QueryInterface } from 'src/query';
 import { parseForQuery } from 'src/query/transform';
 import { parseRippleForQuery } from 'src/query/transformRipple';
+import { divideByDay } from 'src/query/utils';
 import * as Spec from 'src/specification';
 import { IDENTITY_LIST } from 'src/specification/IdentityData';
 
@@ -265,6 +398,20 @@ const analysisResults = ref<{
     name: string;
     postViewList: Array<Spec.PostView.Type>;
   }>;
+} | null>(null);
+
+// 日期筛选相关状态
+const dateStats = ref<
+  Array<{
+    date: string;
+    archiveCount: number;
+    postCount: number;
+  }>
+>([]);
+const selectedDates = ref<string[]>([]);
+const dateRange = ref<{
+  earliest: string;
+  latest: string;
 } | null>(null);
 
 // CSV导出相关状态
@@ -309,11 +456,35 @@ const processSelectedData = async () => {
     const analysisStart = performance.now();
     console.log('🔍 [身份分析] 开始处理选择的身份数据...');
     console.log('🔍 [身份分析] 选择的身份ID:', selectedIdentityIds.value);
+    console.log('🔍 [日期分析] 选择的日期:', selectedDates.value);
 
-    // 过滤全平台数据
-    const filteredAllPostView = allPostView.value.filter((postView) =>
+    // 获取基础筛选数据
+    let filteredAllPostView = allPostView.value.filter((postView) =>
       selectedIdentityIds.value.includes(postView.post.author),
-    ); // 过滤分组数据 - 直接根据选择的身份ID重新生成分组
+    );
+
+    // 如果选择了特定日期，进一步筛选
+    if (selectedDates.value.length > 0) {
+      filteredAllPostView = filteredAllPostView
+        .map((postView) => {
+          // 只保留在选定日期范围内的存档
+          const filteredArchives = postView.archive.filter((archive) => {
+            try {
+              const isoString = new Date(archive.capturedAt).toISOString();
+              const archiveDate = isoString.split('T')[0];
+              return archiveDate && selectedDates.value.includes(archiveDate);
+            } catch {
+              return false;
+            }
+          });
+
+          return {
+            ...postView,
+            archive: filteredArchives,
+          };
+        })
+        .filter((postView) => postView.archive.length > 0); // 移除没有有效存档的帖子
+    } // 过滤分组数据 - 直接根据选择的身份ID重新生成分组
     console.log('🔍 [调试] 开始重新生成选中身份的分组数据...');
 
     const filteredPostViewListGroupByIdentity = [];
@@ -362,6 +533,164 @@ const openExportDialog = () => {
   }
   showExportDialog.value = true;
 };
+
+// 🔥 [日期分析] 计算基于选择身份的存档日期统计
+const filteredDateStats = computed(() => {
+  if (allPostView.value.length === 0 || selectedIdentityIds.value.length === 0) {
+    return [];
+  }
+
+  console.log('📅 [日期分析] 开始分析筛选后的存档日期统计...');
+
+  // 收集选择身份的存档数据
+  const filteredArchives: Array<Spec.PostArchive.Type> = [];
+  allPostView.value.forEach((postView) => {
+    // 只包含选择的身份
+    if (selectedIdentityIds.value.includes(postView.post.author)) {
+      filteredArchives.push(...postView.archive);
+    }
+  });
+
+  // 使用 divideByDay 按日期分组存档
+  const archivesByDate = divideByDay(filteredArchives, (archive) => {
+    try {
+      const isoString = new Date(archive.capturedAt).toISOString();
+      const datePart = isoString.split('T')[0];
+      return datePart || '';
+    } catch {
+      return '';
+    }
+  }).filter((item) => item.date !== ''); // 过滤掉无效日期
+
+  // 统计每个日期的信息
+  const stats = archivesByDate
+    .map(({ date, itemList }) => {
+      // 计算该日期下唯一帖子数量
+      const uniquePostIds = new Set(itemList.map((archive) => archive.post));
+      return {
+        date,
+        archiveCount: itemList.length,
+        postCount: uniquePostIds.size,
+      };
+    })
+    .sort((a, b) => a.date.localeCompare(b.date)); // 按日期排序
+
+  console.log('📅 [日期分析] 筛选后日期统计分析完成:', {
+    totalDays: stats.length,
+    totalArchives: filteredArchives.length,
+    selectedIdentities: selectedIdentityIds.value.length
+  });
+
+  return stats;
+});
+
+// 🔥 [日期分析] 分析所有存档数据的日期统计（用于初始化）
+const analyzeDateStats = () => {
+  if (allPostView.value.length === 0) {
+    dateStats.value = [];
+    dateRange.value = null;
+    selectedDates.value = [];
+    return;
+  }
+
+  console.log('📅 [日期分析] 开始分析存档日期统计...');
+
+  // 收集所有存档数据
+  const allArchives: Array<Spec.PostArchive.Type> = [];
+  allPostView.value.forEach((postView) => {
+    allArchives.push(...postView.archive);
+  });
+
+  // 使用 divideByDay 按日期分组存档
+  const archivesByDate = divideByDay(allArchives, (archive) => {
+    try {
+      const isoString = new Date(archive.capturedAt).toISOString();
+      const datePart = isoString.split('T')[0];
+      return datePart || '';
+    } catch {
+      return '';
+    }
+  }).filter((item) => item.date !== ''); // 过滤掉无效日期
+
+  // 统计每个日期的信息
+  const stats = archivesByDate
+    .map(({ date, itemList }) => {
+      // 计算该日期下唯一帖子数量
+      const uniquePostIds = new Set(itemList.map((archive) => archive.post));
+      return {
+        date,
+        archiveCount: itemList.length,
+        postCount: uniquePostIds.size,
+      };
+    })
+    .sort((a, b) => a.date.localeCompare(b.date)); // 按日期排序
+
+  dateStats.value = stats;
+
+  // 设置日期范围
+  if (stats.length > 0) {
+    const firstStat = stats[0];
+    const lastStat = stats[stats.length - 1];
+    if (firstStat && lastStat) {
+      dateRange.value = {
+        earliest: firstStat.date,
+        latest: lastStat.date,
+      };
+      // 默认选择所有日期
+      selectedDates.value = stats.map((stat) => stat.date);
+    }
+  } else {
+    dateRange.value = null;
+    selectedDates.value = [];
+  }
+
+  console.log('📅 [日期分析] 日期统计分析完成:', {
+    totalDays: stats.length,
+    totalArchives: allArchives.length,
+    dateRange: dateRange.value,
+  });
+};
+
+// 🔥 [日期筛选] 日期选择相关函数
+const toggleDate = (date: string) => {
+  const index = selectedDates.value.indexOf(date);
+  if (index > -1) {
+    selectedDates.value.splice(index, 1);
+  } else {
+    selectedDates.value.push(date);
+  }
+};
+
+const selectAllDates = () => {
+  selectedDates.value = [...filteredDateStats.value.map((stat) => stat.date)];
+};
+
+const selectNoneDates = () => {
+  selectedDates.value = [];
+};
+
+const selectRecentDates = (days: number) => {
+  if (filteredDateStats.value.length === 0) return;
+
+  // 从最新日期开始选择指定天数
+  const sortedDates = [...filteredDateStats.value]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, days)
+    .map((stat) => stat.date);
+
+  selectedDates.value = sortedDates;
+};
+
+// 监听身份选择变化，自动更新日期选择
+watch(selectedIdentityIds, (newIds: string[]) => {
+  if (newIds.length > 0) {
+    // 当身份选择变化时，默认选择所有可用日期
+    selectedDates.value = filteredDateStats.value.map((stat) => stat.date);
+  } else {
+    // 如果没有选择身份，清空日期选择
+    selectedDates.value = [];
+  }
+}, { immediate: false });
 
 // 根据作者ID查找作者名字
 const getAuthorNameById = (authorId: string): string => {
@@ -752,6 +1081,9 @@ const processData = async (
   console.log(`📊 [性能分析] 按身份分组完成，总耗时: ${(groupEnd - groupStart).toFixed(2)}ms`);
 
   console.log('✅ [性能分析] processData 函数执行完成');
+
+  // 分析日期统计
+  analyzeDateStats();
 };
 
 // 数据处理核心逻辑
@@ -819,6 +1151,9 @@ const processOldData = async (
   console.log(`📊 [性能分析] 按身份分组完成，总耗时: ${(groupEnd - groupStart).toFixed(2)}ms`);
 
   console.log('✅ [性能分析] processOldData 函数执行完成');
+
+  // 分析日期统计
+  analyzeDateStats();
 };
 
 onMounted(async () => {
