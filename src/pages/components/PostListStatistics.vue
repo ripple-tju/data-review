@@ -36,9 +36,6 @@
       <AppKChart title="每天发文量" :option="postCountOption" :height="300" />
     </div>
     <div>
-      <AppKChart title="词云" :option="wordCloudOption" :height="400" />
-    </div>
-    <div>
       <AppKChart title="推文交互分布散点图 (点赞 vs 评论)" :option="scatterOption" :height="500" />
     </div>
     <div>

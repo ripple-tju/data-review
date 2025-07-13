@@ -72,17 +72,55 @@
       </q-card>
     </div>
 
+    <!-- 身份筛选区域 -->
+    <div
+      v-if="allPostView.length > 0"
+      class="identity-filter-section q-pa-md"
+      style="width: 100%; max-width: 800px"
+    >
+      <IdentitySelector v-model="selectedIdentityIds" />
+
+      <!-- 数据处理按钮 -->
+      <div class="text-center q-mt-md">
+        <q-btn
+          color="primary"
+          label="开始数据统计分析"
+          icon="analytics"
+          size="md"
+          @click="processSelectedData"
+          :disable="selectedIdentityIds.length === 0 || isProcessingAnalysis"
+          :loading="isProcessingAnalysis"
+          class="q-px-xl"
+        />
+        <div class="text-caption q-mt-xs text-grey">
+          已选择 {{ selectedIdentityIds.length }} 个身份，点击开始分析
+        </div>
+      </div>
+    </div>
+
     <!-- 数据展示区域 -->
-    <div v-if="allPostView.length > 0" style="width: 100%">
+    <div v-if="analysisResults" style="width: 100%">
       <div>
-        <h3>全平台身份</h3>
+        <h3>
+          全平台身份统计
+          <q-chip
+            color="primary"
+            text-color="white"
+            icon="people"
+            :label="`已选择 ${selectedIdentityIds.length} 个身份`"
+            class="q-ml-sm"
+          />
+        </h3>
         <AppPostListStatistics
           :query="query"
-          :postViewList="allPostView"
+          :postViewList="analysisResults.filteredAllPostView"
           :cutWordCache="cutwordCache"
         />
       </div>
-      <div v-for="(item, index) in postViewListGroupByIdentity" :key="index">
+      <div
+        v-for="(item, index) in analysisResults.filteredPostViewListGroupByIdentity"
+        :key="index"
+      >
         <h3>身份：{{ item.name }}</h3>
         <AppPostListStatistics
           :query="query"
@@ -95,8 +133,9 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import AppPostListStatistics from './components/PostListStatistics.vue';
+import IdentitySelector from 'src/components/IdentitySelector.vue';
 import { Query, QueryInterface } from 'src/query';
 import { parseForQuery } from 'src/query/transform';
 import { parseRippleForQuery } from 'src/query/transformRipple';
@@ -118,6 +157,17 @@ const cutwordCache = ref<
   }>
 >([]);
 
+// 身份筛选相关状态
+const selectedIdentityIds = ref<string[]>([]);
+const isProcessingAnalysis = ref(false);
+const analysisResults = ref<{
+  filteredAllPostView: Array<Spec.PostView.Type>;
+  filteredPostViewListGroupByIdentity: Array<{
+    name: string;
+    postViewList: Array<Spec.PostView.Type>;
+  }>;
+} | null>(null);
+
 // 文件上传相关状态
 const archiveFile = ref<File | null>(null);
 const cutwordFile = ref<File | null>(null);
@@ -126,6 +176,51 @@ const uploadStatus = ref<{
   type: 'success' | 'error';
   message: string;
 } | null>(null);
+
+// 🔥 [身份筛选] 处理选择的身份进行数据分析
+const processSelectedData = () => {
+  if (selectedIdentityIds.value.length === 0) {
+    return;
+  }
+
+  isProcessingAnalysis.value = true;
+
+  try {
+    const analysisStart = performance.now();
+    console.log('🔍 [身份分析] 开始处理选择的身份数据...');
+    console.log('🔍 [身份分析] 选择的身份ID:', selectedIdentityIds.value);
+
+    // 过滤全平台数据
+    const filteredAllPostView = allPostView.value.filter((postView) =>
+      selectedIdentityIds.value.includes(postView.post.author),
+    );
+
+    // 过滤分组数据
+    const filteredPostViewListGroupByIdentity = postViewListGroupByIdentity.value.filter(
+      (group) => {
+        const matchingIdentity = idList.value.find(
+          (identity) => (identity.archive[0]?.name || 'Unknown') === group.name,
+        );
+        return matchingIdentity && selectedIdentityIds.value.includes(matchingIdentity.identity.id);
+      },
+    );
+
+    // 保存分析结果
+    analysisResults.value = {
+      filteredAllPostView,
+      filteredPostViewListGroupByIdentity,
+    };
+
+    const analysisEnd = performance.now();
+    console.log(`🔍 [身份分析] 数据分析完成，耗时: ${(analysisEnd - analysisStart).toFixed(2)}ms`);
+    console.log(`🔍 [身份分析] 筛选后帖子数量: ${filteredAllPostView.length}`);
+    console.log(`🔍 [身份分析] 筛选后身份组数量: ${filteredPostViewListGroupByIdentity.length}`);
+  } catch (error) {
+    console.error('身份数据分析失败:', error);
+  } finally {
+    isProcessingAnalysis.value = false;
+  }
+};
 
 // 文件读取辅助函数
 const readFileAsJSON = (file: File): Promise<any> => {
@@ -223,6 +318,9 @@ const processUploadedData = async () => {
       type: 'success',
       message: `数据处理成功！加载了 ${allPostView.value.length} 个帖子和 ${idList.value.length} 个身份，耗时 ${(totalTime / 1000).toFixed(2)}秒`,
     };
+
+    // 重置分析结果，让用户重新选择
+    analysisResults.value = null;
   } catch (error) {
     console.error('Data processing error:', error);
     uploadStatus.value = {
@@ -296,6 +394,9 @@ const loadDefaultData = async () => {
       type: 'success',
       message: `默认数据加载成功！加载了 ${allPostView.value.length} 个帖子和 ${idList.value.length} 个身份，耗时 ${(totalTime / 1000).toFixed(2)}秒`,
     };
+
+    // 重置分析结果，让用户重新选择
+    analysisResults.value = null;
   } catch (error) {
     console.error('Default data loading error:', error);
     uploadStatus.value = {
