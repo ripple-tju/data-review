@@ -39,10 +39,12 @@ export const divideByDay = <T>(
   getDateStr: (item: T) => string = defaultGetDateStr as any,
 ) => {
   const groupByed = Object.groupBy(list, (item) => getDateStr(item));
-  return Object.entries(groupByed).map(([date, itemList]) => ({
-    date,
-    itemList: itemList ?? [],
-  }));
+  return Object.entries(groupByed)
+    .map(([date, itemList]) => ({
+      date,
+      itemList: itemList ?? [],
+    }))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 };
 
 export const getRangeValue = <T extends { createdAt: Date }, D extends string | Date>(
