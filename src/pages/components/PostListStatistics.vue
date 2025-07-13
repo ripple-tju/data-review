@@ -83,6 +83,7 @@ const LabelMap = {
   'specification.data.PostArchive.shareGrowthRate': '分享增速',
   'specification.data.PostArchive.comment': '评论',
   'specification.data.PostArchive.commentGrowthRate': '评论增速',
+  'specification.data.PostArchive.endorsement': '认同度',
   'specification.data.PostArchive.view': '浏览',
   'specification.data.PostArchive.favorite': '收藏',
   'specification.data.PostArchive.createdAt': '创建时间',
@@ -97,6 +98,7 @@ const ViewDataSchema = Spec.PostArchive.Schema.extend({
   likeGrowthRate: z.number().optional().describe('点赞增速'),
   shareGrowthRate: z.number().optional().describe('分享增速'),
   commentGrowthRate: z.number().optional().describe('评论增速'),
+  endorsement: z.number().optional().describe('认同度'),
   author: Spec.IdentityArchive.Schema.optional(),
   authorId: Spec.Identity.Schema.shape.id.optional().describe('身份ID'),
   authorName: Spec.IdentityArchive.Schema.shape.name.optional().describe('身份名称'),
@@ -113,6 +115,7 @@ const defaultOrder: Array<Key> = [
   'likeGrowthRate',
   'shareGrowthRate',
   'commentGrowthRate',
+  'endorsement',
   // 'view',
   // 'favorite',
   'createdAt',
@@ -160,6 +163,11 @@ const _columns = [
     name: 'commentGrowthRate',
     headerStyle: 'width: 80px;',
     sortable: true,
+  },
+  {
+    name: 'endorsement',
+    headerStyle: 'width: 60px;',
+    format: (v: number | null) => (v !== null ? v : '-'),
   },
   {
     name: 'view',
@@ -278,11 +286,19 @@ const latestPostArchiveList = computed(() => {
         : 1, // 默认1天，避免除以0
     );
 
+    //认同度暂时使用假数据 评论数高于30的，0.8向下浮动0.1，向上浮动0.2。评论数低于30的都为null
+    const endorsement = latestArchive?.comment
+      ? latestArchive.comment > 30
+        ? (0.8 + Math.random() * 0.4 - 0.2).toFixed(3)
+        : null
+      : null;
+
     return {
       ...latestArchive,
       likeGrowthRate,
       shareGrowthRate,
       commentGrowthRate,
+      endorsement,
     };
   });
 
