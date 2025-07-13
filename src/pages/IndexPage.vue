@@ -113,16 +113,28 @@
       </div>
 
       <div>
-        <h3>
-          全平台身份统计
-          <q-chip
-            color="primary"
-            text-color="white"
-            icon="people"
-            :label="`已选择 ${selectedIdentityIds.length} 个身份`"
-            class="q-ml-sm"
+        <div class="row items-center q-mb-md">
+          <h3 class="q-ma-none">
+            全平台身份统计
+            <q-chip
+              color="primary"
+              text-color="white"
+              icon="people"
+              :label="`已选择 ${selectedIdentityIds.length} 个身份`"
+              class="q-ml-sm"
+            />
+          </h3>
+          <q-space />
+          <q-btn
+            color="secondary"
+            icon="download"
+            label="导出CSV"
+            outline
+            @click="openExportDialog"
+            :disable="!analysisResults || analysisResults.filteredAllPostView.length === 0"
+            class="q-ml-md"
           />
-        </h3>
+        </div>
         <AppPostListStatistics
           :query="query"
           :postViewList="analysisResults.filteredAllPostView"
@@ -141,6 +153,80 @@
         />
       </div>
     </div>
+
+    <!-- CSV导出配置对话框 -->
+    <q-dialog v-model="showExportDialog" persistent>
+      <q-card style="min-width: 500px">
+        <q-card-section>
+          <div class="text-h6">CSV导出设置</div>
+          <div class="text-subtitle2 text-grey">
+            即将导出 {{ analysisResults?.filteredAllPostView.length || 0 }} 条帖子数据
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <div class="text-subtitle1 q-mb-md">选择要导出的字段：</div>
+
+          <!-- 快捷操作按钮 -->
+          <div class="row q-gutter-sm q-mb-md">
+            <q-btn size="sm" outline color="primary" label="全选" @click="selectAllFields" />
+            <q-btn size="sm" outline color="negative" label="全不选" @click="selectNoneFields" />
+          </div>
+
+          <!-- 字段选择区域 -->
+          <div class="row">
+            <div class="col-6">
+              <div class="text-weight-medium q-mb-sm">帖子基本信息</div>
+              <div v-for="(config, field) in exportFields" :key="field">
+                <q-checkbox
+                  v-if="field.startsWith('post.')"
+                  v-model="config.selected"
+                  :label="config.label"
+                  class="q-mb-xs"
+                />
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="text-weight-medium q-mb-sm">存档数据（最新）</div>
+              <div v-for="(config, field) in exportFields" :key="field">
+                <q-checkbox
+                  v-if="field.startsWith('archive.')"
+                  v-model="config.selected"
+                  :label="config.label"
+                  class="q-mb-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 选中字段预览 -->
+          <div class="q-mt-md">
+            <div class="text-subtitle2">
+              已选择字段 ({{ Object.values(exportFields).filter((f) => f.selected).length }})：
+            </div>
+            <div class="text-caption text-grey">
+              {{
+                Object.entries(exportFields)
+                  .filter(([, config]) => config.selected)
+                  .map(([, config]) => config.label)
+                  .join(', ') || '未选择任何字段'
+              }}
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="取消" color="grey" @click="showExportDialog = false" />
+          <q-btn
+            flat
+            label="导出CSV"
+            color="primary"
+            @click="exportToCsv"
+            :disable="Object.values(exportFields).filter((f) => f.selected).length === 0"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -179,6 +265,26 @@ const analysisResults = ref<{
     postViewList: Array<Spec.PostView.Type>;
   }>;
 } | null>(null);
+
+// CSV导出相关状态
+const showExportDialog = ref(false);
+const exportFields = ref({
+  // 帖子基本信息
+  'post.id': { label: '帖子ID', selected: true },
+  'post.author': { label: '作者ID', selected: true },
+  'post.createdAt': { label: '帖子创建时间', selected: true },
+  'post.root': { label: '根帖子ID', selected: false },
+  'post.parent': { label: '父帖子ID', selected: false },
+  // 最新存档数据
+  'archive.content': { label: '帖子内容', selected: true },
+  'archive.like': { label: '点赞数', selected: true },
+  'archive.comment': { label: '评论数', selected: true },
+  'archive.share': { label: '分享数', selected: true },
+  'archive.view': { label: '浏览数', selected: true },
+  'archive.favorite': { label: '收藏数', selected: true },
+  // 'archive.createdAt': { label: '存档时间', selected: false },
+  'archive.capturedAt': { label: '抓取时间', selected: false },
+});
 
 // 文件上传相关状态
 const archiveFile = ref<File | null>(null);
@@ -245,6 +351,139 @@ const processSelectedData = async () => {
   } finally {
     isProcessingAnalysis.value = false;
   }
+};
+
+// 🔥 [CSV导出] CSV导出相关功能
+const openExportDialog = () => {
+  if (!analysisResults.value || analysisResults.value.filteredAllPostView.length === 0) {
+    return;
+  }
+  showExportDialog.value = true;
+};
+
+const getFieldValue = (postView: Spec.PostView.Type, fieldPath: string): string => {
+  try {
+    // 获取最新的存档数据
+    const latestArchive = postView.archive[postView.archive.length - 1];
+
+    switch (fieldPath) {
+      case 'post.id':
+        return postView.post.id || '';
+      case 'post.author':
+        return postView.post.author || '';
+      case 'post.createdAt':
+        return postView.post.createdAt ? new Date(postView.post.createdAt).toISOString() : '';
+      case 'post.root':
+        return postView.post.root || '';
+      case 'post.parent':
+        return postView.post.parent || '';
+      case 'archive.content':
+        return latestArchive?.content || '';
+      case 'archive.like':
+        return (latestArchive?.like ?? 0).toString();
+      case 'archive.comment':
+        return (latestArchive?.comment ?? 0).toString();
+      case 'archive.share':
+        return (latestArchive?.share ?? 0).toString();
+      case 'archive.view':
+        return (latestArchive?.view ?? 0).toString();
+      case 'archive.favorite':
+        return (latestArchive?.favorite ?? 0).toString();
+      case 'archive.createdAt':
+        return latestArchive?.createdAt ? new Date(latestArchive.createdAt).toISOString() : '';
+      case 'archive.capturedAt':
+        return latestArchive?.capturedAt ? new Date(latestArchive.capturedAt).toISOString() : '';
+      default:
+        return '';
+    }
+  } catch (error) {
+    console.error(`获取字段 ${fieldPath} 值时出错:`, error);
+    return '';
+  }
+};
+
+const escapeCsvField = (field: string): string => {
+  // 如果字段包含逗号、引号或换行符，需要用引号包围并转义内部引号
+  if (field.includes(',') || field.includes('"') || field.includes('\n') || field.includes('\r')) {
+    return `"${field.replace(/"/g, '""')}"`;
+  }
+  return field;
+};
+
+const exportToCsv = () => {
+  if (!analysisResults.value) return;
+
+  const exportStart = performance.now();
+  console.log('📊 [CSV导出] 开始导出CSV文件...');
+
+  // 获取选中的字段
+  const selectedFields = Object.entries(exportFields.value)
+    .filter(([, config]) => config.selected)
+    .map(([field, config]) => ({ field, label: config.label }));
+
+  if (selectedFields.length === 0) {
+    alert('请至少选择一个字段进行导出！');
+    return;
+  }
+
+  // 构建CSV内容
+  const headers = selectedFields.map((f) => f.label);
+  const csvContent = [
+    // CSV头部
+    headers.map(escapeCsvField).join(','),
+    // CSV数据行
+    ...analysisResults.value.filteredAllPostView.map((postView) => {
+      return selectedFields
+        .map(({ field }) => {
+          const value = getFieldValue(postView, field);
+          return escapeCsvField(value);
+        })
+        .join(',');
+    }),
+  ].join('\n');
+
+  // 添加BOM以支持中文字符
+  const bom = '\uFEFF';
+  const finalContent = bom + csvContent;
+
+  // 创建下载链接
+  const blob = new Blob([finalContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+
+  // 生成文件名
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+  const filename = `筛选帖子数据_${selectedIdentityIds.value.length}个身份_${analysisResults.value.filteredAllPostView.length}条帖子_${timestamp}.csv`;
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+
+  // 执行下载
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  const exportEnd = performance.now();
+  console.log(`📊 [CSV导出] CSV导出完成，耗时: ${(exportEnd - exportStart).toFixed(2)}ms`);
+  console.log(
+    `📊 [CSV导出] 导出了 ${analysisResults.value.filteredAllPostView.length} 条记录，${selectedFields.length} 个字段`,
+  );
+
+  // 关闭对话框
+  showExportDialog.value = false;
+};
+
+const selectAllFields = () => {
+  Object.keys(exportFields.value).forEach((field) => {
+    exportFields.value[field as keyof typeof exportFields.value].selected = true;
+  });
+};
+
+const selectNoneFields = () => {
+  Object.keys(exportFields.value).forEach((field) => {
+    exportFields.value[field as keyof typeof exportFields.value].selected = false;
+  });
 };
 
 // 文件读取辅助函数
@@ -472,6 +711,7 @@ const processData = async (
   const postStart = performance.now();
   console.log('📝 [性能分析] 开始获取帖子列表...');
   allPostView.value = await query.value.Target('fb').getPostViewList();
+  console.log('allPostView.value', allPostView.value);
   const postEnd = performance.now();
   console.log(
     `📝 [性能分析] 帖子列表获取完成，耗时: ${(postEnd - postStart).toFixed(2)}ms，获得 ${allPostView.value.length} 个帖子`,
