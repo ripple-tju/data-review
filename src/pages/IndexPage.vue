@@ -238,6 +238,7 @@ import { Query, QueryInterface } from 'src/query';
 import { parseForQuery } from 'src/query/transform';
 import { parseRippleForQuery } from 'src/query/transformRipple';
 import * as Spec from 'src/specification';
+import { IDENTITY_LIST } from 'src/specification/IdentityData';
 
 const query = ref<QueryInterface>(Query(parseRippleForQuery([])));
 const idList = ref<Array<Spec.IdentityView.Type>>([]);
@@ -270,8 +271,9 @@ const analysisResults = ref<{
 const showExportDialog = ref(false);
 const exportFields = ref({
   // 帖子基本信息
-  'post.id': { label: '帖子ID', selected: true },
-  'post.author': { label: '作者ID', selected: true },
+  'post.id': { label: '帖子ID', selected: false },
+  'post.author': { label: '作者ID', selected: false },
+  'post.authorName': { label: '作者名字', selected: true },
   'post.createdAt': { label: '帖子创建时间', selected: true },
   'post.root': { label: '根帖子ID', selected: false },
   'post.parent': { label: '父帖子ID', selected: false },
@@ -280,10 +282,10 @@ const exportFields = ref({
   'archive.like': { label: '点赞数', selected: true },
   'archive.comment': { label: '评论数', selected: true },
   'archive.share': { label: '分享数', selected: true },
-  'archive.view': { label: '浏览数', selected: true },
-  'archive.favorite': { label: '收藏数', selected: true },
+  'archive.view': { label: '浏览数', selected: false },
+  'archive.favorite': { label: '收藏数', selected: false },
   // 'archive.createdAt': { label: '存档时间', selected: false },
-  'archive.capturedAt': { label: '抓取时间', selected: false },
+  'archive.capturedAt': { label: '抓取时间', selected: true },
 });
 
 // 文件上传相关状态
@@ -361,6 +363,16 @@ const openExportDialog = () => {
   showExportDialog.value = true;
 };
 
+// 根据作者ID查找作者名字
+const getAuthorNameById = (authorId: string): string => {
+  const identity = IDENTITY_LIST.find((item) => item.id === authorId);
+  if (identity) {
+    // 优先使用name，如果为空则使用code，都为空则返回ID
+    return identity.name || identity.code || authorId;
+  }
+  return authorId; // 如果找不到对应的身份，返回原ID
+};
+
 const getFieldValue = (postView: Spec.PostView.Type, fieldPath: string): string => {
   try {
     // 获取最新的存档数据
@@ -371,6 +383,8 @@ const getFieldValue = (postView: Spec.PostView.Type, fieldPath: string): string 
         return postView.post.id || '';
       case 'post.author':
         return postView.post.author || '';
+      case 'post.authorName':
+        return getAuthorNameById(postView.post.author || '');
       case 'post.createdAt':
         return postView.post.createdAt ? new Date(postView.post.createdAt).toISOString() : '';
       case 'post.root':
