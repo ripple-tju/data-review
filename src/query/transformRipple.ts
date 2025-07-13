@@ -126,6 +126,7 @@ function transformData(data: Array<z.infer<typeof RippleFormat>>): Array<EntityD
           favorite: 0,
           post: postWithUUID.id,
           view: item.view ?? 0,
+          url: item.url ?? '-',
         };
 
         const existPost = acc.postList.find((i) => i.id === postWithUUID.id);

@@ -157,6 +157,7 @@ function transformData(data: Array<z.infer<typeof RawPeriodData>>): Array<{
           favorite: item.index.favorite ?? 0,
           post: postWithUUID.id,
           view: item.index.read ?? 0,
+          url: item.url ?? '-',
         };
 
         const existPost = acc.postList.find((i) => i.id === postWithUUID.id);

@@ -623,6 +623,7 @@ const exportFields = ref({
   'post.parent': { label: '父帖子ID', selected: false },
   // 最新存档数据
   'archive.content': { label: '帖子内容', selected: true },
+  'archive.url': { label: '帖子链接', selected: true },
   'archive.like': { label: '点赞数', selected: true },
   'archive.comment': { label: '评论数', selected: true },
   'archive.share': { label: '分享数', selected: true },
@@ -878,6 +879,8 @@ const getFieldValue = (postView: Spec.PostView.Type, fieldPath: string): string 
         return postView.post.parent || '';
       case 'archive.content':
         return latestArchive?.content || '';
+      case 'archive.url':
+        return latestArchive?.url || '';
       case 'archive.like':
         return (latestArchive?.like ?? 0).toString();
       case 'archive.comment':

@@ -12,6 +12,7 @@ export const Schema = z.object({
   share: z.number().describe('specification.data.PostArchive.share'),
   view: z.number().describe('specification.data.PostArchive.view'),
   favorite: z.number().describe('specification.data.PostArchive.favorite'),
+  url: z.string().describe('specification.data.IdentityArchive.url'),
 });
 
 export type Type = z.infer<typeof Schema>;
@@ -27,4 +28,5 @@ export const Default: () => Type = () => ({
   share: 0,
   view: 0,
   favorite: 0,
+  url: '-',
 });
