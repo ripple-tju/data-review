@@ -459,6 +459,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, computed, watch, onUnmounted } from 'vue';
+import dayjs from 'dayjs';
 import AppPostListStatistics from './components/PostListStatistics.vue';
 import IdentitySelector from 'src/components/IdentitySelector.vue';
 import { Query, QueryInterface } from 'src/query';
@@ -534,9 +535,8 @@ const getFilteredPostView = () => {
     filteredAllPostView = filteredAllPostView.filter((postView) => {
       try {
         if (!postView.post.createdAt) return false;
-        // 使用本地时区避免时区转换问题
-        const date = new Date(postView.post.createdAt);
-        const postDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        // 使用 dayjs 格式化，与 divideByDay 保持一致
+        const postDate = dayjs(postView.post.createdAt).format('YYYY-MM-DD');
         return postDate && selectedDates.value.includes(postDate);
       } catch {
         return false;
@@ -574,9 +574,8 @@ const getFilteredGroupByIdentity = () => {
           postViewList = postViewList.filter((postView) => {
             try {
               if (!postView.post.createdAt) return false;
-              // 使用本地时区避免时区转换问题
-              const date = new Date(postView.post.createdAt);
-              const postDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+              // 使用 dayjs 格式化，与 divideByDay 保持一致
+              const postDate = dayjs(postView.post.createdAt).format('YYYY-MM-DD');
               return postDate && selectedDates.value.includes(postDate);
             } catch {
               return false;
@@ -702,18 +701,10 @@ const filteredDateStats = computed(() => {
     }
   });
 
-  // 使用 divideByDay 按帖子创建日期分组
-  const postsByDate = divideByDay(filteredPosts, (postView) => {
-    try {
-      if (!postView.post.createdAt) return '';
-      // 使用本地时区避免时区转换问题
-      const date = new Date(postView.post.createdAt);
-      const datePart = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-      return datePart || '';
-    } catch {
-      return '';
-    }
-  }).filter((item) => item.date !== ''); // 过滤掉无效日期
+  // 使用 divideByDay 按帖子创建日期分组，使用默认的日期提取函数
+  const postsByDate = divideByDay(filteredPosts, (postView) =>
+    dayjs(postView.post.createdAt).format('YYYY-MM-DD'),
+  ).filter((item) => item.date !== ''); // 过滤掉无效日期
 
   // 统计每个日期的信息
   const stats = postsByDate
@@ -750,18 +741,10 @@ const analyzeDateStats = () => {
 
   console.log('📅 [日期分析] 开始分析帖子日期统计...');
 
-  // 使用 divideByDay 按帖子创建日期分组
-  const postsByDate = divideByDay(allPostView.value, (postView) => {
-    try {
-      if (!postView.post.createdAt) return '';
-      // 使用本地时区避免时区转换问题
-      const date = new Date(postView.post.createdAt);
-      const datePart = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-      return datePart || '';
-    } catch {
-      return '';
-    }
-  }).filter((item) => item.date !== ''); // 过滤掉无效日期
+  // 使用 divideByDay 按帖子创建日期分组，使用默认的日期提取函数
+  const postsByDate = divideByDay(allPostView.value, (postView) =>
+    dayjs(postView.post.createdAt).format('YYYY-MM-DD'),
+  ).filter((item) => item.date !== ''); // 过滤掉无效日期
 
   // 统计每个日期的信息
   const stats = postsByDate
