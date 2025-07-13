@@ -244,46 +244,148 @@
         </div>
       </div>
 
-      <div>
-        <div class="row items-center q-mb-md">
-          <h3 class="q-ma-none">
-            全平台身份统计
-            <q-chip
-              color="primary"
-              text-color="white"
-              icon="people"
-              :label="`已选择 ${selectedIdentityIds.length} 个身份`"
-              class="q-ml-sm"
-            />
-          </h3>
-          <q-space />
-          <q-btn
-            color="secondary"
-            icon="download"
-            label="导出CSV"
-            outline
-            @click="openExportDialog"
-            :disable="!analysisResults || analysisResults.filteredAllPostView.length === 0"
-            class="q-ml-md"
-          />
-        </div>
-        <AppPostListStatistics
-          :query="query"
-          :postViewList="analysisResults.filteredAllPostView"
-          :cutWordCache="cutwordCache"
-        />
-      </div>
-      <div
-        v-for="(item, index) in analysisResults.filteredPostViewListGroupByIdentity"
-        :key="index"
+      <!-- 标签页导航 -->
+      <q-tabs
+        v-model="activeTab"
+        dense
+        class="text-grey"
+        active-color="primary"
+        align="justify"
+        indicator-color="primary"
       >
-        <h3>身份：{{ item.name }}</h3>
-        <AppPostListStatistics
-          :query="query"
-          :postViewList="item.postViewList"
-          :cutWordCache="cutwordCache"
-        />
-      </div>
+        <q-tab name="overview" label="全平台概览" icon="analytics" />
+        <q-tab name="byIdentity" label="按身份统计" icon="people" />
+        <q-tab name="export" label="数据导出" icon="download" />
+      </q-tabs>
+
+      <q-separator class="q-mb-md" />
+
+      <q-tab-panels
+        v-model="activeTab"
+        animated
+        transition-prev="slide-right"
+        transition-next="slide-left"
+      >
+        <!-- 全平台概览标签页 -->
+        <q-tab-panel name="overview" class="q-pa-none">
+          <div class="row items-center q-mb-md">
+            <h3 class="q-ma-none">
+              全平台身份统计
+              <q-chip
+                color="primary"
+                text-color="white"
+                icon="people"
+                :label="`已选择 ${selectedIdentityIds.length} 个身份`"
+                class="q-ml-sm"
+              />
+            </h3>
+          </div>
+
+          <!-- 只在当前标签页激活时渲染组件，避免WebGL上下文冲突 -->
+          <AppPostListStatistics
+            v-if="activeTab === 'overview'"
+            :query="query"
+            :postViewList="analysisResults.filteredAllPostView"
+            :cutWordCache="cutwordCache"
+            :key="'overview-' + selectedIdentityIds.join('-')"
+          />
+        </q-tab-panel>
+
+        <!-- 按身份统计标签页 -->
+        <q-tab-panel name="byIdentity" class="q-pa-none">
+          <!-- 身份选择器 -->
+          <div class="q-mb-md">
+            <q-select
+              v-model="selectedIdentityForView"
+              :options="identityOptions"
+              label="选择要查看的身份统计"
+              emit-value
+              map-options
+              outlined
+              clearable
+              class="q-mb-md"
+            >
+              <template #prepend>
+                <q-icon name="person" />
+              </template>
+            </q-select>
+          </div>
+
+          <!-- 只显示选中的身份统计，避免同时渲染多个图表 -->
+          <div v-if="selectedIdentityForView">
+            <div
+              v-for="(item, index) in analysisResults.filteredPostViewListGroupByIdentity"
+              :key="index"
+            >
+              <div v-if="item.name === selectedIdentityForView">
+                <div class="row items-center q-mb-md">
+                  <h3 class="q-ma-none">身份：{{ item.name }}</h3>
+                  <q-chip
+                    color="info"
+                    text-color="white"
+                    icon="article"
+                    :label="`${item.postViewList.length} 个帖子`"
+                    class="q-ml-sm"
+                  />
+                </div>
+                <AppPostListStatistics
+                  v-if="activeTab === 'byIdentity'"
+                  :query="query"
+                  :postViewList="item.postViewList"
+                  :cutWordCache="cutwordCache"
+                  :key="'identity-' + item.name"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 未选择身份时的提示 -->
+          <div v-else class="text-center q-pa-xl">
+            <q-icon name="person_search" size="4rem" color="grey-5" class="q-mb-md" />
+            <div class="text-h6 q-mb-md text-grey-6">选择身份查看统计</div>
+            <div class="text-body2 text-grey">请从上方下拉框中选择一个身份来查看其详细统计信息</div>
+          </div>
+        </q-tab-panel>
+
+        <!-- 数据导出标签页 -->
+        <q-tab-panel name="export" class="q-pa-none">
+          <div class="text-center q-pa-xl">
+            <q-icon name="download" size="4rem" color="primary" class="q-mb-md" />
+            <div class="text-h6 q-mb-md">数据导出</div>
+            <div class="text-body2 text-grey q-mb-lg">
+              导出当前筛选的 {{ analysisResults.filteredAllPostView.length }} 条帖子数据
+            </div>
+
+            <!-- 导出统计信息 -->
+            <div class="row justify-center q-gutter-md q-mb-lg">
+              <q-card flat bordered class="q-pa-md" style="min-width: 150px">
+                <div class="text-h4 text-primary">
+                  {{ analysisResults.filteredAllPostView.length }}
+                </div>
+                <div class="text-caption text-grey">帖子总数</div>
+              </q-card>
+              <q-card flat bordered class="q-pa-md" style="min-width: 150px">
+                <div class="text-h4 text-secondary">{{ selectedIdentityIds.length }}</div>
+                <div class="text-caption text-grey">选择身份</div>
+              </q-card>
+              <q-card flat bordered class="q-pa-md" style="min-width: 150px">
+                <div class="text-h4 text-info">{{ selectedDates.length }}</div>
+                <div class="text-caption text-grey">选择日期</div>
+              </q-card>
+            </div>
+
+            <q-btn
+              color="primary"
+              icon="download"
+              label="导出CSV文件"
+              size="lg"
+              @click="openExportDialog"
+              :disable="!analysisResults || analysisResults.filteredAllPostView.length === 0"
+              class="q-px-xl"
+            />
+          </div>
+        </q-tab-panel>
+      </q-tab-panels>
     </div>
 
     <!-- CSV导出配置对话框 -->
@@ -363,7 +465,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from 'vue';
+import { onMounted, ref, computed, watch, onUnmounted } from 'vue';
 import AppPostListStatistics from './components/PostListStatistics.vue';
 import IdentitySelector from 'src/components/IdentitySelector.vue';
 import { Query, QueryInterface } from 'src/query';
@@ -399,6 +501,20 @@ const analysisResults = ref<{
     postViewList: Array<Spec.PostView.Type>;
   }>;
 } | null>(null);
+
+// 标签页相关状态
+const activeTab = ref('overview');
+const selectedIdentityForView = ref<string | null>(null);
+
+// 计算身份选项
+const identityOptions = computed(() => {
+  if (!analysisResults.value) return [];
+
+  return analysisResults.value.filteredPostViewListGroupByIdentity.map((item) => ({
+    label: `${item.name} (${item.postViewList.length} 个帖子)`,
+    value: item.name,
+  }));
+});
 
 // 日期筛选相关状态
 const dateStats = ref<
@@ -1159,6 +1275,43 @@ const processOldData = async (
   // 分析日期统计
   analyzeDateStats();
 };
+
+// WebGL上下文清理函数
+const cleanupWebGLContexts = () => {
+  console.log('🧹 [WebGL清理] 开始清理WebGL上下文...');
+  const canvases = document.querySelectorAll('canvas');
+  let cleanedCount = 0;
+
+  canvases.forEach((canvas) => {
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (gl && gl instanceof WebGLRenderingContext) {
+      const loseContext = gl.getExtension('WEBGL_lose_context');
+      if (loseContext) {
+        loseContext.loseContext();
+        cleanedCount++;
+      }
+    }
+  });
+
+  console.log(`🧹 [WebGL清理] 清理完成，清理了 ${cleanedCount} 个WebGL上下文`);
+};
+
+// 监听标签页切换，清理WebGL上下文
+watch(activeTab, (newTab, oldTab) => {
+  if (oldTab && newTab !== oldTab) {
+    console.log(`🔄 [标签切换] 从 ${oldTab} 切换到 ${newTab}`);
+    // 延迟清理以确保旧组件已卸载
+    setTimeout(() => {
+      cleanupWebGLContexts();
+    }, 100);
+  }
+});
+
+// 组件卸载时清理WebGL上下文
+onUnmounted(() => {
+  console.log('🚪 [组件卸载] 清理所有WebGL上下文');
+  cleanupWebGLContexts();
+});
 
 onMounted(async () => {
   // 页面加载时自动加载默认数据
