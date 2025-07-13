@@ -158,6 +158,9 @@ const onCutwordFileChange = (file: File | null) => {
 
 // 处理上传的数据
 const processUploadedData = async () => {
+  const startTime = performance.now();
+  console.log('🚀 [性能分析] 开始处理上传数据');
+
   if (!archiveFile.value) {
     uploadStatus.value = {
       type: 'error',
@@ -171,26 +174,54 @@ const processUploadedData = async () => {
 
   try {
     // 读取存档数据文件
+    const fileReadStart = performance.now();
+    console.log('📁 [性能分析] 开始读取存档数据文件...');
     const archiveData = await readFileAsJSON(archiveFile.value);
-    console.log('Archive data loaded:', archiveData);
+    const fileReadEnd = performance.now();
+    console.log(
+      `📁 [性能分析] 存档数据文件读取完成，耗时: ${(fileReadEnd - fileReadStart).toFixed(2)}ms`,
+    );
+    console.log(
+      `📊 [性能分析] 存档数据大小: ${JSON.stringify(archiveData).length} 字符，${archiveData.length} 条记录`,
+    );
 
     // 读取分词缓存文件（如果有）
     let cutwordData: Array<{ id: string; cut: Array<string> }> = [];
     if (cutwordFile.value) {
       try {
+        const cutwordReadStart = performance.now();
+        console.log('📁 [性能分析] 开始读取分词缓存文件...');
         cutwordData = await readFileAsJSON(cutwordFile.value);
-        console.log('Cutword cache loaded:', cutwordData);
+        const cutwordReadEnd = performance.now();
+        console.log(
+          `📁 [性能分析] 分词缓存文件读取完成，耗时: ${(cutwordReadEnd - cutwordReadStart).toFixed(2)}ms`,
+        );
+        console.log(`📊 [性能分析] 分词缓存大小: ${cutwordData.length} 条记录`);
       } catch (error) {
         console.warn('分词缓存文件读取失败，将使用空缓存:', error);
       }
     }
 
     // 处理数据
-    await processData(archiveData.slice(0, 1000), cutwordData);
+    const processStart = performance.now();
+    console.log('⚙️ [性能分析] 开始处理数据...');
+    // const dataToProcess = archiveData.slice(0, 10000);
+    const dataToProcess = archiveData;
+    console.log(`📊 [性能分析] 实际处理数据量: ${dataToProcess.length} 条记录`);
+
+    await processData(dataToProcess, cutwordData);
+
+    const processEnd = performance.now();
+    console.log(`⚙️ [性能分析] 数据处理完成，耗时: ${(processEnd - processStart).toFixed(2)}ms`);
+
+    const totalTime = performance.now() - startTime;
+    console.log(
+      `✅ [性能分析] 整个流程完成，总耗时: ${totalTime.toFixed(2)}ms (${(totalTime / 1000).toFixed(2)}秒)`,
+    );
 
     uploadStatus.value = {
       type: 'success',
-      message: `数据处理成功！加载了 ${allPostView.value.length} 个帖子和 ${idList.value.length} 个身份`,
+      message: `数据处理成功！加载了 ${allPostView.value.length} 个帖子和 ${idList.value.length} 个身份，耗时 ${(totalTime / 1000).toFixed(2)}秒`,
     };
   } catch (error) {
     console.error('Data processing error:', error);
@@ -205,17 +236,28 @@ const processUploadedData = async () => {
 
 // 加载默认示例数据
 const loadDefaultData = async () => {
+  const startTime = performance.now();
+  console.log('🚀 [性能分析] 开始加载默认数据');
+
   isProcessing.value = true;
   uploadStatus.value = null;
 
   try {
+    const fetchStart = performance.now();
+    console.log('🌐 [性能分析] 开始获取默认存档数据...');
     const test = await fetch('/data/default.json')
       .then((response) => response.json())
       .catch((error) => {
         console.error('Error fetching data:', error);
         throw new Error('无法加载默认存档数据');
       });
+    const fetchEnd = performance.now();
+    console.log(
+      `🌐 [性能分析] 默认存档数据获取完成，耗时: ${(fetchEnd - fetchStart).toFixed(2)}ms`,
+    );
 
+    const cacheStart = performance.now();
+    console.log('🌐 [性能分析] 开始获取默认分词缓存...');
     const testCache = (await fetch('/data/default-jieba.json')
       .then((response) => response.json())
       .catch((error) => {
@@ -225,15 +267,34 @@ const loadDefaultData = async () => {
       id: Spec.PostArchive.Type['id'];
       cut: Array<string>;
     }>;
+    const cacheEnd = performance.now();
+    console.log(
+      `🌐 [性能分析] 默认分词缓存获取完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`,
+    );
 
+    const processStart = performance.now();
+    console.log('⚙️ [性能分析] 开始处理默认数据...');
     await processOldData(test, testCache);
+    const processEnd = performance.now();
+    console.log(
+      `⚙️ [性能分析] 默认数据处理完成，耗时: ${(processEnd - processStart).toFixed(2)}ms`,
+    );
 
+    const queryStart = performance.now();
+    console.log('📋 [性能分析] 开始查询帖子视图...');
     const b = await query.value.Target('fb').getPostViewList();
+    const queryEnd = performance.now();
+    console.log(`📋 [性能分析] 帖子视图查询完成，耗时: ${(queryEnd - queryStart).toFixed(2)}ms`);
     console.log('Default data loaded:', b);
+
+    const totalTime = performance.now() - startTime;
+    console.log(
+      `✅ [性能分析] 默认数据加载完成，总耗时: ${totalTime.toFixed(2)}ms (${(totalTime / 1000).toFixed(2)}秒)`,
+    );
 
     uploadStatus.value = {
       type: 'success',
-      message: `默认数据加载成功！加载了 ${allPostView.value.length} 个帖子和 ${idList.value.length} 个身份`,
+      message: `默认数据加载成功！加载了 ${allPostView.value.length} 个帖子和 ${idList.value.length} 个身份，耗时 ${(totalTime / 1000).toFixed(2)}秒`,
     };
   } catch (error) {
     console.error('Default data loading error:', error);
@@ -251,24 +312,66 @@ const processData = async (
   archiveData: any,
   cutwordData: Array<{ id: string; cut: Array<string> }>,
 ) => {
+  console.log('🔧 [性能分析] 进入 processData 函数');
+
   // 设置分词缓存
+  const cacheStart = performance.now();
+  console.log('💾 [性能分析] 开始设置分词缓存...');
   cutwordCache.value = cutwordData;
+  const cacheEnd = performance.now();
+  console.log(`💾 [性能分析] 分词缓存设置完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`);
 
   // 解析并设置查询
+  const parseStart = performance.now();
+  console.log('🔍 [性能分析] 开始解析数据...');
   const parsedData = parseRippleForQuery(archiveData);
+  const parseEnd = performance.now();
+  console.log(`🔍 [性能分析] 数据解析完成，耗时: ${(parseEnd - parseStart).toFixed(2)}ms`);
+
+  const queryStart = performance.now();
+  console.log('📋 [性能分析] 开始创建查询对象...');
   query.value = Query(parsedData);
+  const queryEnd = performance.now();
+  console.log(`📋 [性能分析] 查询对象创建完成，耗时: ${(queryEnd - queryStart).toFixed(2)}ms`);
 
   // 获取身份列表和帖子列表
+  const identityStart = performance.now();
+  console.log('👤 [性能分析] 开始获取身份列表...');
   idList.value = await query.value.Target('fb').getIdentityViewList();
+  const identityEnd = performance.now();
+  console.log(
+    `👤 [性能分析] 身份列表获取完成，耗时: ${(identityEnd - identityStart).toFixed(2)}ms，获得 ${idList.value.length} 个身份`,
+  );
+
+  const postStart = performance.now();
+  console.log('📝 [性能分析] 开始获取帖子列表...');
   allPostView.value = await query.value.Target('fb').getPostViewList();
+  const postEnd = performance.now();
+  console.log(
+    `📝 [性能分析] 帖子列表获取完成，耗时: ${(postEnd - postStart).toFixed(2)}ms，获得 ${allPostView.value.length} 个帖子`,
+  );
 
   // 按身份分组帖子
+  const groupStart = performance.now();
+  console.log('📊 [性能分析] 开始按身份分组帖子...');
   postViewListGroupByIdentity.value = await Promise.all(
-    idList.value.map(async (id) => ({
-      name: id.archive[0]?.name || 'Unknown',
-      postViewList: await query.value.Target('fb').getPostViewListByIdentityId(id.identity.id),
-    })),
+    idList.value.map(async (id, index) => {
+      const groupItemStart = performance.now();
+      const result = {
+        name: id.archive[0]?.name || 'Unknown',
+        postViewList: await query.value.Target('fb').getPostViewListByIdentityId(id.identity.id),
+      };
+      const groupItemEnd = performance.now();
+      console.log(
+        `📊 [性能分析] 身份 ${index + 1}/${idList.value.length} (${result.name}) 分组完成，耗时: ${(groupItemEnd - groupItemStart).toFixed(2)}ms，获得 ${result.postViewList.length} 个帖子`,
+      );
+      return result;
+    }),
   );
+  const groupEnd = performance.now();
+  console.log(`📊 [性能分析] 按身份分组完成，总耗时: ${(groupEnd - groupStart).toFixed(2)}ms`);
+
+  console.log('✅ [性能分析] processData 函数执行完成');
 };
 
 // 数据处理核心逻辑
@@ -276,28 +379,70 @@ const processOldData = async (
   archiveData: any,
   cutwordData: Array<{ id: string; cut: Array<string> }>,
 ) => {
+  console.log('🔧 [性能分析] 进入 processOldData 函数');
+
   // 设置分词缓存
+  const cacheStart = performance.now();
+  console.log('💾 [性能分析] 开始设置分词缓存...');
   cutwordCache.value = cutwordData;
+  const cacheEnd = performance.now();
+  console.log(`💾 [性能分析] 分词缓存设置完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`);
 
   // 解析并设置查询
+  const parseStart = performance.now();
+  console.log('🔍 [性能分析] 开始解析旧格式数据...');
   const parsedData = parseForQuery(archiveData);
+  const parseEnd = performance.now();
+  console.log(`🔍 [性能分析] 旧格式数据解析完成，耗时: ${(parseEnd - parseStart).toFixed(2)}ms`);
+
+  const queryStart = performance.now();
+  console.log('📋 [性能分析] 开始创建查询对象...');
   query.value = Query(parsedData);
+  const queryEnd = performance.now();
+  console.log(`📋 [性能分析] 查询对象创建完成，耗时: ${(queryEnd - queryStart).toFixed(2)}ms`);
 
   // 获取身份列表和帖子列表
+  const identityStart = performance.now();
+  console.log('👤 [性能分析] 开始获取身份列表...');
   idList.value = await query.value.Target('fb').getIdentityViewList();
+  const identityEnd = performance.now();
+  console.log(
+    `👤 [性能分析] 身份列表获取完成，耗时: ${(identityEnd - identityStart).toFixed(2)}ms，获得 ${idList.value.length} 个身份`,
+  );
+
+  const postStart = performance.now();
+  console.log('📝 [性能分析] 开始获取帖子列表...');
   allPostView.value = await query.value.Target('fb').getPostViewList();
+  const postEnd = performance.now();
+  console.log(
+    `📝 [性能分析] 帖子列表获取完成，耗时: ${(postEnd - postStart).toFixed(2)}ms，获得 ${allPostView.value.length} 个帖子`,
+  );
 
   // 按身份分组帖子
+  const groupStart = performance.now();
+  console.log('📊 [性能分析] 开始按身份分组帖子...');
   postViewListGroupByIdentity.value = await Promise.all(
-    idList.value.map(async (id) => ({
-      name: id.archive[0]?.name || 'Unknown',
-      postViewList: await query.value.Target('fb').getPostViewListByIdentityId(id.identity.id),
-    })),
+    idList.value.map(async (id, index) => {
+      const groupItemStart = performance.now();
+      const result = {
+        name: id.archive[0]?.name || 'Unknown',
+        postViewList: await query.value.Target('fb').getPostViewListByIdentityId(id.identity.id),
+      };
+      const groupItemEnd = performance.now();
+      console.log(
+        `📊 [性能分析] 身份 ${index + 1}/${idList.value.length} (${result.name}) 分组完成，耗时: ${(groupItemEnd - groupItemStart).toFixed(2)}ms，获得 ${result.postViewList.length} 个帖子`,
+      );
+      return result;
+    }),
   );
+  const groupEnd = performance.now();
+  console.log(`📊 [性能分析] 按身份分组完成，总耗时: ${(groupEnd - groupStart).toFixed(2)}ms`);
+
+  console.log('✅ [性能分析] processOldData 函数执行完成');
 };
 
 onMounted(async () => {
   // 页面加载时自动加载默认数据
-  await loadDefaultData();
+  // await loadDefaultData();
 });
 </script>

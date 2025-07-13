@@ -239,7 +239,10 @@ const calcPercentageGrowth = (latest: number, earliest: number, dayCount: number
 };
 
 const latestPostArchiveList = computed(() => {
-  return postViewList.map((post) => {
+  const startTime = performance.now();
+  console.log('🔄 [PostStatistics] 开始计算 latestPostArchiveList...');
+
+  const result = postViewList.map((post) => {
     const sortedArchive = post.archive;
     // .sort(
     //   (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
@@ -279,51 +282,91 @@ const latestPostArchiveList = computed(() => {
       commentGrowthRate,
     };
   });
+
+  const endTime = performance.now();
+  console.log(
+    `🔄 [PostStatistics] latestPostArchiveList 计算完成，耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 条记录`,
+  );
+  return result;
 });
 
 const latestPostArchiveCutWordList = computed(() => {
-  return latestPostArchiveList.value.map((post) => {
+  const startTime = performance.now();
+  console.log('🔄 [PostStatistics] 开始计算 latestPostArchiveCutWordList...');
+
+  const result = latestPostArchiveList.value.map((post) => {
     const cut = cutWordCache.find((item) => item.id === post.id)?.cut || [];
     return {
       ...post,
       cut,
     };
   });
+
+  const endTime = performance.now();
+  console.log(
+    `🔄 [PostStatistics] latestPostArchiveCutWordList 计算完成，耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 条记录`,
+  );
+  return result;
 });
 
 const wordOccurrence = computed(() => {
+  const startTime = performance.now();
+  console.log('🔄 [PostStatistics] 开始计算 wordOccurrence...');
   console.time('wordOccurrence');
-  const groupByed = Object.groupBy(
-    latestPostArchiveCutWordList.value
-      .flatMap((post) => post.cut)
-      .filter((word) => {
-        // 过滤长度、URL、@用户名
-        if (word.length <= 1 || word.startsWith('http') || word.startsWith('@')) {
-          return false;
-        }
 
-        // 过滤中英文标点符号
-        const punctuationRegex =
-          /^[\u3000-\u303F\uFF00-\uFFEF\u2000-\u206F\u0020-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u007E]+$/;
-        if (punctuationRegex.test(word)) {
-          return false;
-        }
-
-        // 过滤纯数字
-        if (/^\d+$/.test(word)) {
-          return false;
-        }
-
-        return true;
-      }),
-    (word) => word,
+  const flatMapStart = performance.now();
+  const words = latestPostArchiveCutWordList.value.flatMap((post) => post.cut);
+  const flatMapEnd = performance.now();
+  console.log(
+    `🔄 [PostStatistics] 词汇展平完成，耗时: ${(flatMapEnd - flatMapStart).toFixed(2)}ms，获得 ${words.length} 个词汇`,
   );
-  console.timeEnd('wordOccurrence');
 
-  return Object.entries(groupByed).map(([word, occurrences]) => ({
+  const filterStart = performance.now();
+  const filteredWords = words.filter((word) => {
+    // 过滤长度、URL、@用户名
+    if (word.length <= 1 || word.startsWith('http') || word.startsWith('@')) {
+      return false;
+    }
+
+    // 过滤中英文标点符号
+    const punctuationRegex =
+      /^[\u3000-\u303F\uFF00-\uFFEF\u2000-\u206F\u0020-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u007E]+$/;
+    if (punctuationRegex.test(word)) {
+      return false;
+    }
+
+    // 过滤纯数字
+    if (/^\d+$/.test(word)) {
+      return false;
+    }
+
+    return true;
+  });
+  const filterEnd = performance.now();
+  console.log(
+    `🔄 [PostStatistics] 词汇过滤完成，耗时: ${(filterEnd - filterStart).toFixed(2)}ms，剩余 ${filteredWords.length} 个有效词汇`,
+  );
+
+  const groupStart = performance.now();
+  const groupByed = Object.groupBy(filteredWords, (word) => word);
+  const groupEnd = performance.now();
+  console.log(
+    `🔄 [PostStatistics] 词汇分组完成，耗时: ${(groupEnd - groupStart).toFixed(2)}ms，获得 ${Object.keys(groupByed).length} 个不同词汇`,
+  );
+
+  const mapStart = performance.now();
+  const result = Object.entries(groupByed).map(([word, occurrences]) => ({
     word,
     count: occurrences?.length ?? 0,
   }));
+  const mapEnd = performance.now();
+  console.log(`🔄 [PostStatistics] 词频统计完成，耗时: ${(mapEnd - mapStart).toFixed(2)}ms`);
+
+  console.timeEnd('wordOccurrence');
+  const totalTime = performance.now() - startTime;
+  console.log(`🔄 [PostStatistics] wordOccurrence 计算完成，总耗时: ${totalTime.toFixed(2)}ms`);
+
+  return result;
 });
 
 const postViewDivideByDay = computed(() => {
