@@ -1,15 +1,8 @@
 <template>
   <div>
-    <div
-      style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-      "
-    >
-      <h6 style="margin: 0">{{ title }}</h6>
-      <div style="display: flex; gap: 8px">
+    <div class="row items-center justify-between q-mb-md">
+      <div class="text-h6 q-ma-none">{{ title }}</div>
+      <div class="row q-gutter-sm">
         <q-btn
           size="sm"
           outline
@@ -30,7 +23,7 @@
         />
       </div>
     </div>
-    <div ref="chartRef" :style="{ width: '100%', height: height + 'px' }"></div>
+    <div ref="chartRef" class="full-width" :style="{ height: height + 'px' }"></div>
   </div>
 </template>
 

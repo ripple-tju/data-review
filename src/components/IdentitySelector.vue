@@ -75,7 +75,7 @@
         </div>
 
         <!-- 身份列表 -->
-        <div class="identity-list" style="max-height: 400px; overflow-y: auto">
+        <div class="identity-list scroll" style="max-height: 400px">
           <q-list bordered separator>
             <q-item-label header class="text-weight-bold">
               身份列表 ({{ filteredIdentities.length }} 项)

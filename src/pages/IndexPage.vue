@@ -1,7 +1,7 @@
 <template>
   <q-page class="column items-center justify-evenly">
     <!-- 文件上传区域 -->
-    <div class="file-upload-section q-pa-md" style="width: 100%; max-width: 1080px">
+    <div class="file-upload-section q-pa-md full-width" style="max-width: 1080px">
       <q-card class="q-pa-md">
         <q-card-section>
           <div class="text-h6 q-mb-md">数据文件上传</div>
@@ -75,8 +75,8 @@
     <!-- 身份筛选区域 -->
     <div
       v-if="allPostView.length > 0"
-      class="identity-filter-section q-pa-md"
-      style="width: 100%; max-width: 1080px"
+      class="identity-filter-section q-pa-md full-width"
+      style="max-width: 1080px"
     >
       <IdentitySelector v-model="selectedIdentityIds" :all-post-view="allPostView" />
     </div>
@@ -84,8 +84,8 @@
     <!-- 日期筛选区域 -->
     <div
       v-if="selectedIdentityIds.length > 0 && filteredDateStats.length > 0"
-      class="date-filter-section q-pa-md"
-      style="width: 100%; max-width: 1080px"
+      class="date-filter-section q-pa-md full-width"
+      style="max-width: 1080px"
     >
       <q-card class="q-pa-md">
         <q-card-section>
@@ -157,7 +157,7 @@
           </div>
 
           <!-- 日期列表 -->
-          <div class="date-list" style="max-height: 300px; overflow-y: auto">
+          <div class="date-list scroll" style="max-height: 300px">
             <q-list bordered separator dense>
               <q-item-label header class="text-weight-bold">
                 日期列表 ({{ filteredDateStats.length }} 天，已选身份的帖子创建日期)
@@ -208,8 +208,8 @@
     <!-- 数据处理按钮区域 -->
     <div
       v-if="allPostView.length > 0"
-      class="process-button-section q-pa-md"
-      style="width: 100%; max-width: 1080px"
+      class="process-button-section q-pa-md full-width"
+      style="max-width: 1080px"
     >
       <!-- 数据处理按钮 -->
       <div class="text-center q-mt-md">
@@ -231,9 +231,9 @@
     </div>
 
     <!-- 数据展示区域 -->
-    <div v-if="analysisResults" style="width: 100%; max-width: 1080px; margin: 0 auto">
+    <div v-if="analysisResults" class="full-width q-mx-auto" style="max-width: 1080px">
       <!-- 调试信息 -->
-      <div class="q-pa-md q-mb-md" style="background: #f5f5f5; border-radius: 4px">
+      <div class="q-pa-md q-mb-md bg-grey-2 rounded-borders">
         <div class="text-caption">
           <strong>调试信息：</strong><br />
           全平台帖子数量：{{ analysisResults.filteredAllPostView.length }}<br />
