@@ -345,25 +345,6 @@
             <q-icon name="summarize" class="q-mr-sm" />
             批注汇总
           </div>
-          <q-chip
-            :color="filledAnnotationsCount === totalAnnotationsCount ? 'positive' : 'info'"
-            text-color="white"
-            icon="edit_note"
-          >
-            {{ filledAnnotationsCount }}/{{ totalAnnotationsCount }} 已填写
-          </q-chip>
-        </div>
-
-        <div class="q-mb-md">
-          <div class="text-subtitle2 q-mb-sm">批注完成度</div>
-          <q-linear-progress
-            :value="filledAnnotationsCount / totalAnnotationsCount"
-            color="positive"
-            size="8px"
-            rounded
-            stripe
-            animation-speed="1000"
-          />
         </div>
 
         <div class="row q-gutter-md">
@@ -372,7 +353,6 @@
             label="导出PDF报告"
             icon="description"
             @click="exportAnnotations"
-            :disable="filledAnnotationsCount === 0"
           />
           <q-btn
             color="secondary"
@@ -380,11 +360,10 @@
             icon="clear_all"
             outline
             @click="clearAllAnnotations"
-            :disable="filledAnnotationsCount === 0"
           />
         </div>
 
-        <div v-if="filledAnnotationsCount > 0" class="q-mt-md">
+        <div class="q-mt-md">
           <div class="text-subtitle2 q-mb-sm">批注预览</div>
           <div class="row q-gutter-sm">
             <q-chip
@@ -971,16 +950,6 @@ const getAnnotationLabel = (key: string): string => {
   };
   return labelMap[key] || key;
 };
-
-// 计算已填写批注的数量
-const filledAnnotationsCount = computed(() => {
-  return Object.values(annotations.value).filter((item) => item.content.trim()).length;
-});
-
-// 计算总批注数量
-const totalAnnotationsCount = computed(() => {
-  return Object.keys(annotations.value).length;
-});
 
 // 图表渲染完成计数器
 const renderedChartsCount = ref(0);
