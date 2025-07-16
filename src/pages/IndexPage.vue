@@ -255,7 +255,7 @@
       >
         <q-tab name="overview" label="全平台概览" icon="analytics" />
         <q-tab name="byIdentity" label="按身份统计" icon="people" />
-        <q-tab name="report" label="报告生成" icon="assessment" />
+        <!-- <q-tab name="report" label="报告生成" icon="assessment" /> -->
         <q-tab name="export" label="数据导出" icon="download" />
       </q-tabs>
 
