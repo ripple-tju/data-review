@@ -284,15 +284,15 @@
             <q-icon name="summarize" class="q-mr-sm" />
             批注汇总
           </div>
-          <q-chip 
-            :color="filledAnnotationsCount === totalAnnotationsCount ? 'positive' : 'info'" 
+          <q-chip
+            :color="filledAnnotationsCount === totalAnnotationsCount ? 'positive' : 'info'"
             text-color="white"
             icon="edit_note"
           >
             {{ filledAnnotationsCount }}/{{ totalAnnotationsCount }} 已填写
           </q-chip>
         </div>
-        
+
         <div class="q-mb-md">
           <div class="text-subtitle2 q-mb-sm">批注完成度</div>
           <q-linear-progress
@@ -304,7 +304,7 @@
             animation-speed="1000"
           />
         </div>
-        
+
         <div class="row q-gutter-md">
           <q-btn
             color="primary"
@@ -322,12 +322,12 @@
             :disable="filledAnnotationsCount === 0"
           />
         </div>
-        
+
         <div v-if="filledAnnotationsCount > 0" class="q-mt-md">
           <div class="text-subtitle2 q-mb-sm">批注预览</div>
           <div class="row q-gutter-sm">
-            <q-chip 
-              v-for="(item, key) in annotations" 
+            <q-chip
+              v-for="(item, key) in annotations"
               :key="key"
               :color="item.content.trim() ? 'positive' : 'grey-5'"
               :text-color="item.content.trim() ? 'white' : 'grey-8'"
@@ -356,8 +356,6 @@ import { divideByDay } from 'src/query/utils';
 import type { EChartsOption } from 'echarts';
 import { useQuasar } from 'quasar';
 
-const $q = useQuasar();
-
 const { query, postViewList, cutWordCache, useImageMode } = defineProps<{
   query: QueryInterface;
   postViewList: Array<Spec.PostView.Type>;
@@ -372,6 +370,9 @@ const { query, postViewList, cutWordCache, useImageMode } = defineProps<{
 const emit = defineEmits<{
   rendered: [];
 }>();
+
+// 使用 Quasar 的 dialog 和 notify 功能
+const $q = useQuasar();
 
 // 批注数据结构
 interface AnnotationItem {
