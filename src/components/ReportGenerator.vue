@@ -199,9 +199,10 @@
                   <!-- 只渲染当前或已完成的组件 -->
                   <div v-if="index <= currentRenderingIndex">
                     <AppPostListStatistics
-                      :query="query"
+                      :query="props.query"
                       :postViewList="identity.postViewList"
                       :cutWordCache="[]"
+                      :id-list="props.idList"
                       :useImageMode="true"
                       :key="'identity-stats-' + identity.name"
                       @rendered="onIdentityStatsRendered(index)"
@@ -243,6 +244,7 @@ interface AnalysisResults {
 const props = defineProps<{
   analysisResults: AnalysisResults | null;
   query: QueryInterface;
+  idList: Array<Spec.IdentityView.Type>;
 }>();
 
 // 渐进式渲染状态管理

@@ -419,13 +419,14 @@ import { useQuasar } from 'quasar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const { query, postViewList, cutWordCache, useImageMode } = defineProps<{
+const { query, postViewList, cutWordCache, idList, useImageMode } = defineProps<{
   query: QueryInterface;
   postViewList: Array<Spec.PostView.Type>;
   cutWordCache: Array<{
     id: Spec.PostArchive.Type['id'];
     cut: Array<string>;
   }>;
+  idList: Array<Spec.IdentityView.Type>;
   useImageMode?: boolean; // 新增：是否使用图片模式
 }>();
 
@@ -557,6 +558,7 @@ const exportAnnotations = async () => {
       doc.addFileToVFS('SourceHanSansCN-VF.ttf', fontBase64);
       doc.addFont('SourceHanSansCN-VF.ttf', 'SourceHanSansCN', 'normal');
       doc.addFont('SourceHanSansCN-VF.ttf', 'SourceHanSansCN', 'bold');
+      doc.addFont('SourceHanSansCN-VF.ttf', 'SourceHanSansCN', 'italic');
       doc.setFont('SourceHanSansCN');
     } catch (fontError) {
       console.warn('中文字体加载失败，使用默认字体:', fontError);
@@ -600,7 +602,7 @@ const exportAnnotations = async () => {
         annotation: annotationData.dataTableAnnotation,
         getData: () => {
           return latestPostArchiveList.value
-            .slice(0, 20)
+            .slice(0, 10)
             .map((post, index) => [
               (index + 1).toString(),
               post.content
@@ -622,7 +624,7 @@ const exportAnnotations = async () => {
         condition: () => identityRankingList.value.length > 1,
         getData: () => {
           return identityRankingList.value
-            .slice(0, 15)
+            .slice(0, 10)
             .map((identity) => [
               identity.rank.toString(),
               identity.authorName,
@@ -698,17 +700,50 @@ const exportAnnotations = async () => {
         continue;
       }
 
-      // 检查是否需要换页
-      checkPageBreak(40);
+      // 计算section所需的最小高度（确保section完整性）
+      let estimatedSectionHeight = 40; // 标题 + 基本间距 (减少20px)
+
+      if (section.type === 'table' && 'getData' in section) {
+        const tableData = section.getData();
+        estimatedSectionHeight += Math.min(tableData.length * 10, 150); // 表格高度估算更紧凑
+      } else if (section.type === 'chart') {
+        estimatedSectionHeight += 100; // 图表高度估算减少
+      }
+
+      if (section.annotation) {
+        estimatedSectionHeight += 35; // 批注高度估算减少
+      }
+
+      // 如果当前页面空间不够，直接换页
+      if (currentY + estimatedSectionHeight > pageHeight - margin - 20) {
+        doc.addPage();
+        currentY = margin;
+      }
+
+      // 添加section分隔线（除了第一个section）
+      if (sectionNumber > 1) {
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
+        doc.line(margin, currentY - 3, pageWidth - margin, currentY - 3);
+        currentY += 6; // 减少间距
+      }
+
+      // 添加section背景色块
+      doc.setFillColor(248, 249, 250);
+      doc.rect(margin - 5, currentY - 3, contentWidth + 10, 20, 'F'); // 减少高度
 
       // 添加节标题，使用独立的section编号
       doc.setFontSize(16);
       doc.setFont('SourceHanSansCN', 'bold');
-      doc.text(`${sectionNumber}. ${section.title}`, margin, currentY);
-      currentY += 15;
+      doc.setTextColor(33, 37, 41);
+      doc.text(`${sectionNumber}. ${section.title}`, margin, currentY + 8);
+      currentY += 22; // 减少间距
 
       // section编号递增
       sectionNumber++;
+
+      // 重置文本颜色
+      doc.setTextColor(0, 0, 0);
 
       // 根据类型渲染内容
       if (section.type === 'table') {
@@ -718,8 +753,7 @@ const exportAnnotations = async () => {
           const headers = section.getHeaders();
 
           if (tableData.length > 0) {
-            checkPageBreak(50);
-
+            // 表格渲染时不需要额外的换页检查，因为已经在section级别处理了
             autoTable(doc, {
               head: [headers],
               body: tableData,
@@ -727,7 +761,7 @@ const exportAnnotations = async () => {
               styles: {
                 font: 'SourceHanSansCN',
                 fontSize: 9,
-                cellPadding: 3,
+                cellPadding: 2, // 减少单元格内边距
               },
               headStyles: {
                 fillColor: 'tableColor' in section ? section.tableColor : [66, 139, 202],
@@ -739,18 +773,19 @@ const exportAnnotations = async () => {
                 fillColor: [245, 245, 245],
               },
               margin: { left: margin, right: margin },
-              pageBreak: 'auto',
+              pageBreak: 'avoid', // 尽量避免表格被分页
             });
 
-            currentY = (doc as any).lastAutoTable.finalY + 10;
+            currentY = (doc as any).lastAutoTable.finalY + 8; // 减少间距
 
             // 添加额外信息（如权重说明）
             if ('extraInfo' in section && section.extraInfo) {
-              checkPageBreak(15);
               doc.setFontSize(10);
-              doc.setFont('SourceHanSansCN', 'normal');
+              doc.setFont('SourceHanSansCN', 'italic');
+              doc.setTextColor(108, 117, 125);
               doc.text(section.extraInfo, margin, currentY);
-              currentY += 10;
+              doc.setTextColor(0, 0, 0);
+              currentY += 8; // 减少间距
             }
           }
         }
@@ -766,10 +801,13 @@ const exportAnnotations = async () => {
                 const imgWidth = contentWidth;
                 const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-                checkPageBreak(imgHeight + 20);
+                // 添加图表边框
+                doc.setDrawColor(220, 220, 220);
+                doc.setLineWidth(0.5);
+                doc.rect(margin - 2, currentY - 2, imgWidth + 4, imgHeight + 4);
 
                 doc.addImage(imgData, 'PNG', margin, currentY, imgWidth, imgHeight);
-                currentY += imgHeight + 10;
+                currentY += imgHeight + 12; // 减少间距
               }
             }
           } catch (error) {
@@ -777,32 +815,51 @@ const exportAnnotations = async () => {
             // 如果无法获取图片，显示占位符
             doc.setFontSize(12);
             doc.setFont('SourceHanSansCN', 'normal');
+            doc.setTextColor(108, 117, 125);
             doc.text(`[图表: ${section.title}]`, margin, currentY);
-            currentY += 15;
+            doc.setTextColor(0, 0, 0);
+            currentY += 12; // 减少间距
           }
         }
       }
 
       // 添加批注
       if (section.annotation) {
-        checkPageBreak(30);
+        // 添加批注背景色块
+        const annotationLines = doc.splitTextToSize(
+          section.annotation || '暂无批注',
+          contentWidth - 20,
+        );
+        const annotationHeight = annotationLines.length * 5 + 15; // 减少高度
+
+        doc.setFillColor(252, 248, 227); // 淡黄色背景
+        doc.rect(margin - 5, currentY - 3, contentWidth + 10, annotationHeight, 'F');
+
+        // 添加批注左边框
+        doc.setDrawColor(255, 193, 7);
+        doc.setLineWidth(3);
+        doc.line(margin - 5, currentY - 3, margin - 5, currentY - 3 + annotationHeight);
 
         doc.setFontSize(12);
         doc.setFont('SourceHanSansCN', 'bold');
-        doc.text(`${section.title}批注：`, margin, currentY);
-        currentY += 8;
+        doc.setTextColor(133, 100, 4);
+        doc.text(`${section.title}批注：`, margin, currentY + 3);
+        currentY += 12; // 减少间距
 
         doc.setFontSize(11);
         doc.setFont('SourceHanSansCN', 'normal');
+        doc.setTextColor(102, 77, 3);
 
-        const annotationLines = doc.splitTextToSize(section.annotation || '暂无批注', contentWidth);
         annotationLines.forEach((line: string) => {
-          checkPageBreak(8);
           doc.text(line, margin, currentY);
-          currentY += 6;
+          currentY += 5; // 减少行间距
         });
 
-        currentY += 10; // 节间距
+        // 重置文本颜色
+        doc.setTextColor(0, 0, 0);
+        currentY += 15; // 减少section间距
+      } else {
+        currentY += 10; // 减少没有批注时的间距
       }
     }
 
@@ -1231,9 +1288,13 @@ const identityRankingList = computed(() => {
       existing.totalShares += shares;
       existing.totalComments += comments;
     } else {
+      // 从 idList 中查找身份的真实名称
+      const identityView = idList.find((id) => id.identity.id === authorId);
+      const identityName = identityView?.archive?.[0]?.name || `身份-${authorId.slice(0, 8)}`;
+
       identityStats.set(authorId, {
         authorId,
-        authorName: `身份-${authorId.slice(0, 8)}`, // 显示前8位作为名称
+        authorName: identityName,
         postCount: 1,
         totalLikes: likes,
         totalShares: shares,

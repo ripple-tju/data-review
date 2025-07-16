@@ -288,6 +288,7 @@
             :query="query"
             :postViewList="analysisResults.filteredAllPostView"
             :cutWordCache="cutwordCache"
+            :id-list="idList"
             :key="'overview-' + selectedIdentityIds.join('-')"
           />
         </q-tab-panel>
@@ -329,6 +330,7 @@
               :query="query"
               :postViewList="currentIdentityData.postViewList"
               :cutWordCache="cutwordCache"
+              :id-list="idList"
               :key="'identity-' + currentIdentityData.name"
             />
           </div>
@@ -343,12 +345,13 @@
 
         <!-- 报告生成标签页 -->
         <q-tab-panel name="report" class="q-pa-none">
-          <ReportGenerator
+          <!-- <ReportGenerator
             v-if="activeTab === 'report'"
             :analysisResults="analysisResults"
             :query="query"
+            :id-list="idList"
             :key="'report-' + selectedIdentityIds.join('-')"
-          />
+          /> -->
         </q-tab-panel>
 
         <!-- 数据导出标签页 -->
