@@ -346,6 +346,7 @@
           <ReportGenerator
             v-if="activeTab === 'report'"
             :analysisResults="analysisResults"
+            :query="query"
             :key="'report-' + selectedIdentityIds.join('-')"
           />
         </q-tab-panel>

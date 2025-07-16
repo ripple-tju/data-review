@@ -21,35 +21,66 @@
       </template>
     </q-table>
     <div>
-      <AppKChart title="点赞趋势" :option="likeOption" :height="300" />
+      <AppKChart title="点赞趋势" :option="likeOption" :height="300" :useImageMode="useImageMode" />
     </div>
     <div>
-      <AppKChart title="分享趋势" :option="shareOption" :height="300" />
+      <AppKChart
+        title="分享趋势"
+        :option="shareOption"
+        :height="300"
+        :useImageMode="useImageMode"
+      />
     </div>
     <div>
-      <AppKChart title="评论趋势" :option="commentOption" :height="300" />
+      <AppKChart
+        title="评论趋势"
+        :option="commentOption"
+        :height="300"
+        :useImageMode="useImageMode"
+      />
     </div>
     <!-- <div>
       <AppKChart title="点赞、分享、评论趋势对比" :option="interactionTrendOption" :height="400" />
     </div> -->
     <div>
-      <AppKChart title="每天发文量" :option="postCountOption" :height="300" />
+      <AppKChart
+        title="每天发文量"
+        :option="postCountOption"
+        :height="300"
+        :useImageMode="useImageMode"
+      />
     </div>
     <div>
-      <AppKChart title="推文交互分布散点图 (点赞 : 评论)" :option="scatterOption" :height="500" />
+      <AppKChart
+        title="推文交互分布散点图 (点赞 : 评论)"
+        :option="scatterOption"
+        :height="500"
+        :useImageMode="useImageMode"
+      />
     </div>
     <div>
-      <AppKChart title="推文交互分布热力图 (点赞 : 评论)" :option="heatmapOption" :height="500" />
+      <AppKChart
+        title="推文交互分布热力图 (点赞 : 评论)"
+        :option="heatmapOption"
+        :height="500"
+        :useImageMode="useImageMode"
+      />
     </div>
     <div>
       <AppKChart
         title="推文交互分布3D散点图 (点赞 : 评论 : 分享)"
         :option="scatter3DOption"
         :height="600"
+        :useImageMode="useImageMode"
       />
     </div>
     <div>
-      <AppKChart title="词云" :option="wordCloudOption" :height="400" />
+      <AppKChart
+        title="词云"
+        :option="wordCloudOption"
+        :height="400"
+        :useImageMode="useImageMode"
+      />
     </div>
   </div>
 </template>
@@ -66,13 +97,14 @@ import * as Spec from 'src/specification';
 import { divideByDay } from 'src/query/utils';
 import type { EChartsOption } from 'echarts';
 
-const { query, postViewList, cutWordCache } = defineProps<{
+const { query, postViewList, cutWordCache, useImageMode } = defineProps<{
   query: QueryInterface;
   postViewList: Array<Spec.PostView.Type>;
   cutWordCache: Array<{
     id: Spec.PostArchive.Type['id'];
     cut: Array<string>;
   }>;
+  useImageMode?: boolean; // 新增：是否使用图片模式
 }>();
 
 const LabelMap = {

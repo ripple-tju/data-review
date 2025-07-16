@@ -22,7 +22,7 @@
           <div class="text-caption text-grey q-mb-md">
             基于点赞、分享、评论的加权评分排序（权重：点赞×1.0，分享×3.0，评论×2.0）
           </div>
-          
+
           <q-table
             :rows="identityRankingData"
             :columns="rankingColumns"
@@ -42,25 +42,25 @@
                 />
               </q-td>
             </template>
-            
+
             <template #body-cell-score="props">
               <q-td :props="props">
                 <div class="text-weight-bold">{{ props.row.score.toFixed(2) }}</div>
               </q-td>
             </template>
-            
+
             <template #body-cell-like="props">
               <q-td :props="props">
                 <q-chip outline color="pink" size="sm" :label="props.row.like" />
               </q-td>
             </template>
-            
+
             <template #body-cell-share="props">
               <q-td :props="props">
                 <q-chip outline color="blue" size="sm" :label="props.row.share" />
               </q-td>
             </template>
-            
+
             <template #body-cell-comment="props">
               <q-td :props="props">
                 <q-chip outline color="green" size="sm" :label="props.row.comment" />
@@ -80,7 +80,7 @@
           <div class="text-caption text-grey q-mb-md">
             X轴：点赞总数，Y轴：分享总数，Z轴：评论总数
           </div>
-          
+
           <KChart
             title="身份互动数据3D散点图"
             :option="scatterPlot3DOption"
@@ -97,10 +97,8 @@
             <q-icon name="cloud" class="q-mr-sm" />
             所有身份帖子词云
           </div>
-          <div class="text-caption text-grey q-mb-md">
-            基于所有身份的帖子内容生成的词云图
-          </div>
-          
+          <div class="text-caption text-grey q-mb-md">基于所有身份的帖子内容生成的词云图</div>
+
           <KChart
             title="所有身份帖子词云"
             :option="wordCloudOption"
@@ -117,45 +115,35 @@
             <q-icon name="people" class="q-mr-sm" />
             按身份统计汇总
           </div>
-          <div class="text-caption text-grey q-mb-md">
-            所有选中身份的统计信息汇总
-          </div>
-          
-          <div class="row q-gutter-md">
-            <div 
-              v-for="identity in analysisResults.filteredPostViewListGroupByIdentity" 
+          <div class="text-caption text-grey q-mb-md">所有选中身份的详细统计信息</div>
+
+          <div class="q-gutter-lg">
+            <div
+              v-for="identity in analysisResults.filteredPostViewListGroupByIdentity"
               :key="identity.name"
-              class="col-12 col-md-6 col-lg-4"
+              class="identity-section"
             >
-              <q-card flat bordered class="full-height">
+              <q-card flat bordered>
                 <q-card-section>
-                  <div class="text-h6 q-mb-sm">{{ identity.name }}</div>
-                  <div class="text-caption text-grey q-mb-md">
-                    {{ identity.postViewList.length }} 个帖子
+                  <div class="row items-center q-mb-md">
+                    <div class="text-h6 q-ma-none">{{ identity.name }}</div>
+                    <q-chip
+                      color="info"
+                      text-color="white"
+                      icon="article"
+                      :label="`${identity.postViewList.length} 个帖子`"
+                      class="q-ml-sm"
+                    />
                   </div>
-                  
-                  <div class="q-gutter-sm">
-                    <div class="row items-center">
-                      <q-icon name="thumb_up" color="pink" class="q-mr-xs" />
-                      <span class="text-caption">点赞总数：</span>
-                      <span class="text-weight-bold">{{ getIdentityStats(identity).like }}</span>
-                    </div>
-                    <div class="row items-center">
-                      <q-icon name="share" color="blue" class="q-mr-xs" />
-                      <span class="text-caption">分享总数：</span>
-                      <span class="text-weight-bold">{{ getIdentityStats(identity).share }}</span>
-                    </div>
-                    <div class="row items-center">
-                      <q-icon name="comment" color="green" class="q-mr-xs" />
-                      <span class="text-caption">评论总数：</span>
-                      <span class="text-weight-bold">{{ getIdentityStats(identity).comment }}</span>
-                    </div>
-                    <div class="row items-center">
-                      <q-icon name="article" color="orange" class="q-mr-xs" />
-                      <span class="text-caption">帖子数量：</span>
-                      <span class="text-weight-bold">{{ identity.postViewList.length }}</span>
-                    </div>
-                  </div>
+
+                  <!-- 使用 AppPostListStatistics 组件显示详细统计 -->
+                  <AppPostListStatistics
+                    :query="query"
+                    :postViewList="identity.postViewList"
+                    :cutWordCache="[]"
+                    :useImageMode="true"
+                    :key="'identity-stats-' + identity.name"
+                  />
                 </q-card-section>
               </q-card>
             </div>
@@ -169,7 +157,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import KChart from 'src/pages/components/KChart.vue';
+import AppPostListStatistics from 'src/pages/components/PostListStatistics.vue';
 import * as Spec from 'src/specification';
+import { QueryInterface } from 'src/query';
 
 interface AnalysisResults {
   filteredAllPostView: Array<Spec.PostView.Type>;
@@ -181,13 +171,14 @@ interface AnalysisResults {
 
 const props = defineProps<{
   analysisResults: AnalysisResults | null;
+  query: QueryInterface;
 }>();
 
 // 影响力评分权重配置
 const WEIGHT_CONFIG = {
-  like: 1.0,     // 点赞权重
-  share: 3.0,    // 分享权重（分享比点赞影响更大）
-  comment: 2.0,  // 评论权重
+  like: 1.0, // 点赞权重
+  share: 3.0, // 分享权重（分享比点赞影响更大）
+  comment: 2.0, // 评论权重
 };
 
 // 获取身份统计数据
@@ -196,7 +187,7 @@ const getIdentityStats = (identity: { name: string; postViewList: Array<Spec.Pos
   let totalShare = 0;
   let totalComment = 0;
 
-  identity.postViewList.forEach(postView => {
+  identity.postViewList.forEach((postView) => {
     // 获取最新的存档数据
     const latestArchive = postView.archive[postView.archive.length - 1];
     if (latestArchive) {
@@ -217,15 +208,14 @@ const getIdentityStats = (identity: { name: string; postViewList: Array<Spec.Pos
 const identityRankingData = computed(() => {
   if (!props.analysisResults) return [];
 
-  const rankingData = props.analysisResults.filteredPostViewListGroupByIdentity.map(identity => {
+  const rankingData = props.analysisResults.filteredPostViewListGroupByIdentity.map((identity) => {
     const stats = getIdentityStats(identity);
-    
+
     // 计算加权评分
-    const score = (
+    const score =
       stats.like * WEIGHT_CONFIG.like +
       stats.share * WEIGHT_CONFIG.share +
-      stats.comment * WEIGHT_CONFIG.comment
-    );
+      stats.comment * WEIGHT_CONFIG.comment;
 
     return {
       name: identity.name,
@@ -318,7 +308,7 @@ const getRankColor = (rank: number) => {
 const scatterPlot3DOption = computed(() => {
   if (!props.analysisResults) return {};
 
-  const scatterData = props.analysisResults.filteredPostViewListGroupByIdentity.map(identity => {
+  const scatterData = props.analysisResults.filteredPostViewListGroupByIdentity.map((identity) => {
     const stats = getIdentityStats(identity);
     return {
       name: identity.name,
@@ -394,7 +384,7 @@ const wordCloudOption = computed(() => {
 
   // 收集所有帖子内容
   const allContent = props.analysisResults.filteredAllPostView
-    .map(postView => {
+    .map((postView) => {
       const latestArchive = postView.archive[postView.archive.length - 1];
       return latestArchive?.content || '';
     })
@@ -403,11 +393,14 @@ const wordCloudOption = computed(() => {
   // 简单的词频统计（这里可以接入更复杂的分词逻辑）
   const words = allContent
     .split(/\s+/)
-    .filter(word => word.length > 1)
-    .reduce((acc, word) => {
-      acc[word] = (acc[word] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    .filter((word) => word.length > 1)
+    .reduce(
+      (acc, word) => {
+        acc[word] = (acc[word] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
   const wordCloudData = Object.entries(words)
     .sort((a, b) => b[1] - a[1])
@@ -461,5 +454,13 @@ const wordCloudOption = computed(() => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 16px;
+}
+
+.identity-section {
+  margin-bottom: 24px;
+}
+
+.identity-section:last-child {
+  margin-bottom: 0;
 }
 </style>
