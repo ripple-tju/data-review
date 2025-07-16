@@ -2,7 +2,7 @@
   <div>
     <!-- 数据表格 -->
     <div class="q-mb-lg">
-      <div class="text-h6 q-mb-md">帖子数据表格</div>
+      <div class="text-h6 q-mb-md">推文排行</div>
 
       <q-table
         dense
@@ -102,6 +102,7 @@
       <div class="text-h6 q-mb-md">点赞趋势分析</div>
 
       <AppKChart
+        data-chart="like-trend"
         title="点赞趋势"
         :option="likeOption"
         :height="300"
@@ -131,6 +132,7 @@
       <div class="text-h6 q-mb-md">分享趋势分析</div>
 
       <AppKChart
+        data-chart="share-trend"
         title="分享趋势"
         :option="shareOption"
         :height="300"
@@ -160,6 +162,7 @@
       <div class="text-h6 q-mb-md">评论趋势分析</div>
 
       <AppKChart
+        data-chart="comment-trend"
         title="评论趋势"
         :option="commentOption"
         :height="300"
@@ -189,6 +192,7 @@
       <div class="text-h6 q-mb-md">发文量统计</div>
 
       <AppKChart
+        data-chart="post-count"
         title="发文量统计"
         :option="postCountOption"
         :height="300"
@@ -218,6 +222,7 @@
       <div class="text-h6 q-mb-md">交互分布散点图</div>
 
       <AppKChart
+        data-chart="scatter-plot"
         title="交互分布散点图"
         :option="scatterOption"
         :height="400"
@@ -247,6 +252,7 @@
       <div class="text-h6 q-mb-md">交互分布热力图</div>
 
       <AppKChart
+        data-chart="heatmap"
         title="交互分布热力图"
         :option="heatmapOption"
         :height="400"
@@ -276,6 +282,7 @@
       <div class="text-h6 q-mb-md">3D散点图</div>
 
       <AppKChart
+        data-chart="scatter3d"
         title="3D散点图"
         :option="scatter3DOption"
         :height="500"
@@ -305,6 +312,7 @@
       <div class="text-h6 q-mb-md">词云图</div>
 
       <AppKChart
+        data-chart="wordcloud"
         title="词云图"
         :option="wordCloudOption"
         :height="400"
@@ -584,149 +592,214 @@ const exportAnnotations = async () => {
       return false;
     };
 
-    // 添加各个部分的批注
+    // 重新设计的 sections 配置
     const sections = [
-      { title: '数据表格分析', content: annotationData.dataTableAnnotation },
-      { title: '身份影响力排行分析', content: annotationData.identityRankingAnnotation },
-      { title: '点赞趋势分析', content: annotationData.likesTrendAnnotation },
-      { title: '分享趋势分析', content: annotationData.sharesTrendAnnotation },
-      { title: '评论趋势分析', content: annotationData.commentsTrendAnnotation },
-      { title: '发文量统计分析', content: annotationData.postCountAnnotation },
-      { title: '交互分布散点图分析', content: annotationData.scatterPlotAnnotation },
-      { title: '交互分布热力图分析', content: annotationData.heatmapAnnotation },
-      { title: '3D交互分布图分析', content: annotationData.scatter3DAnnotation },
-      { title: '词云分析', content: annotationData.wordCloudAnnotation },
+      {
+        title: '数据表格',
+        type: 'table' as const,
+        annotation: annotationData.dataTableAnnotation,
+        getData: () => {
+          return latestPostArchiveList.value
+            .slice(0, 20)
+            .map((post, index) => [
+              (index + 1).toString(),
+              post.content
+                ? post.content.slice(0, 50) + (post.content.length > 50 ? '...' : '')
+                : '',
+              post.like?.toString() || '0',
+              post.share?.toString() || '0',
+              post.comment?.toString() || '0',
+              dayjs(post.createdAt).format('YYYY-MM-DD'),
+            ]);
+        },
+        getHeaders: () => ['序号', '内容', '点赞', '分享', '评论', '创建时间'],
+        tableColor: [66, 139, 202] as [number, number, number],
+      },
+      {
+        title: '身份影响力排行',
+        type: 'table' as const,
+        annotation: annotationData.identityRankingAnnotation,
+        condition: () => identityRankingList.value.length > 1,
+        getData: () => {
+          return identityRankingList.value
+            .slice(0, 15)
+            .map((identity) => [
+              identity.rank.toString(),
+              identity.authorName,
+              identity.postCount.toString(),
+              identity.totalLikes.toString(),
+              identity.totalShares.toString(),
+              identity.totalComments.toString(),
+              identity.influenceScore.toString(),
+            ]);
+        },
+        getHeaders: () => ['排名', '身份', '发帖数', '总点赞', '总分享', '总评论', '影响力分数'],
+        tableColor: [156, 39, 176] as [number, number, number],
+        extraInfo: `影响力评分说明：点赞权重 ${INFLUENCE_WEIGHTS.like}，分享权重 ${INFLUENCE_WEIGHTS.share}，评论权重 ${INFLUENCE_WEIGHTS.comment}`,
+      },
+      {
+        title: '点赞趋势分析',
+        type: 'chart' as const,
+        annotation: annotationData.likesTrendAnnotation,
+        chartSelector: '[data-chart="like-trend"]',
+      },
+      {
+        title: '分享趋势分析',
+        type: 'chart' as const,
+        annotation: annotationData.sharesTrendAnnotation,
+        chartSelector: '[data-chart="share-trend"]',
+      },
+      {
+        title: '评论趋势分析',
+        type: 'chart' as const,
+        annotation: annotationData.commentsTrendAnnotation,
+        chartSelector: '[data-chart="comment-trend"]',
+      },
+      {
+        title: '发文量统计分析',
+        type: 'chart' as const,
+        annotation: annotationData.postCountAnnotation,
+        chartSelector: '[data-chart="post-count"]',
+      },
+      {
+        title: '交互分布散点图分析',
+        type: 'chart' as const,
+        annotation: annotationData.scatterPlotAnnotation,
+        chartSelector: '[data-chart="scatter-plot"]',
+      },
+      {
+        title: '交互分布热力图分析',
+        type: 'chart' as const,
+        annotation: annotationData.heatmapAnnotation,
+        chartSelector: '[data-chart="heatmap"]',
+      },
+      {
+        title: '3D交互分布图分析',
+        type: 'chart' as const,
+        annotation: annotationData.scatter3DAnnotation,
+        chartSelector: '[data-chart="scatter3d"]',
+      },
+      {
+        title: '词云分析',
+        type: 'chart' as const,
+        annotation: annotationData.wordCloudAnnotation,
+        chartSelector: '[data-chart="wordcloud"]',
+      },
     ];
 
-    sections.forEach((section, index) => {
+    // 渲染各个 section
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i];
+      if (!section) continue;
+
+      // 检查条件（如果有）
+      if ('condition' in section && !section.condition()) {
+        continue;
+      }
+
       // 检查是否需要换页
-      checkPageBreak(30);
+      checkPageBreak(40);
 
       // 添加节标题
-      doc.setFontSize(14);
+      doc.setFontSize(16);
       doc.setFont('SourceHanSansCN', 'bold');
-      doc.text(`${index + 1}. ${section.title}`, margin, currentY);
-      currentY += 10;
+      doc.text(`${i + 1}. ${section.title}`, margin, currentY);
+      currentY += 15;
 
-      // 添加内容
-      doc.setFontSize(11);
-      doc.setFont('SourceHanSansCN', 'normal');
+      // 根据类型渲染内容
+      if (section.type === 'table') {
+        // 渲染表格
+        if ('getData' in section && 'getHeaders' in section) {
+          const tableData = section.getData();
+          const headers = section.getHeaders();
 
-      const content = section.content || '暂无批注';
-      const lines = doc.splitTextToSize(content, contentWidth);
+          if (tableData.length > 0) {
+            checkPageBreak(50);
 
-      lines.forEach((line: string) => {
-        checkPageBreak(8);
-        doc.text(line, margin, currentY);
-        currentY += 6;
-      });
+            autoTable(doc, {
+              head: [headers],
+              body: tableData,
+              startY: currentY,
+              styles: {
+                font: 'SourceHanSansCN',
+                fontSize: 9,
+                cellPadding: 3,
+              },
+              headStyles: {
+                fillColor: 'tableColor' in section ? section.tableColor : [66, 139, 202],
+                textColor: [255, 255, 255],
+                fontSize: 10,
+                fontStyle: 'bold',
+              },
+              alternateRowStyles: {
+                fillColor: [245, 245, 245],
+              },
+              margin: { left: margin, right: margin },
+              pageBreak: 'auto',
+            });
 
-      currentY += 8; // 段落间距
-    });
+            currentY = (doc as any).lastAutoTable.finalY + 10;
 
-    // 添加数据表格（如果有数据）
-    if (latestPostArchiveList.value.length > 0) {
-      checkPageBreak(50);
+            // 添加额外信息（如权重说明）
+            if ('extraInfo' in section && section.extraInfo) {
+              checkPageBreak(15);
+              doc.setFontSize(10);
+              doc.setFont('SourceHanSansCN', 'normal');
+              doc.text(section.extraInfo, margin, currentY);
+              currentY += 10;
+            }
+          }
+        }
+      } else if (section.type === 'chart') {
+        // 渲染图表
+        if ('chartSelector' in section && section.chartSelector) {
+          try {
+            const chartElement = document.querySelector(section.chartSelector);
+            if (chartElement) {
+              const canvas = chartElement.querySelector('canvas');
+              if (canvas) {
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = contentWidth;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      doc.setFontSize(14);
-      doc.setFont('SourceHanSansCN', 'bold');
-      doc.text('数据表格', margin, currentY);
-      currentY += 10;
+                checkPageBreak(imgHeight + 20);
 
-      // 准备表格数据
-      const tableData = latestPostArchiveList.value
-        .slice(0, 20)
-        .map((post, index) => [
-          (index + 1).toString(),
-          post.content ? post.content.slice(0, 50) + (post.content.length > 50 ? '...' : '') : '',
-          post.like?.toString() || '0',
-          post.share?.toString() || '0',
-          post.comment?.toString() || '0',
-          dayjs(post.createdAt).format('YYYY-MM-DD'),
-        ]);
+                doc.addImage(imgData, 'PNG', margin, currentY, imgWidth, imgHeight);
+                currentY += imgHeight + 10;
+              }
+            }
+          } catch (error) {
+            console.warn(`无法获取图表图片: ${section.title}`, error);
+            // 如果无法获取图片，显示占位符
+            doc.setFontSize(12);
+            doc.setFont('SourceHanSansCN', 'normal');
+            doc.text(`[图表: ${section.title}]`, margin, currentY);
+            currentY += 15;
+          }
+        }
+      }
 
-      // 使用 autoTable 添加表格
-      autoTable(doc, {
-        head: [['序号', '内容', '点赞', '分享', '评论', '创建时间']],
-        body: tableData,
-        startY: currentY,
-        styles: {
-          font: 'SourceHanSansCN',
-          fontSize: 9,
-          cellPadding: 3,
-        },
-        headStyles: {
-          fillColor: [66, 139, 202],
-          textColor: [255, 255, 255],
-          fontSize: 10,
-          fontStyle: 'bold',
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245],
-        },
-        margin: { left: margin, right: margin },
-        pageBreak: 'auto',
-      });
-    }
+      // 添加批注
+      if (section.annotation) {
+        checkPageBreak(30);
 
-    // 添加身份排行表格（如果有多个身份）
-    if (identityRankingList.value.length > 1) {
-      checkPageBreak(50);
+        doc.setFontSize(12);
+        doc.setFont('SourceHanSansCN', 'bold');
+        doc.text('📝 分析批注：', margin, currentY);
+        currentY += 8;
 
-      doc.setFontSize(14);
-      doc.setFont('SourceHanSansCN', 'bold');
-      doc.text('身份影响力排行', margin, currentY);
-      currentY += 10;
+        doc.setFontSize(11);
+        doc.setFont('SourceHanSansCN', 'normal');
 
-      // 准备身份排行数据
-      const identityTableData = identityRankingList.value
-        .slice(0, 15) // 取前15名
-        .map((identity) => [
-          identity.rank.toString(),
-          identity.authorName,
-          identity.postCount.toString(),
-          identity.totalLikes.toString(),
-          identity.totalShares.toString(),
-          identity.totalComments.toString(),
-          identity.influenceScore.toString(),
-        ]);
+        const annotationLines = doc.splitTextToSize(section.annotation || '暂无批注', contentWidth);
+        annotationLines.forEach((line: string) => {
+          checkPageBreak(8);
+          doc.text(line, margin, currentY);
+          currentY += 6;
+        });
 
-      // 使用 autoTable 添加身份排行表格
-      autoTable(doc, {
-        head: [['排名', '身份', '发帖数', '总点赞', '总分享', '总评论', '影响力分数']],
-        body: identityTableData,
-        startY: currentY,
-        styles: {
-          font: 'SourceHanSansCN',
-          fontSize: 9,
-          cellPadding: 3,
-        },
-        headStyles: {
-          fillColor: [156, 39, 176],
-          textColor: [255, 255, 255],
-          fontSize: 10,
-          fontStyle: 'bold',
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245],
-        },
-        margin: { left: margin, right: margin },
-        pageBreak: 'auto',
-      });
-
-      // 添加权重说明
-      checkPageBreak(20);
-      doc.setFontSize(10);
-      doc.setFont('SourceHanSansCN', 'normal');
-      doc.text('影响力评分说明：', margin, currentY);
-      currentY += 8;
-      doc.setFontSize(9);
-      doc.text(
-        `点赞权重: ${INFLUENCE_WEIGHTS.like}， 分享权重: ${INFLUENCE_WEIGHTS.share}， 评论权重: ${INFLUENCE_WEIGHTS.comment}`,
-        margin,
-        currentY,
-      );
-      currentY += 8;
+        currentY += 10; // 节间距
+      }
     }
 
     // 添加页脚
