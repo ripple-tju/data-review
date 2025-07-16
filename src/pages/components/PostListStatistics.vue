@@ -584,9 +584,20 @@ const exportAnnotations = async () => {
     });
     currentY += 20;
 
-    // 检查是否需要换页
+    // 改进的换页检查逻辑
     const checkPageBreak = (neededHeight: number) => {
-      if (currentY + neededHeight > pageHeight - margin) {
+      if (currentY + neededHeight > pageHeight - margin - 20) {
+        doc.addPage();
+        currentY = margin;
+        return true;
+      }
+      return false;
+    };
+
+    // 智能换页检查 - 只在真正需要时换页
+    const smartPageBreak = (minHeight: number) => {
+      const availableHeight = pageHeight - margin - 20 - currentY;
+      if (availableHeight < minHeight) {
         doc.addPage();
         currentY = margin;
         return true;
@@ -700,44 +711,45 @@ const exportAnnotations = async () => {
         continue;
       }
 
-      // 计算section所需的最小高度（确保section完整性）
-      let estimatedSectionHeight = 40; // 标题 + 基本间距 (减少20px)
+      // 预估整个section的高度（标题 + 内容）
+      let estimatedSectionHeight = 25; // 标题高度
 
       if (section.type === 'table' && 'getData' in section) {
         const tableData = section.getData();
-        estimatedSectionHeight += Math.min(tableData.length * 10, 150); // 表格高度估算更紧凑
+        estimatedSectionHeight += Math.min(tableData.length * 8 + 20, 120); // 表格高度
       } else if (section.type === 'chart') {
-        estimatedSectionHeight += 100; // 图表高度估算减少
+        estimatedSectionHeight += 80; // 图表高度
       }
 
       if (section.annotation) {
-        estimatedSectionHeight += 35; // 批注高度估算减少
+        const annotationLines = doc.splitTextToSize(
+          section.annotation || '暂无批注',
+          contentWidth - 16,
+        );
+        estimatedSectionHeight += annotationLines.length * 4 + 12; // 批注高度
       }
 
-      // 如果当前页面空间不够，直接换页
-      if (currentY + estimatedSectionHeight > pageHeight - margin - 20) {
-        doc.addPage();
-        currentY = margin;
-      }
+      // 检查整个section是否需要换页（避免标题和内容分离）
+      smartPageBreak(estimatedSectionHeight);
 
       // 添加section分隔线（除了第一个section）
       if (sectionNumber > 1) {
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
-        doc.line(margin, currentY - 3, pageWidth - margin, currentY - 3);
-        currentY += 6; // 减少间距
+        doc.line(margin, currentY - 2, pageWidth - margin, currentY - 2);
+        currentY += 4; // 更紧凑的间距
       }
 
-      // 添加section背景色块
+      // 更紧凑的section背景色块
       doc.setFillColor(248, 249, 250);
-      doc.rect(margin - 5, currentY - 3, contentWidth + 10, 20, 'F'); // 减少高度
+      doc.rect(margin - 3, currentY - 2, contentWidth + 6, 16, 'F'); // 更小的背景块
 
       // 添加节标题，使用独立的section编号
-      doc.setFontSize(16);
+      doc.setFontSize(14); // 减小标题字体
       doc.setFont('SourceHanSansCN', 'bold');
       doc.setTextColor(33, 37, 41);
       doc.text(`${sectionNumber}. ${section.title}`, margin, currentY + 8);
-      currentY += 22; // 减少间距
+      currentY += 18; // 更紧凑的间距
 
       // section编号递增
       sectionNumber++;
@@ -753,39 +765,47 @@ const exportAnnotations = async () => {
           const headers = section.getHeaders();
 
           if (tableData.length > 0) {
-            // 表格渲染时不需要额外的换页检查，因为已经在section级别处理了
+            // 表格渲染（换页已在section层面处理）
             autoTable(doc, {
               head: [headers],
               body: tableData,
               startY: currentY,
               styles: {
                 font: 'SourceHanSansCN',
-                fontSize: 9,
-                cellPadding: 2, // 减少单元格内边距
+                fontSize: 8, // 更小的字体
+                cellPadding: 1.5, // 更紧凑的单元格内边距
+                lineColor: [200, 200, 200],
+                lineWidth: 0.3,
               },
               headStyles: {
                 fillColor: 'tableColor' in section ? section.tableColor : [66, 139, 202],
                 textColor: [255, 255, 255],
-                fontSize: 10,
+                fontSize: 9, // 更小的标题字体
                 fontStyle: 'bold',
+                cellPadding: 2,
+              },
+              bodyStyles: {
+                fontSize: 8,
+                cellPadding: 1.5,
               },
               alternateRowStyles: {
-                fillColor: [245, 245, 245],
+                fillColor: [248, 249, 250],
               },
               margin: { left: margin, right: margin },
-              pageBreak: 'avoid', // 尽量避免表格被分页
+              pageBreak: 'avoid', // 避免表格被分页（因为已经在section层面处理）
+              showHead: 'everyPage', // 每页都显示表头
             });
 
-            currentY = (doc as any).lastAutoTable.finalY + 8; // 减少间距
+            currentY = (doc as any).lastAutoTable.finalY + 6; // 更紧凑的间距
 
             // 添加额外信息（如权重说明）
             if ('extraInfo' in section && section.extraInfo) {
-              doc.setFontSize(10);
+              doc.setFontSize(9);
               doc.setFont('SourceHanSansCN', 'italic');
               doc.setTextColor(108, 117, 125);
               doc.text(section.extraInfo, margin, currentY);
               doc.setTextColor(0, 0, 0);
-              currentY += 8; // 减少间距
+              currentY += 10; // 更紧凑的间距
             }
           }
         }
@@ -798,68 +818,69 @@ const exportAnnotations = async () => {
               const canvas = chartElement.querySelector('canvas');
               if (canvas) {
                 const imgData = canvas.toDataURL('image/png');
-                const imgWidth = contentWidth;
+                const imgWidth = contentWidth * 0.9; // 稍微减小图表宽度
                 const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
                 // 添加图表边框
                 doc.setDrawColor(220, 220, 220);
-                doc.setLineWidth(0.5);
-                doc.rect(margin - 2, currentY - 2, imgWidth + 4, imgHeight + 4);
+                doc.setLineWidth(0.3);
+                doc.rect(margin - 1, currentY - 1, imgWidth + 2, imgHeight + 2);
 
                 doc.addImage(imgData, 'PNG', margin, currentY, imgWidth, imgHeight);
-                currentY += imgHeight + 12; // 减少间距
+                currentY += imgHeight + 8; // 更紧凑的间距
               }
             }
           } catch (error) {
             console.warn(`无法获取图表图片: ${section.title}`, error);
             // 如果无法获取图片，显示占位符
-            doc.setFontSize(12);
+            doc.setFontSize(11);
             doc.setFont('SourceHanSansCN', 'normal');
             doc.setTextColor(108, 117, 125);
             doc.text(`[图表: ${section.title}]`, margin, currentY);
             doc.setTextColor(0, 0, 0);
-            currentY += 12; // 减少间距
+            currentY += 12; // 更紧凑的间距
           }
         }
       }
 
       // 添加批注
       if (section.annotation) {
-        // 添加批注背景色块
+        // 预估批注高度
         const annotationLines = doc.splitTextToSize(
           section.annotation || '暂无批注',
-          contentWidth - 20,
+          contentWidth - 16,
         );
-        const annotationHeight = annotationLines.length * 5 + 15; // 减少高度
+        const annotationHeight = annotationLines.length * 4 + 12; // 更紧凑的行高
 
+        // 添加批注背景色块
         doc.setFillColor(252, 248, 227); // 淡黄色背景
-        doc.rect(margin - 5, currentY - 3, contentWidth + 10, annotationHeight, 'F');
+        doc.rect(margin - 3, currentY - 2, contentWidth + 6, annotationHeight, 'F');
 
         // 添加批注左边框
         doc.setDrawColor(255, 193, 7);
-        doc.setLineWidth(3);
-        doc.line(margin - 5, currentY - 3, margin - 5, currentY - 3 + annotationHeight);
+        doc.setLineWidth(2);
+        doc.line(margin - 3, currentY - 2, margin - 3, currentY - 2 + annotationHeight);
 
-        doc.setFontSize(12);
+        doc.setFontSize(10); // 更小的字体
         doc.setFont('SourceHanSansCN', 'bold');
         doc.setTextColor(133, 100, 4);
-        doc.text(`${section.title}批注：`, margin, currentY + 3);
-        currentY += 12; // 减少间距
+        doc.text(`${section.title}批注：`, margin, currentY + 6);
+        currentY += 10; // 更紧凑的间距
 
-        doc.setFontSize(11);
+        doc.setFontSize(9); // 更小的字体
         doc.setFont('SourceHanSansCN', 'normal');
         doc.setTextColor(102, 77, 3);
 
         annotationLines.forEach((line: string) => {
           doc.text(line, margin, currentY);
-          currentY += 5; // 减少行间距
+          currentY += 4; // 更紧凑的行间距
         });
 
         // 重置文本颜色
         doc.setTextColor(0, 0, 0);
-        currentY += 15; // 减少section间距
+        currentY += 8; // 更紧凑的section间距
       } else {
-        currentY += 10; // 减少没有批注时的间距
+        currentY += 6; // 更紧凑的没有批注时的间距
       }
     }
 
@@ -867,11 +888,12 @@ const exportAnnotations = async () => {
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.setFontSize(9);
-      doc.text(`第 ${i} 页 / 共 ${pageCount} 页`, pageWidth / 2, pageHeight - 10, {
+      doc.setFontSize(8); // 更小的页脚字体
+      doc.setTextColor(108, 117, 125); // 灰色文本
+      doc.text(`第 ${i} 页 / 共 ${pageCount} 页`, pageWidth / 2, pageHeight - 8, {
         align: 'center',
       });
-      doc.text(`生成时间: ${annotationData.timestamp}`, pageWidth - margin, pageHeight - 10, {
+      doc.text(`生成时间: ${annotationData.timestamp}`, pageWidth - margin, pageHeight - 8, {
         align: 'right',
       });
     }
