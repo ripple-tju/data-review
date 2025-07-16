@@ -21,7 +21,13 @@
       </template>
     </q-table>
     <div>
-      <AppKChart title="点赞趋势" :option="likeOption" :height="300" :useImageMode="useImageMode" />
+      <AppKChart
+        title="点赞趋势"
+        :option="likeOption"
+        :height="300"
+        :useImageMode="useImageMode"
+        @rendered="onChartRendered"
+      />
     </div>
     <div>
       <AppKChart
@@ -29,6 +35,7 @@
         :option="shareOption"
         :height="300"
         :useImageMode="useImageMode"
+        @rendered="onChartRendered"
       />
     </div>
     <div>
@@ -37,6 +44,7 @@
         :option="commentOption"
         :height="300"
         :useImageMode="useImageMode"
+        @rendered="onChartRendered"
       />
     </div>
     <!-- <div>
@@ -48,6 +56,7 @@
         :option="postCountOption"
         :height="300"
         :useImageMode="useImageMode"
+        @rendered="onChartRendered"
       />
     </div>
     <div>
@@ -56,6 +65,7 @@
         :option="scatterOption"
         :height="500"
         :useImageMode="useImageMode"
+        @rendered="onChartRendered"
       />
     </div>
     <div>
@@ -64,6 +74,7 @@
         :option="heatmapOption"
         :height="500"
         :useImageMode="useImageMode"
+        @rendered="onChartRendered"
       />
     </div>
     <div>
@@ -72,6 +83,7 @@
         :option="scatter3DOption"
         :height="600"
         :useImageMode="useImageMode"
+        @rendered="onChartRendered"
       />
     </div>
     <div>
@@ -80,6 +92,7 @@
         :option="wordCloudOption"
         :height="400"
         :useImageMode="useImageMode"
+        @rendered="onChartRendered"
       />
     </div>
   </div>
@@ -92,7 +105,7 @@ import z from 'zod';
 import dayjs from 'dayjs';
 import AppKChart from './KChart.vue';
 import { QueryInterface } from 'src/query';
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, nextTick, watch } from 'vue';
 import * as Spec from 'src/specification';
 import { divideByDay } from 'src/query/utils';
 import type { EChartsOption } from 'echarts';
@@ -106,6 +119,55 @@ const { query, postViewList, cutWordCache, useImageMode } = defineProps<{
   }>;
   useImageMode?: boolean; // 新增：是否使用图片模式
 }>();
+
+// 定义事件发射器
+const emit = defineEmits<{
+  rendered: [];
+}>();
+
+// 图表渲染完成计数器
+const renderedChartsCount = ref(0);
+const totalChartsCount = 7; // 当前组件中的图表总数
+
+// 图表渲染完成的回调
+const onChartRendered = () => {
+  renderedChartsCount.value++;
+  console.log(
+    `📊 [PostListStatistics] 图表渲染完成: ${renderedChartsCount.value}/${totalChartsCount}`,
+  );
+
+  // 如果所有图表都已渲染完成，发射 rendered 事件
+  if (renderedChartsCount.value >= totalChartsCount) {
+    console.log('📊 [PostListStatistics] 所有图表渲染完成，发射 rendered 事件');
+    emit('rendered');
+  }
+};
+
+// 在组件挂载时，如果不是图片模式，立即发射 rendered 事件
+onMounted(() => {
+  if (!useImageMode) {
+    void nextTick(() => {
+      emit('rendered');
+    });
+  } else {
+    // 如果是图片模式，重置计数器
+    renderedChartsCount.value = 0;
+  }
+});
+
+// 当 useImageMode 改变时，重置计数器
+watch(
+  () => useImageMode,
+  (newMode: boolean | undefined) => {
+    if (newMode) {
+      renderedChartsCount.value = 0;
+    } else {
+      void nextTick(() => {
+        emit('rendered');
+      });
+    }
+  },
+);
 
 const LabelMap = {
   'specification.data.PostArchive.content': '推文内容',

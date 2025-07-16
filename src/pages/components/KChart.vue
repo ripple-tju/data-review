@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="k-chart-container">
     <div class="row items-center justify-between q-mb-md">
       <div class="text-h6 q-ma-none">{{ title }}</div>
       <div class="row q-gutter-sm">
@@ -33,11 +33,17 @@
       />
     </div>
     <div v-else ref="chartRef" class="full-width" :style="{ height: height + 'px' }"></div>
+
+    <!-- 图片生成提示 -->
+    <div v-if="imageGenerating" class="image-generating-hint">
+      <q-icon name="image" class="q-mr-xs" />
+      正在生成图片...
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import * as echarts from 'echarts';
 import 'echarts-gl'; // 引入3D图表支持
 import 'echarts-wordcloud'; // 引入词云图支持
@@ -51,11 +57,17 @@ const props = defineProps<{
   useImageMode?: boolean; // 新增：是否使用图片模式，默认为false
 }>();
 
+// 定义事件发射器
+const emit = defineEmits<{
+  rendered: [];
+}>();
+
 const $q = useQuasar();
 
 const chartRef = ref<HTMLDivElement>();
 const chartInstance = ref<echarts.ECharts | null>(null);
 const chartImageUrl = ref<string | null>(null); // 新增：图片URL
+const imageGenerating = ref<boolean>(false); // 新增：图片生成状态
 
 const height = props.height || 400;
 
@@ -67,6 +79,11 @@ const initChart = () => {
     // 如果启用了图片模式，生成图片并销毁图表实例
     if (props.useImageMode) {
       generateChartImage();
+    } else {
+      // 如果不是图片模式，图表初始化完成后发射 rendered 事件
+      nextTick(() => {
+        emit('rendered');
+      }).catch(console.error);
     }
   }
 };
@@ -74,23 +91,117 @@ const initChart = () => {
 // 新增：生成图片并销毁图表实例以节省WebGL上下文
 const generateChartImage = () => {
   if (chartInstance.value) {
-    // 等待图表完全渲染
-    setTimeout(() => {
-      if (chartInstance.value) {
-        // 生成图片
-        chartImageUrl.value = chartInstance.value.getDataURL({
-          type: 'png',
-          pixelRatio: 2, // 提高图片质量
-          backgroundColor: '#fff', // 设置背景色为白色
-        });
+    imageGenerating.value = true; // 开始生成图片
 
-        // 销毁图表实例以释放WebGL上下文
-        chartInstance.value.dispose();
-        chartInstance.value = null;
+    // 等待图表完全渲染 - 使用多重检查机制
+    const waitForRender = () => {
+      return new Promise<void>((resolve) => {
+        let attempts = 0;
+        const maxAttempts = 30; // 最多等待3秒
 
-        console.log('📊 [KChart] 图表已转换为图片，WebGL上下文已释放');
-      }
-    }, 100);
+        const checkRender = () => {
+          attempts++;
+
+          if (!chartInstance.value) {
+            resolve();
+            return;
+          }
+
+          // 检查图表是否已经渲染完成
+          // 1. 检查是否有可见的DOM元素
+          const chartDom = chartInstance.value.getDom();
+          if (!chartDom || chartDom.offsetWidth === 0 || chartDom.offsetHeight === 0) {
+            if (attempts < maxAttempts) {
+              setTimeout(checkRender, 100);
+              return;
+            }
+          }
+
+          // 2. 检查是否有series数据
+          const option = chartInstance.value.getOption();
+          if (
+            !option ||
+            !option.series ||
+            !Array.isArray(option.series) ||
+            option.series.length === 0
+          ) {
+            if (attempts < maxAttempts) {
+              setTimeout(checkRender, 100);
+              return;
+            }
+          }
+
+          // 3. 对于3D图表，额外等待一段时间确保WebGL渲染完成
+          const has3DSeries =
+            Array.isArray(option.series) &&
+            option.series.some(
+              (series: any) =>
+                series.type && (series.type.includes('3D') || series.type === 'scatter3D'),
+            );
+
+          if (has3DSeries && attempts < 5) {
+            setTimeout(checkRender, 200);
+            return;
+          }
+
+          // 4. 对于词云图，检查是否有wordCloud类型
+          const hasWordCloud =
+            Array.isArray(option.series) &&
+            option.series.some((series: any) => series.type === 'wordCloud');
+
+          if (hasWordCloud && attempts < 3) {
+            setTimeout(checkRender, 300);
+            return;
+          }
+
+          resolve();
+        };
+
+        checkRender();
+      });
+    };
+
+    void waitForRender()
+      .then(() => {
+        if (chartInstance.value) {
+          try {
+            // 生成图片
+            chartImageUrl.value = chartInstance.value.getDataURL({
+              type: 'png',
+              pixelRatio: 2, // 提高图片质量
+              backgroundColor: '#fff', // 设置背景色为白色
+            });
+
+            // 销毁图表实例以释放WebGL上下文
+            chartInstance.value.dispose();
+            chartInstance.value = null;
+
+            console.log('📊 [KChart] 图表已转换为图片，WebGL上下文已释放');
+          } catch (error) {
+            console.error('📊 [KChart] 图片生成失败:', error);
+            // 即使生成失败，也要清理图表实例
+            if (chartInstance.value) {
+              chartInstance.value.dispose();
+              chartInstance.value = null;
+            }
+          } finally {
+            imageGenerating.value = false; // 结束生成图片状态
+            // 图片生成完成后发射 rendered 事件
+            emit('rendered');
+          }
+        }
+      })
+      .catch((error) => {
+        console.error('📊 [KChart] 等待渲染失败:', error);
+        // 确保清理图表实例
+        if (chartInstance.value) {
+          chartInstance.value.dispose();
+          chartInstance.value = null;
+        }
+        imageGenerating.value = false; // 结束生成图片状态
+        // 即使失败也要发射 rendered 事件，防止阻塞后续渲染
+        emit('rendered');
+      });
   }
 };
 
@@ -217,7 +328,11 @@ watch(
         // 重新创建图表实例
         chartInstance.value = echarts.init(chartRef.value);
         chartInstance.value.setOption(newOption);
-        generateChartImage();
+
+        // 等待一个tick确保setOption完成
+        setTimeout(() => {
+          generateChartImage();
+        }, 0);
       }
     } else if (chartInstance.value) {
       // 原有的图表更新逻辑
@@ -227,3 +342,45 @@ watch(
   { deep: true },
 );
 </script>
+
+<style scoped>
+.k-chart-container {
+  position: relative;
+}
+
+.image-generating-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+}
+
+.image-generating-hint .q-icon {
+  font-size: 16px;
+  color: #2196f3;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+</style>

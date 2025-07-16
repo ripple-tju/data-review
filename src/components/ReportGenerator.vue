@@ -81,12 +81,18 @@
             X轴：点赞总数，Y轴：分享总数，Z轴：评论总数
           </div>
 
-          <KChart
-            title="身份互动数据3D散点图"
-            :option="scatterPlot3DOption"
-            :height="500"
-            :useImageMode="true"
-          />
+          <div class="chart-container">
+            <KChart
+              title="身份互动数据3D散点图"
+              :option="scatterPlot3DOption"
+              :height="500"
+              :useImageMode="true"
+            />
+            <div class="chart-loading-hint">
+              <q-icon name="info" class="q-mr-xs" />
+              <span class="text-caption">3D图表正在生成，请稍候...</span>
+            </div>
+          </div>
         </q-card-section>
       </q-card>
 
@@ -99,12 +105,18 @@
           </div>
           <div class="text-caption text-grey q-mb-md">基于所有身份的帖子内容生成的词云图</div>
 
-          <KChart
-            title="所有身份帖子词云"
-            :option="wordCloudOption"
-            :height="400"
-            :useImageMode="true"
-          />
+          <div class="chart-container">
+            <KChart
+              title="所有身份帖子词云"
+              :option="wordCloudOption"
+              :height="400"
+              :useImageMode="true"
+            />
+            <div class="chart-loading-hint">
+              <q-icon name="info" class="q-mr-xs" />
+              <span class="text-caption">词云图正在生成，请稍候...</span>
+            </div>
+          </div>
         </q-card-section>
       </q-card>
 
@@ -118,8 +130,9 @@
           <div class="text-caption text-grey q-mb-md">所有选中身份的详细统计信息</div>
 
           <div class="q-gutter-lg">
+            <!-- 渐进式渲染身份统计组件 -->
             <div
-              v-for="identity in analysisResults.filteredPostViewListGroupByIdentity"
+              v-for="(identity, index) in analysisResults.filteredPostViewListGroupByIdentity"
               :key="identity.name"
               class="identity-section"
             >
@@ -134,16 +147,57 @@
                       :label="`${identity.postViewList.length} 个帖子`"
                       class="q-ml-sm"
                     />
+                    <!-- 渲染状态指示器 -->
+                    <div class="q-ml-auto">
+                      <q-chip
+                        v-if="currentRenderingIndex === index"
+                        color="orange"
+                        text-color="white"
+                        icon="hourglass_empty"
+                        size="sm"
+                        label="正在渲染"
+                        class="q-ml-sm animate-pulse"
+                      />
+                      <q-chip
+                        v-else-if="currentRenderingIndex > index"
+                        color="green"
+                        text-color="white"
+                        icon="check_circle"
+                        size="sm"
+                        label="已完成"
+                        class="q-ml-sm"
+                      />
+                      <q-chip
+                        v-else
+                        color="grey"
+                        text-color="white"
+                        icon="schedule"
+                        size="sm"
+                        label="等待中"
+                        class="q-ml-sm"
+                      />
+                    </div>
                   </div>
 
-                  <!-- 使用 AppPostListStatistics 组件显示详细统计 -->
-                  <AppPostListStatistics
-                    :query="query"
-                    :postViewList="identity.postViewList"
-                    :cutWordCache="[]"
-                    :useImageMode="true"
-                    :key="'identity-stats-' + identity.name"
-                  />
+                  <!-- 只渲染当前或已完成的组件 -->
+                  <div v-if="index <= currentRenderingIndex">
+                    <AppPostListStatistics
+                      :query="query"
+                      :postViewList="identity.postViewList"
+                      :cutWordCache="[]"
+                      :useImageMode="true"
+                      :key="'identity-stats-' + identity.name"
+                      @rendered="onIdentityStatsRendered(index)"
+                    />
+                  </div>
+
+                  <!-- 等待渲染的占位符 -->
+                  <div v-else class="waiting-placeholder">
+                    <div class="text-center q-pa-lg">
+                      <q-icon name="schedule" size="3rem" color="grey-4" class="q-mb-md" />
+                      <div class="text-body2 text-grey-6">等待前面的图表渲染完成...</div>
+                    </div>
+                  </div>
                 </q-card-section>
               </q-card>
             </div>
@@ -155,7 +209,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch, onUnmounted } from 'vue';
 import KChart from 'src/pages/components/KChart.vue';
 import AppPostListStatistics from 'src/pages/components/PostListStatistics.vue';
 import * as Spec from 'src/specification';
@@ -173,6 +227,55 @@ const props = defineProps<{
   analysisResults: AnalysisResults | null;
   query: QueryInterface;
 }>();
+
+// 渐进式渲染状态管理
+const currentRenderingIndex = ref<number>(0); // 当前正在渲染的组件索引
+const renderingTimeout = ref<NodeJS.Timeout | null>(null);
+
+// 当分析结果变化时，重置渲染状态
+watch(
+  () => props.analysisResults,
+  (newResults) => {
+    if (newResults) {
+      currentRenderingIndex.value = 0;
+      // 清除之前的超时
+      if (renderingTimeout.value) {
+        clearTimeout(renderingTimeout.value);
+      }
+    }
+  },
+  { immediate: true },
+);
+
+// 身份统计组件渲染完成的回调
+const onIdentityStatsRendered = (index: number) => {
+  console.log(`📊 [ReportGenerator] 身份统计组件 ${index} 渲染完成`);
+
+  // 清除之前的超时
+  if (renderingTimeout.value) {
+    clearTimeout(renderingTimeout.value);
+  }
+
+  // 如果还有下一个组件需要渲染，则延迟一段时间后渲染下一个
+  if (
+    props.analysisResults &&
+    index < props.analysisResults.filteredPostViewListGroupByIdentity.length - 1
+  ) {
+    renderingTimeout.value = setTimeout(() => {
+      currentRenderingIndex.value = index + 1;
+      console.log(`📊 [ReportGenerator] 开始渲染下一个组件，索引: ${index + 1}`);
+    }, 500); // 延迟500ms确保前一个组件完全渲染完成
+  } else {
+    console.log('📊 [ReportGenerator] 所有身份统计组件渲染完成');
+  }
+};
+
+// 在组件卸载时清理超时
+onUnmounted(() => {
+  if (renderingTimeout.value) {
+    clearTimeout(renderingTimeout.value);
+  }
+});
 
 // 影响力评分权重配置
 const WEIGHT_CONFIG = {
@@ -462,5 +565,67 @@ const wordCloudOption = computed(() => {
 
 .identity-section:last-child {
   margin-bottom: 0;
+}
+
+.chart-container {
+  position: relative;
+}
+
+.chart-loading-hint {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  backdrop-filter: blur(2px);
+  z-index: 10;
+}
+
+.chart-loading-hint .q-icon {
+  font-size: 14px;
+  color: #2196f3;
+}
+
+.waiting-placeholder {
+  min-height: 200px;
+  background: #f5f5f5;
+  border: 2px dashed #e0e0e0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.waiting-placeholder .q-icon {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 </style>
