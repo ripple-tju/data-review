@@ -255,6 +255,7 @@
       >
         <q-tab name="overview" label="全平台概览" icon="analytics" />
         <q-tab name="byIdentity" label="按身份统计" icon="people" />
+        <q-tab name="report" label="报告生成" icon="assessment" />
         <q-tab name="export" label="数据导出" icon="download" />
       </q-tabs>
 
@@ -338,6 +339,15 @@
             <div class="text-h6 q-mb-md text-grey-6">选择身份查看统计</div>
             <div class="text-body2 text-grey">请从上方下拉框中选择一个身份来查看其详细统计信息</div>
           </div>
+        </q-tab-panel>
+
+        <!-- 报告生成标签页 -->
+        <q-tab-panel name="report" class="q-pa-none">
+          <ReportGenerator
+            v-if="activeTab === 'report'"
+            :analysisResults="analysisResults"
+            :key="'report-' + selectedIdentityIds.join('-')"
+          />
         </q-tab-panel>
 
         <!-- 数据导出标签页 -->
@@ -462,6 +472,7 @@ import { onMounted, ref, computed, watch, onUnmounted } from 'vue';
 import dayjs from 'dayjs';
 import AppPostListStatistics from './components/PostListStatistics.vue';
 import IdentitySelector from 'src/components/IdentitySelector.vue';
+import ReportGenerator from 'src/components/ReportGenerator.vue';
 import { Query, QueryInterface } from 'src/query';
 import { parseForQuery } from 'src/query/transform';
 import { parseRippleForQuery } from 'src/query/transformRipple';
