@@ -29,7 +29,7 @@
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-blue-1">
-          <div class="text-subtitle2 q-mb-sm">📝 推文排行批注</div>
+          <div class="text-subtitle2 q-mb-sm">推文排行批注</div>
           <q-input
             v-model="annotations.table.content"
             type="textarea"
@@ -82,7 +82,7 @@
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-indigo-1">
-          <div class="text-subtitle2 q-mb-sm">🏆 身份影响力排行批注</div>
+          <div class="text-subtitle2 q-mb-sm">身份影响力排行批注</div>
           <q-input
             v-model="annotations.identityRanking.content"
             type="textarea"
@@ -99,7 +99,7 @@
 
     <!-- 点赞趋势图 -->
     <div class="q-mb-lg">
-      <div class="text-h6 q-mb-md">点赞趋势分析</div>
+      <div class="text-h6 q-mb-md">点赞趋势</div>
 
       <AppKChart
         data-chart="like-trend"
@@ -112,7 +112,7 @@
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-red-1">
-          <div class="text-subtitle2 q-mb-sm">❤️ 点赞趋势分析批注</div>
+          <div class="text-subtitle2 q-mb-sm">点赞趋势批注</div>
           <q-input
             v-model="annotations.like.content"
             type="textarea"
@@ -129,7 +129,7 @@
 
     <!-- 分享趋势图 -->
     <div class="q-mb-lg">
-      <div class="text-h6 q-mb-md">分享趋势分析</div>
+      <div class="text-h6 q-mb-md">分享趋势</div>
 
       <AppKChart
         data-chart="share-trend"
@@ -142,7 +142,7 @@
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-teal-1">
-          <div class="text-subtitle2 q-mb-sm">🔄 分享趋势分析批注</div>
+          <div class="text-subtitle2 q-mb-sm">分享趋势批注</div>
           <q-input
             v-model="annotations.share.content"
             type="textarea"
@@ -159,7 +159,7 @@
 
     <!-- 评论趋势图 -->
     <div class="q-mb-lg">
-      <div class="text-h6 q-mb-md">评论趋势分析</div>
+      <div class="text-h6 q-mb-md">评论趋势</div>
 
       <AppKChart
         data-chart="comment-trend"
@@ -172,7 +172,7 @@
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-orange-1">
-          <div class="text-subtitle2 q-mb-sm">💬 评论趋势分析批注</div>
+          <div class="text-subtitle2 q-mb-sm">评论趋势批注</div>
           <q-input
             v-model="annotations.comment.content"
             type="textarea"
@@ -202,7 +202,7 @@
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-green-1">
-          <div class="text-subtitle2 q-mb-sm">📊 发文量统计批注</div>
+          <div class="text-subtitle2 q-mb-sm">发文量统计批注</div>
           <q-input
             v-model="annotations.postCount.content"
             type="textarea"
@@ -232,7 +232,7 @@
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-purple-1">
-          <div class="text-subtitle2 q-mb-sm">🎯 交互分布散点图批注</div>
+          <div class="text-subtitle2 q-mb-sm">交互分布散点图批注</div>
           <q-input
             v-model="annotations.scatter.content"
             type="textarea"
@@ -262,7 +262,7 @@
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-yellow-1">
-          <div class="text-subtitle2 q-mb-sm">🔥 交互分布热力图批注</div>
+          <div class="text-subtitle2 q-mb-sm">交互分布热力图批注</div>
           <q-input
             v-model="annotations.heatmap.content"
             type="textarea"
@@ -292,7 +292,7 @@
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-pink-1">
-          <div class="text-subtitle2 q-mb-sm">🎨 3D散点图批注</div>
+          <div class="text-subtitle2 q-mb-sm">3D交互分布图批注</div>
           <q-input
             v-model="annotations.scatter3d.content"
             type="textarea"
@@ -322,7 +322,7 @@
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-cyan-1">
-          <div class="text-subtitle2 q-mb-sm">☁️ 词云图批注</div>
+          <div class="text-subtitle2 q-mb-sm">词云图批注</div>
           <q-input
             v-model="annotations.wordCloud.content"
             type="textarea"
@@ -638,49 +638,49 @@ const exportAnnotations = async () => {
         extraInfo: `影响力评分说明：点赞权重 ${INFLUENCE_WEIGHTS.like}，分享权重 ${INFLUENCE_WEIGHTS.share}，评论权重 ${INFLUENCE_WEIGHTS.comment}`,
       },
       {
-        title: '点赞趋势分析',
+        title: '点赞趋势',
         type: 'chart' as const,
         annotation: annotationData.likesTrendAnnotation,
         chartSelector: '[data-chart="like-trend"]',
       },
       {
-        title: '分享趋势分析',
+        title: '分享趋势',
         type: 'chart' as const,
         annotation: annotationData.sharesTrendAnnotation,
         chartSelector: '[data-chart="share-trend"]',
       },
       {
-        title: '评论趋势分析',
+        title: '评论趋势',
         type: 'chart' as const,
         annotation: annotationData.commentsTrendAnnotation,
         chartSelector: '[data-chart="comment-trend"]',
       },
       {
-        title: '发文量统计分析',
+        title: '发文量统计',
         type: 'chart' as const,
         annotation: annotationData.postCountAnnotation,
         chartSelector: '[data-chart="post-count"]',
       },
       {
-        title: '交互分布散点图分析',
+        title: '交互分布散点图',
         type: 'chart' as const,
         annotation: annotationData.scatterPlotAnnotation,
         chartSelector: '[data-chart="scatter-plot"]',
       },
       {
-        title: '交互分布热力图分析',
+        title: '交互分布热力图',
         type: 'chart' as const,
         annotation: annotationData.heatmapAnnotation,
         chartSelector: '[data-chart="heatmap"]',
       },
       {
-        title: '3D交互分布图分析',
+        title: '3D交互分布图',
         type: 'chart' as const,
         annotation: annotationData.scatter3DAnnotation,
         chartSelector: '[data-chart="scatter3d"]',
       },
       {
-        title: '词云分析',
+        title: '词云图',
         type: 'chart' as const,
         annotation: annotationData.wordCloudAnnotation,
         chartSelector: '[data-chart="wordcloud"]',
@@ -785,7 +785,7 @@ const exportAnnotations = async () => {
 
         doc.setFontSize(12);
         doc.setFont('SourceHanSansCN', 'bold');
-        doc.text('📝 分析批注：', margin, currentY);
+        doc.text(`${section.title}批注：`, margin, currentY);
         currentY += 8;
 
         doc.setFontSize(11);
@@ -875,14 +875,14 @@ const clearAllAnnotations = () => {
 const getAnnotationLabel = (key: string): string => {
   const labelMap: Record<string, string> = {
     table: '推文排行',
-    identityRanking: '身份排行',
-    like: '点赞分析',
-    share: '分享分析',
-    comment: '评论分析',
-    postCount: '发帖数量',
-    scatter: '散点图',
-    heatmap: '热力图',
-    scatter3d: '3D散点图',
+    identityRanking: '身份影响力排行',
+    like: '点赞趋势',
+    share: '分享趋势',
+    comment: '评论趋势',
+    postCount: '发文量统计',
+    scatter: '交互分布散点图',
+    heatmap: '交互分布热力图',
+    scatter3d: '3D交互分布图',
     wordCloud: '词云图',
   };
   return labelMap[key] || key;
