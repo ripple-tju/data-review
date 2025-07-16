@@ -688,6 +688,7 @@ const exportAnnotations = async () => {
     ];
 
     // 渲染各个 section
+    let sectionNumber = 1; // 添加独立的section编号计数器
     for (let i = 0; i < sections.length; i++) {
       const section = sections[i];
       if (!section) continue;
@@ -700,11 +701,14 @@ const exportAnnotations = async () => {
       // 检查是否需要换页
       checkPageBreak(40);
 
-      // 添加节标题
+      // 添加节标题，使用独立的section编号
       doc.setFontSize(16);
       doc.setFont('SourceHanSansCN', 'bold');
-      doc.text(`${i + 1}. ${section.title}`, margin, currentY);
+      doc.text(`${sectionNumber}. ${section.title}`, margin, currentY);
       currentY += 15;
+
+      // section编号递增
+      sectionNumber++;
 
       // 根据类型渲染内容
       if (section.type === 'table') {
