@@ -551,7 +551,7 @@ const exportAnnotations = async () => {
 
     // 添加标题
     doc.setFontSize(20);
-    doc.text('统计分析批注报告', pageWidth / 2, currentY, { align: 'center' });
+    doc.text('国际传播分析报告', pageWidth / 2, currentY, { align: 'center' });
     currentY += 15;
 
     // 添加导出时间
@@ -877,7 +877,7 @@ const exportAnnotations = async () => {
 
     // 保存 PDF
     const timestamp = dayjs().format('YYYY-MM-DD_HH-mm-ss');
-    doc.save(`统计分析批注报告_${timestamp}.pdf`);
+    doc.save(`国际传播分析报告_${timestamp}.pdf`);
 
     // 关闭加载状态并显示成功消息
     $q.loading.hide();
