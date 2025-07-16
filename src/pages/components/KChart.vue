@@ -49,9 +49,27 @@ const chartInstance = ref<echarts.ECharts | null>(null);
 const height = props.height || 400;
 
 const initChart = () => {
+  console.log(`📊 [KChart] 开始初始化图表: ${props.title}`, {
+    hasChartRef: !!chartRef.value,
+    hasInstance: !!chartInstance.value,
+  });
+
   if (chartRef.value && !chartInstance.value) {
     chartInstance.value = echarts.init(chartRef.value);
     chartInstance.value.setOption(props.option);
+    console.log(`📊 [KChart] 图表初始化完成: ${props.title}`);
+    console.log(`📊 [KChart] 图表实例详情:`, {
+      title: props.title,
+      instanceExists: !!chartInstance.value,
+      instanceType: typeof chartInstance.value,
+      hasGetDataURL: chartInstance.value && typeof chartInstance.value.getDataURL === 'function',
+      hasResize: chartInstance.value && typeof chartInstance.value.resize === 'function',
+      hasDispose: chartInstance.value && typeof chartInstance.value.dispose === 'function',
+      instanceId: chartInstance.value?.id || 'unknown',
+      dom: chartInstance.value?.getDom() || null,
+      width: chartInstance.value?.getWidth() || 0,
+      height: chartInstance.value?.getHeight() || 0,
+    });
   }
 };
 
@@ -121,6 +139,51 @@ const copyChart = async () => {
     }
   }
 };
+
+// Method to get chart instance for PDF export
+const getChart = () => {
+  console.log(`📊 [KChart] 获取图表实例: ${props.title}`, {
+    hasInstance: !!chartInstance.value,
+    instanceType: typeof chartInstance.value,
+  });
+
+  // 确保图表已完全渲染
+  if (chartInstance.value) {
+    try {
+      // 先调用resize确保图表完全渲染
+      chartInstance.value.resize();
+
+      // 验证图表是否有必要的方法
+      if (typeof chartInstance.value.getDataURL === 'function') {
+        console.log(`📊 [KChart] 图表实例验证通过: ${props.title}`);
+      } else {
+        console.warn(`📊 [KChart] 图表实例缺少getDataURL方法: ${props.title}`);
+      }
+
+      // 详细的图表实例信息
+      console.log(`📊 [KChart] 图表实例状态:`, {
+        title: props.title,
+        instanceId: chartInstance.value.id,
+        isDisposed: chartInstance.value.isDisposed?.() || false,
+        width: chartInstance.value.getWidth(),
+        height: chartInstance.value.getHeight(),
+        dom: !!chartInstance.value.getDom(),
+        canvasContext: !!chartInstance.value.getRenderedCanvas?.(),
+      });
+    } catch (error) {
+      console.warn(`📊 [KChart] 图表resize失败: ${props.title}`, error);
+    }
+  } else {
+    console.warn(`📊 [KChart] 图表实例不存在: ${props.title}`);
+  }
+
+  return chartInstance.value;
+};
+
+// Expose methods to parent component
+defineExpose({
+  getChart,
+});
 
 onMounted(() => {
   initChart();

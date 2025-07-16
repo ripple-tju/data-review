@@ -244,6 +244,25 @@
         </div>
       </div>
 
+      <!-- 始终渲染统计组件，用于PDF导出 -->
+      <div style="position: absolute; left: -9999px; top: -9999px; width: 1080px">
+        <AppPostListStatistics
+          ref="overviewStatisticsRef"
+          :query="query"
+          :postViewList="analysisResults.filteredAllPostView"
+          :cutWordCache="cutwordCache"
+          :key="'overview-' + selectedIdentityIds.join('-')"
+        />
+        <AppPostListStatistics
+          ref="identityStatisticsRef"
+          v-if="currentIdentityData"
+          :query="query"
+          :postViewList="currentIdentityData.postViewList"
+          :cutWordCache="cutwordCache"
+          :key="'identity-' + currentIdentityData.name"
+        />
+      </div>
+
       <!-- 标签页导航 -->
       <q-tabs
         v-model="activeTab"
@@ -281,13 +300,12 @@
             </h3>
           </div>
 
-          <!-- 只在当前标签页激活时渲染组件，避免WebGL上下文冲突 -->
+          <!-- 显示用的组件，复用同样的数据 -->
           <AppPostListStatistics
-            v-if="activeTab === 'overview'"
             :query="query"
             :postViewList="analysisResults.filteredAllPostView"
             :cutWordCache="cutwordCache"
-            :key="'overview-' + selectedIdentityIds.join('-')"
+            :key="'overview-display-' + selectedIdentityIds.join('-')"
           />
         </q-tab-panel>
 
@@ -323,12 +341,13 @@
                 class="q-ml-sm"
               />
             </div>
+
+            <!-- 显示用的组件，复用同样的数据 -->
             <AppPostListStatistics
-              v-if="activeTab === 'byIdentity'"
               :query="query"
               :postViewList="currentIdentityData.postViewList"
               :cutWordCache="cutwordCache"
-              :key="'identity-' + currentIdentityData.name"
+              :key="'identity-display-' + currentIdentityData.name"
             />
           </div>
 
@@ -373,6 +392,16 @@
               label="导出CSV文件"
               size="lg"
               @click="openExportDialog"
+              :disable="!analysisResults || analysisResults.filteredAllPostView.length === 0"
+              class="q-px-xl q-mr-md"
+            />
+
+            <q-btn
+              color="secondary"
+              icon="picture_as_pdf"
+              label="导出PDF报告"
+              size="lg"
+              @click="exportPdfReport"
               :disable="!analysisResults || analysisResults.filteredAllPostView.length === 0"
               class="q-px-xl"
             />
@@ -458,7 +487,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed, watch, onUnmounted } from 'vue';
+import { onMounted, ref, computed, watch, onUnmounted, nextTick } from 'vue';
 import dayjs from 'dayjs';
 import AppPostListStatistics from './components/PostListStatistics.vue';
 import IdentitySelector from 'src/components/IdentitySelector.vue';
@@ -468,6 +497,11 @@ import { parseRippleForQuery } from 'src/query/transformRipple';
 import { divideByDay } from 'src/query/utils';
 import * as Spec from 'src/specification';
 import { IDENTITY_LIST } from 'src/specification/IdentityData';
+import {
+  exportPdfReport as exportPdf,
+  type PdfExportData,
+  type ChartData,
+} from 'src/utils/pdfExport';
 
 const query = ref<QueryInterface>(Query(parseRippleForQuery([])));
 const idList = ref<Array<Spec.IdentityView.Type>>([]);
@@ -484,6 +518,10 @@ const cutwordCache = ref<
     cut: Array<string>;
   }>
 >([]);
+
+// Component refs for PDF export
+const overviewStatisticsRef = ref<InstanceType<typeof AppPostListStatistics>>();
+const identityStatisticsRef = ref<InstanceType<typeof AppPostListStatistics>>();
 
 // 身份筛选相关状态
 const selectedIdentityIds = ref<string[]>([]);
@@ -986,6 +1024,107 @@ const selectNoneFields = () => {
   Object.keys(exportFields.value).forEach((field) => {
     exportFields.value[field as keyof typeof exportFields.value].selected = false;
   });
+};
+
+// 🔥 [PDF导出] PDF报告导出功能
+const exportPdfReport = async () => {
+  if (!analysisResults.value || analysisResults.value.filteredAllPostView.length === 0) {
+    return;
+  }
+
+  try {
+    console.log('📄 [PDF导出] 开始生成PDF报告...');
+
+    // 准备PDF导出数据
+    const pdfData: PdfExportData = {
+      title: '社交媒体数据分析报告',
+      analysisResults: analysisResults.value,
+      selectedIdentityIds: selectedIdentityIds.value,
+      selectedDates: selectedDates.value,
+      dateRange: dateRange.value,
+      exportFields: exportFields.value,
+    };
+
+    // 获取图表数据的函数
+    const getChartsWithRetry = async (maxRetries: number = 3): Promise<ChartData[]> => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        console.log(`📊 [PDF导出] 尝试获取图表实例 (第${attempt}次)...`);
+
+        // 等待Vue渲染完成
+        await nextTick();
+
+        // 等待图表稳定
+        const waitTime = attempt * 1000; // 递增等待时间
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+
+        const charts: ChartData[] = [];
+
+        // 尝试从所有可用的统计组件获取图表实例
+        if (overviewStatisticsRef.value) {
+          console.log(`📊 [PDF导出] 从overview组件获取图表实例 (第${attempt}次)...`);
+          try {
+            const chartInstances = overviewStatisticsRef.value.getChartInstances();
+            console.log(`📊 [PDF导出] Overview组件获取到的图表实例数量: ${chartInstances.length}`);
+            charts.push(...chartInstances.map((chart) => ({ ...chart, source: 'overview' })));
+          } catch (error) {
+            console.warn(`📊 [PDF导出] Overview组件获取图表实例失败:`, error);
+          }
+        }
+
+        if (identityStatisticsRef.value && currentIdentityData.value) {
+          console.log(`📊 [PDF导出] 从identity组件获取图表实例 (第${attempt}次)...`);
+          try {
+            const chartInstances = identityStatisticsRef.value.getChartInstances();
+            console.log(`📊 [PDF导出] Identity组件获取到的图表实例数量: ${chartInstances.length}`);
+            charts.push(
+              ...chartInstances.map((chart) => ({
+                ...chart,
+                source: 'identity',
+                identity: currentIdentityData.value?.name,
+              })),
+            );
+          } catch (error) {
+            console.warn(`📊 [PDF导出] Identity组件获取图表实例失败:`, error);
+          }
+        }
+
+        console.log(`📊 [PDF导出] 第${attempt}次尝试，总共获取到 ${charts.length} 个图表`);
+        console.log(`📊 [PDF导出] 当前标签页: ${activeTab.value}`);
+        console.log(`📊 [PDF导出] Overview ref存在: ${!!overviewStatisticsRef.value}`);
+        console.log(`📊 [PDF导出] Identity ref存在: ${!!identityStatisticsRef.value}`);
+        console.log(`📊 [PDF导出] CurrentIdentityData存在: ${!!currentIdentityData.value}`);
+
+        // 如果获取到了图表或者已经是最后一次尝试，返回结果
+        if (charts.length > 0 || attempt === maxRetries) {
+          console.log(`📊 [PDF导出] 第${attempt}次尝试完成，获取到 ${charts.length} 个图表`);
+          return charts;
+        }
+
+        console.log(`📊 [PDF导出] 第${attempt}次尝试未获取到图表，等待下次重试...`);
+      }
+
+      return [];
+    };
+
+    // 获取图表数据
+    const charts = await getChartsWithRetry();
+    console.log('📊 [PDF导出] 最终图表数量:', charts.length);
+
+    // 获取词频数据（如果有的话）
+    const wordData: Array<{ word: string; count: number }> = [];
+    // 这里可以根据需要添加词频数据
+
+    // 导出PDF
+    exportPdf(pdfData, charts, wordData);
+
+    console.log('📄 [PDF导出] PDF报告导出完成');
+  } catch (error) {
+    console.error('PDF报告导出失败:', error);
+
+    // 显示错误通知
+    // 这里可以使用Quasar的通知系统
+    alert(`PDF报告导出失败: ${error instanceof Error ? error.message : '未知错误'}`);
+  }
 };
 
 // 文件读取辅助函数

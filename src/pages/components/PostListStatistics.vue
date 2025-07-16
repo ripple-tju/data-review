@@ -21,35 +21,51 @@
       </template>
     </q-table>
     <div>
-      <AppKChart title="点赞趋势" :option="likeOption" :height="300" />
+      <AppKChart ref="likeChartRef" title="点赞趋势" :option="likeOption" :height="300" />
     </div>
     <div>
-      <AppKChart title="分享趋势" :option="shareOption" :height="300" />
+      <AppKChart ref="shareChartRef" title="分享趋势" :option="shareOption" :height="300" />
     </div>
     <div>
-      <AppKChart title="评论趋势" :option="commentOption" :height="300" />
+      <AppKChart ref="commentChartRef" title="评论趋势" :option="commentOption" :height="300" />
     </div>
     <!-- <div>
       <AppKChart title="点赞、分享、评论趋势对比" :option="interactionTrendOption" :height="400" />
     </div> -->
     <div>
-      <AppKChart title="每天发文量" :option="postCountOption" :height="300" />
-    </div>
-    <div>
-      <AppKChart title="推文交互分布散点图 (点赞 : 评论)" :option="scatterOption" :height="500" />
-    </div>
-    <div>
-      <AppKChart title="推文交互分布热力图 (点赞 : 评论)" :option="heatmapOption" :height="500" />
+      <AppKChart
+        ref="postCountChartRef"
+        title="每天发文量"
+        :option="postCountOption"
+        :height="300"
+      />
     </div>
     <div>
       <AppKChart
+        ref="scatterChartRef"
+        title="推文交互分布散点图 (点赞 : 评论)"
+        :option="scatterOption"
+        :height="500"
+      />
+    </div>
+    <div>
+      <AppKChart
+        ref="heatmapChartRef"
+        title="推文交互分布热力图 (点赞 : 评论)"
+        :option="heatmapOption"
+        :height="500"
+      />
+    </div>
+    <div>
+      <AppKChart
+        ref="scatter3DChartRef"
         title="推文交互分布3D散点图 (点赞 : 评论 : 分享)"
         :option="scatter3DOption"
         :height="600"
       />
     </div>
     <div>
-      <AppKChart title="词云" :option="wordCloudOption" :height="400" />
+      <AppKChart ref="wordCloudChartRef" title="词云" :option="wordCloudOption" :height="400" />
     </div>
   </div>
 </template>
@@ -74,6 +90,83 @@ const { query, postViewList, cutWordCache } = defineProps<{
     cut: Array<string>;
   }>;
 }>();
+
+// Chart refs for PDF export
+const likeChartRef = ref<InstanceType<typeof AppKChart>>();
+const shareChartRef = ref<InstanceType<typeof AppKChart>>();
+const commentChartRef = ref<InstanceType<typeof AppKChart>>();
+const postCountChartRef = ref<InstanceType<typeof AppKChart>>();
+const scatterChartRef = ref<InstanceType<typeof AppKChart>>();
+const heatmapChartRef = ref<InstanceType<typeof AppKChart>>();
+const scatter3DChartRef = ref<InstanceType<typeof AppKChart>>();
+const wordCloudChartRef = ref<InstanceType<typeof AppKChart>>();
+
+// Method to get chart instances for PDF export
+const getChartInstances = () => {
+  console.log('📊 [PostListStatistics] 开始收集图表实例...');
+
+  const charts = [
+    {
+      title: '点赞趋势',
+      chartInstance: likeChartRef.value?.getChart() || null,
+      type: 'line' as const,
+    },
+    {
+      title: '分享趋势',
+      chartInstance: shareChartRef.value?.getChart() || null,
+      type: 'line' as const,
+    },
+    {
+      title: '评论趋势',
+      chartInstance: commentChartRef.value?.getChart() || null,
+      type: 'line' as const,
+    },
+    {
+      title: '每天发文量',
+      chartInstance: postCountChartRef.value?.getChart() || null,
+      type: 'bar' as const,
+    },
+    {
+      title: '推文交互分布散点图 (点赞 : 评论)',
+      chartInstance: scatterChartRef.value?.getChart() || null,
+      type: 'scatter' as const,
+    },
+    {
+      title: '推文交互分布热力图 (点赞 : 评论)',
+      chartInstance: heatmapChartRef.value?.getChart() || null,
+      type: 'heatmap' as const,
+    },
+    {
+      title: '推文交互分布3D散点图 (点赞 : 评论 : 分享)',
+      chartInstance: scatter3DChartRef.value?.getChart() || null,
+      type: '3d' as const,
+    },
+    {
+      title: '词云',
+      chartInstance: wordCloudChartRef.value?.getChart() || null,
+      type: 'wordcloud' as const,
+    },
+  ];
+
+  console.log(
+    '📊 [PostListStatistics] 图表实例收集结果:',
+    charts.map((c) => ({
+      title: c.title,
+      hasRef: !!c.chartInstance,
+      refType: typeof c.chartInstance,
+    })),
+  );
+
+  const validCharts = charts.filter((item) => item.chartInstance !== null);
+  console.log('📊 [PostListStatistics] 有效图表数量:', validCharts.length);
+
+  return validCharts;
+};
+
+// Expose method to parent component
+defineExpose({
+  getChartInstances,
+});
 
 const LabelMap = {
   'specification.data.PostArchive.content': '推文内容',
