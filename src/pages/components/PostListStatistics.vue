@@ -712,7 +712,7 @@ const exportAnnotations = async () => {
       }
 
       // 预估整个section的高度（标题 + 内容）
-      let estimatedSectionHeight = 25; // 标题高度
+      let estimatedSectionHeight = 20; // 标题高度（更紧凑）
 
       if (section.type === 'table' && 'getData' in section) {
         const tableData = section.getData();
@@ -742,14 +742,14 @@ const exportAnnotations = async () => {
 
       // 更紧凑的section背景色块
       doc.setFillColor(248, 249, 250);
-      doc.rect(margin - 3, currentY - 2, contentWidth + 6, 16, 'F'); // 更小的背景块
+      doc.rect(margin - 2, currentY - 1, contentWidth + 4, 12, 'F'); // 进一步缩小背景块
 
       // 添加节标题，使用独立的section编号
       doc.setFontSize(14); // 减小标题字体
       doc.setFont('SourceHanSansCN', 'bold');
       doc.setTextColor(33, 37, 41);
-      doc.text(`${sectionNumber}. ${section.title}`, margin, currentY + 8);
-      currentY += 18; // 更紧凑的间距
+      doc.text(`${sectionNumber}. ${section.title}`, margin, currentY + 7);
+      currentY += 15; // 更紧凑的间距
 
       // section编号递增
       sectionNumber++;
