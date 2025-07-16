@@ -97,10 +97,12 @@ const generateChartImage = () => {
     const waitForRender = () => {
       return new Promise<void>((resolve) => {
         let attempts = 0;
-        const maxAttempts = 30; // 最多等待3秒
+        const maxAttempts = 100; // 最多等待10秒
+        const startTime = Date.now();
 
         const checkRender = () => {
           attempts++;
+          const elapsed = Date.now() - startTime;
 
           if (!chartInstance.value) {
             resolve();
@@ -140,7 +142,7 @@ const generateChartImage = () => {
             );
 
           if (has3DSeries && attempts < 5) {
-            setTimeout(checkRender, 200);
+            setTimeout(checkRender, 500);
             return;
           }
 
@@ -150,7 +152,20 @@ const generateChartImage = () => {
             option.series.some((series: any) => series.type === 'wordCloud');
 
           if (hasWordCloud && attempts < 3) {
-            setTimeout(checkRender, 300);
+            setTimeout(checkRender, 600);
+            return;
+          }
+
+          // 5. 根据图表类型设置最小等待时间
+          let minWaitTime = 1000; // 普通图表最少等待1秒
+          if (has3DSeries) {
+            minWaitTime = 4000; // 3D图表最少等待4秒
+          } else if (hasWordCloud) {
+            minWaitTime = 5000; // 词云图最少等待5秒
+          }
+
+          if (elapsed < minWaitTime) {
+            setTimeout(checkRender, minWaitTime - elapsed);
             return;
           }
 

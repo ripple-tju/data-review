@@ -1,8 +1,31 @@
 <template>
   <div class="report-generator">
-    <div class="text-h5 q-mb-md">
-      <q-icon name="assessment" class="q-mr-sm" />
-      数据分析报告
+    <div class="row items-center justify-between q-mb-md">
+      <div class="text-h5">
+        <q-icon name="assessment" class="q-mr-sm" />
+        数据分析报告
+      </div>
+
+      <!-- 渲染进度显示 -->
+      <div
+        v-if="analysisResults && analysisResults.filteredPostViewListGroupByIdentity.length > 0"
+        class="render-progress"
+      >
+        <div class="text-caption text-grey-6 q-mb-xs">身份统计渲染进度</div>
+        <div class="progress-info">
+          <q-linear-progress
+            :value="renderProgress"
+            color="primary"
+            size="8px"
+            class="q-mr-sm"
+            style="width: 200px"
+          />
+          <span class="text-caption">
+            {{ currentRenderingIndex + 1 }} /
+            {{ analysisResults.filteredPostViewListGroupByIdentity.length }}
+          </span>
+        </div>
+      </div>
     </div>
 
     <div v-if="!analysisResults" class="text-center q-pa-xl">
@@ -87,11 +110,8 @@
               :option="scatterPlot3DOption"
               :height="500"
               :useImageMode="true"
+              ref="scatterChart3D"
             />
-            <div class="chart-loading-hint">
-              <q-icon name="info" class="q-mr-xs" />
-              <span class="text-caption">3D图表正在生成，请稍候...</span>
-            </div>
           </div>
         </q-card-section>
       </q-card>
@@ -111,11 +131,8 @@
               :option="wordCloudOption"
               :height="400"
               :useImageMode="true"
+              ref="wordCloudChart"
             />
-            <div class="chart-loading-hint">
-              <q-icon name="info" class="q-mr-xs" />
-              <span class="text-caption">词云图正在生成，请稍候...</span>
-            </div>
           </div>
         </q-card-section>
       </q-card>
@@ -232,6 +249,19 @@ const props = defineProps<{
 const currentRenderingIndex = ref<number>(0); // 当前正在渲染的组件索引
 const renderingTimeout = ref<NodeJS.Timeout | null>(null);
 
+// 渲染进度计算
+const renderProgress = computed(() => {
+  if (
+    !props.analysisResults ||
+    props.analysisResults.filteredPostViewListGroupByIdentity.length === 0
+  ) {
+    return 0;
+  }
+  return (
+    currentRenderingIndex.value / props.analysisResults.filteredPostViewListGroupByIdentity.length
+  );
+});
+
 // 当分析结果变化时，重置渲染状态
 watch(
   () => props.analysisResults,
@@ -256,15 +286,13 @@ const onIdentityStatsRendered = (index: number) => {
     clearTimeout(renderingTimeout.value);
   }
 
-  // 如果还有下一个组件需要渲染，则延迟一段时间后渲染下一个
+  // 如果还有下一个组件需要渲染，则立即渲染下一个
   if (
     props.analysisResults &&
     index < props.analysisResults.filteredPostViewListGroupByIdentity.length - 1
   ) {
-    renderingTimeout.value = setTimeout(() => {
-      currentRenderingIndex.value = index + 1;
-      console.log(`📊 [ReportGenerator] 开始渲染下一个组件，索引: ${index + 1}`);
-    }, 500); // 延迟500ms确保前一个组件完全渲染完成
+    currentRenderingIndex.value = index + 1;
+    console.log(`📊 [ReportGenerator] 开始渲染下一个组件，索引: ${index + 1}`);
   } else {
     console.log('📊 [ReportGenerator] 所有身份统计组件渲染完成');
   }
@@ -627,5 +655,17 @@ const wordCloudOption = computed(() => {
   50% {
     opacity: 0.7;
   }
+}
+
+.render-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.progress-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>
