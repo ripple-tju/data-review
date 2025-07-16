@@ -308,8 +308,8 @@
         <div class="row q-gutter-md">
           <q-btn
             color="primary"
-            label="导出批注报告"
-            icon="download"
+            label="导出PDF报告"
+            icon="description"
             @click="exportAnnotations"
             :disable="filledAnnotationsCount === 0"
           />
@@ -355,6 +355,8 @@ import * as Spec from 'src/specification';
 import { divideByDay } from 'src/query/utils';
 import type { EChartsOption } from 'echarts';
 import { useQuasar } from 'quasar';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const { query, postViewList, cutWordCache, useImageMode } = defineProps<{
   query: QueryInterface;
@@ -445,90 +447,213 @@ watch(
 );
 
 // 导出批注功能
-const exportAnnotations = () => {
-  const annotationData = {
-    timestamp: new Date().toISOString(),
-    exportDate: dayjs().format('YYYY年MM月DD日 HH:mm:ss'),
-    dataTableAnnotation: annotations.value.table.content,
-    likesTrendAnnotation: annotations.value.like.content,
-    sharesTrendAnnotation: annotations.value.share.content,
-    commentsTrendAnnotation: annotations.value.comment.content,
-    postCountAnnotation: annotations.value.postCount.content,
-    scatterPlotAnnotation: annotations.value.scatter.content,
-    heatmapAnnotation: annotations.value.heatmap.content,
-    scatter3DAnnotation: annotations.value.scatter3d.content,
-    wordCloudAnnotation: annotations.value.wordCloud.content,
-  };
+const exportAnnotations = async () => {
+  try {
+    // 显示加载状态
+    $q.notify({
+      type: 'ongoing',
+      message: '正在生成PDF报告...',
+      icon: 'description',
+      position: 'top',
+      timeout: 0,
+      actions: [{ icon: 'close', color: 'white' }],
+    });
 
-  // 创建可读的文本格式
-  const textContent = `
-统计分析批注报告
-导出时间: ${annotationData.exportDate}
+    const annotationData = {
+      timestamp: new Date().toISOString(),
+      exportDate: dayjs().format('YYYY年MM月DD日 HH:mm:ss'),
+      dataTableAnnotation: annotations.value.table.content,
+      likesTrendAnnotation: annotations.value.like.content,
+      sharesTrendAnnotation: annotations.value.share.content,
+      commentsTrendAnnotation: annotations.value.comment.content,
+      postCountAnnotation: annotations.value.postCount.content,
+      scatterPlotAnnotation: annotations.value.scatter.content,
+      heatmapAnnotation: annotations.value.heatmap.content,
+      scatter3DAnnotation: annotations.value.scatter3d.content,
+      wordCloudAnnotation: annotations.value.wordCloud.content,
+    };
 
-=== 数据表格分析 ===
-${annotationData.dataTableAnnotation || '暂无批注'}
+    // 创建 jsPDF 实例
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
 
-=== 点赞趋势分析 ===
-${annotationData.likesTrendAnnotation || '暂无批注'}
+    // 加载中文字体
+    try {
+      const fontResponse = await fetch('/font/SourceHanSansCN-VF.ttf');
+      if (!fontResponse.ok) {
+        throw new Error('字体文件加载失败');
+      }
+      const fontArrayBuffer = await fontResponse.arrayBuffer();
+      const fontBase64 = arrayBufferToBase64(fontArrayBuffer);
 
-=== 分享趋势分析 ===
-${annotationData.sharesTrendAnnotation || '暂无批注'}
+      // 添加字体到 jsPDF - 添加所有需要的字重
+      doc.addFileToVFS('SourceHanSansCN-VF.ttf', fontBase64);
+      doc.addFont('SourceHanSansCN-VF.ttf', 'SourceHanSansCN', 'normal');
+      doc.addFont('SourceHanSansCN-VF.ttf', 'SourceHanSansCN', 'bold');
+      doc.setFont('SourceHanSansCN');
+    } catch (fontError) {
+      console.warn('中文字体加载失败，使用默认字体:', fontError);
+      // 如果字体加载失败，使用默认字体
+    }
 
-=== 评论趋势分析 ===
-${annotationData.commentsTrendAnnotation || '暂无批注'}
+    // 设置页面边距
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 20;
+    const contentWidth = pageWidth - 2 * margin;
+    let currentY = margin;
 
-=== 发文量统计分析 ===
-${annotationData.postCountAnnotation || '暂无批注'}
+    // 添加标题
+    doc.setFontSize(20);
+    doc.text('统计分析批注报告', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 15;
 
-=== 交互分布散点图分析 ===
-${annotationData.scatterPlotAnnotation || '暂无批注'}
+    // 添加导出时间
+    doc.setFontSize(12);
+    doc.text(`导出时间: ${annotationData.exportDate}`, pageWidth / 2, currentY, {
+      align: 'center',
+    });
+    currentY += 20;
 
-=== 交互分布热力图分析 ===
-${annotationData.heatmapAnnotation || '暂无批注'}
+    // 检查是否需要换页
+    const checkPageBreak = (neededHeight: number) => {
+      if (currentY + neededHeight > pageHeight - margin) {
+        doc.addPage();
+        currentY = margin;
+        return true;
+      }
+      return false;
+    };
 
-=== 3D交互分布图分析 ===
-${annotationData.scatter3DAnnotation || '暂无批注'}
+    // 添加各个部分的批注
+    const sections = [
+      { title: '数据表格分析', content: annotationData.dataTableAnnotation },
+      { title: '点赞趋势分析', content: annotationData.likesTrendAnnotation },
+      { title: '分享趋势分析', content: annotationData.sharesTrendAnnotation },
+      { title: '评论趋势分析', content: annotationData.commentsTrendAnnotation },
+      { title: '发文量统计分析', content: annotationData.postCountAnnotation },
+      { title: '交互分布散点图分析', content: annotationData.scatterPlotAnnotation },
+      { title: '交互分布热力图分析', content: annotationData.heatmapAnnotation },
+      { title: '3D交互分布图分析', content: annotationData.scatter3DAnnotation },
+      { title: '词云分析', content: annotationData.wordCloudAnnotation },
+    ];
 
-=== 词云分析 ===
-${annotationData.wordCloudAnnotation || '暂无批注'}
+    sections.forEach((section, index) => {
+      // 检查是否需要换页
+      checkPageBreak(30);
 
----
-报告生成时间: ${annotationData.timestamp}
-  `.trim();
+      // 添加节标题
+      doc.setFontSize(14);
+      doc.setFont('SourceHanSansCN', 'bold');
+      doc.text(`${index + 1}. ${section.title}`, margin, currentY);
+      currentY += 10;
 
-  // 同时导出JSON和文本格式
-  const jsonBlob = new Blob([JSON.stringify(annotationData, null, 2)], {
-    type: 'application/json',
-  });
-  const textBlob = new Blob([textContent], { type: 'text/plain; charset=utf-8' });
+      // 添加内容
+      doc.setFontSize(11);
+      doc.setFont('SourceHanSansCN', 'normal');
 
-  const timestamp = dayjs().format('YYYY-MM-DD_HH-mm-ss');
+      const content = section.content || '暂无批注';
+      const lines = doc.splitTextToSize(content, contentWidth);
 
-  // 导出JSON格式
-  const jsonLink = document.createElement('a');
-  jsonLink.href = URL.createObjectURL(jsonBlob);
-  jsonLink.download = `统计分析批注_${timestamp}.json`;
-  document.body.appendChild(jsonLink);
-  jsonLink.click();
-  document.body.removeChild(jsonLink);
-  URL.revokeObjectURL(jsonLink.href);
+      lines.forEach((line: string) => {
+        checkPageBreak(8);
+        doc.text(line, margin, currentY);
+        currentY += 6;
+      });
 
-  // 导出文本格式
-  const textLink = document.createElement('a');
-  textLink.href = URL.createObjectURL(textBlob);
-  textLink.download = `统计分析批注_${timestamp}.txt`;
-  document.body.appendChild(textLink);
-  textLink.click();
-  document.body.removeChild(textLink);
-  URL.revokeObjectURL(textLink.href);
+      currentY += 8; // 段落间距
+    });
 
-  $q.notify({
-    type: 'positive',
-    message: '批注已导出为JSON和TXT格式',
-    icon: 'download',
-    position: 'top',
-    timeout: 3000,
-  });
+    // 添加数据表格（如果有数据）
+    if (latestPostArchiveList.value.length > 0) {
+      checkPageBreak(50);
+
+      doc.setFontSize(14);
+      doc.setFont('SourceHanSansCN', 'bold');
+      doc.text('数据表格', margin, currentY);
+      currentY += 10;
+
+      // 准备表格数据
+      const tableData = latestPostArchiveList.value
+        .slice(0, 20)
+        .map((post, index) => [
+          (index + 1).toString(),
+          post.content ? post.content.slice(0, 50) + (post.content.length > 50 ? '...' : '') : '',
+          post.like?.toString() || '0',
+          post.share?.toString() || '0',
+          post.comment?.toString() || '0',
+          dayjs(post.createdAt).format('YYYY-MM-DD'),
+        ]);
+
+      // 使用 autoTable 添加表格
+      autoTable(doc, {
+        head: [['序号', '内容', '点赞', '分享', '评论', '创建时间']],
+        body: tableData,
+        startY: currentY,
+        styles: {
+          font: 'SourceHanSansCN',
+          fontSize: 9,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [66, 139, 202],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        margin: { left: margin, right: margin },
+        pageBreak: 'auto',
+      });
+    }
+
+    // 添加页脚
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(9);
+      doc.text(`第 ${i} 页 / 共 ${pageCount} 页`, pageWidth / 2, pageHeight - 10, {
+        align: 'center',
+      });
+      doc.text(`生成时间: ${annotationData.timestamp}`, pageWidth - margin, pageHeight - 10, {
+        align: 'right',
+      });
+    }
+
+    // 保存 PDF
+    const timestamp = dayjs().format('YYYY-MM-DD_HH-mm-ss');
+    doc.save(`统计分析批注报告_${timestamp}.pdf`);
+
+    // 关闭加载状态并显示成功消息
+    $q.notify({
+      type: 'positive',
+      message: 'PDF报告已成功导出',
+      icon: 'download',
+      position: 'top',
+      timeout: 3000,
+    });
+  } catch (error) {
+    console.error('PDF生成失败:', error);
+    $q.notify({
+      type: 'negative',
+      message: 'PDF生成失败: ' + (error as Error).message,
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    });
+  }
+};
+
+// 工具函数：将 ArrayBuffer 转换为 Base64
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
+  return window.btoa(binary);
 };
 
 // 清空所有批注
