@@ -44,6 +44,59 @@
       </div>
     </div>
 
+    <!-- 身份排行表 -->
+    <div class="q-mb-lg" v-if="identityRankingList.length > 1">
+      <div class="text-h6 q-mb-md">身份影响力排行</div>
+
+      <q-table
+        dense
+        flat
+        separator="cell"
+        :pagination="{
+          rowsPerPage: 15,
+        }"
+        :rows="identityRankingList"
+        :columns="identityColumns"
+        class="fixed-layout-table"
+      >
+        <template #body-cell-rank="props">
+          <q-td :props="props">
+            <q-badge
+              :color="props.row.rank <= 3 ? 'amber' : 'grey-6'"
+              :text-color="props.row.rank <= 3 ? 'black' : 'white'"
+              :label="props.row.rank"
+            />
+          </q-td>
+        </template>
+        <template #body-cell-authorName="props">
+          <q-td :props="props">
+            <div class="text-weight-medium">{{ props.row.authorName }}</div>
+          </q-td>
+        </template>
+        <template #body-cell-influenceScore="props">
+          <q-td :props="props">
+            <div class="text-weight-bold text-primary">{{ props.row.influenceScore }}</div>
+          </q-td>
+        </template>
+      </q-table>
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-indigo-1">
+          <div class="text-subtitle2 q-mb-sm">🏆 身份影响力排行批注</div>
+          <q-input
+            v-model="annotations.identityRanking.content"
+            type="textarea"
+            label="在此输入关于身份影响力排行的分析..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：排名前三的身份在互动数据上明显领先，可能是核心意见领袖..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
+    </div>
+
     <!-- 点赞趋势图 -->
     <div class="q-mb-lg">
       <div class="text-h6 q-mb-md">点赞趋势分析</div>
@@ -383,6 +436,7 @@ interface AnnotationItem {
 
 const annotations = ref<{
   table: AnnotationItem;
+  identityRanking: AnnotationItem;
   like: AnnotationItem;
   share: AnnotationItem;
   comment: AnnotationItem;
@@ -393,6 +447,7 @@ const annotations = ref<{
   wordCloud: AnnotationItem;
 }>({
   table: { content: '' },
+  identityRanking: { content: '' },
   like: { content: '' },
   share: { content: '' },
   comment: { content: '' },
@@ -463,6 +518,7 @@ const exportAnnotations = async () => {
       timestamp: new Date().toISOString(),
       exportDate: dayjs().format('YYYY年MM月DD日 HH:mm:ss'),
       dataTableAnnotation: annotations.value.table.content,
+      identityRankingAnnotation: annotations.value.identityRanking.content,
       likesTrendAnnotation: annotations.value.like.content,
       sharesTrendAnnotation: annotations.value.share.content,
       commentsTrendAnnotation: annotations.value.comment.content,
@@ -531,6 +587,7 @@ const exportAnnotations = async () => {
     // 添加各个部分的批注
     const sections = [
       { title: '数据表格分析', content: annotationData.dataTableAnnotation },
+      { title: '身份影响力排行分析', content: annotationData.identityRankingAnnotation },
       { title: '点赞趋势分析', content: annotationData.likesTrendAnnotation },
       { title: '分享趋势分析', content: annotationData.sharesTrendAnnotation },
       { title: '评论趋势分析', content: annotationData.commentsTrendAnnotation },
@@ -612,6 +669,66 @@ const exportAnnotations = async () => {
       });
     }
 
+    // 添加身份排行表格（如果有多个身份）
+    if (identityRankingList.value.length > 1) {
+      checkPageBreak(50);
+
+      doc.setFontSize(14);
+      doc.setFont('SourceHanSansCN', 'bold');
+      doc.text('身份影响力排行', margin, currentY);
+      currentY += 10;
+
+      // 准备身份排行数据
+      const identityTableData = identityRankingList.value
+        .slice(0, 15) // 取前15名
+        .map((identity) => [
+          identity.rank.toString(),
+          identity.authorName,
+          identity.postCount.toString(),
+          identity.totalLikes.toString(),
+          identity.totalShares.toString(),
+          identity.totalComments.toString(),
+          identity.influenceScore.toString(),
+        ]);
+
+      // 使用 autoTable 添加身份排行表格
+      autoTable(doc, {
+        head: [['排名', '身份', '发帖数', '总点赞', '总分享', '总评论', '影响力分数']],
+        body: identityTableData,
+        startY: currentY,
+        styles: {
+          font: 'SourceHanSansCN',
+          fontSize: 9,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [156, 39, 176],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        margin: { left: margin, right: margin },
+        pageBreak: 'auto',
+      });
+
+      // 添加权重说明
+      checkPageBreak(20);
+      doc.setFontSize(10);
+      doc.setFont('SourceHanSansCN', 'normal');
+      doc.text('影响力评分说明：', margin, currentY);
+      currentY += 8;
+      doc.setFontSize(9);
+      doc.text(
+        `点赞权重: ${INFLUENCE_WEIGHTS.like}， 分享权重: ${INFLUENCE_WEIGHTS.share}， 评论权重: ${INFLUENCE_WEIGHTS.comment}`,
+        margin,
+        currentY,
+      );
+      currentY += 8;
+    }
+
     // 添加页脚
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
@@ -685,6 +802,7 @@ const clearAllAnnotations = () => {
 const getAnnotationLabel = (key: string): string => {
   const labelMap: Record<string, string> = {
     table: '数据表格',
+    identityRanking: '身份排行',
     like: '点赞分析',
     share: '分享分析',
     comment: '评论分析',
@@ -727,6 +845,9 @@ const onChartRendered = () => {
 
 // 在组件挂载时，如果不是图片模式，立即发射 rendered 事件
 onMounted(() => {
+  // 加载本地存储的批注数据
+  loadAnnotationsFromStorage();
+
   if (!useImageMode) {
     void nextTick(() => {
       emit('rendered');
@@ -988,6 +1109,149 @@ const latestPostArchiveList = computed(() => {
   );
   return result;
 });
+
+// 影响力评分权重系数（可根据需要调整）
+const INFLUENCE_WEIGHTS = {
+  like: 1.0, // 点赞权重
+  share: 3.0, // 分享权重（分享比点赞更有影响力）
+  comment: 2.0, // 评论权重
+} as const;
+
+// 身份排行计算
+const identityRankingList = computed(() => {
+  const startTime = performance.now();
+  console.log('🔄 [PostStatistics] 开始计算 identityRankingList...');
+
+  // 按身份ID分组统计
+  const identityStats = new Map<
+    string,
+    {
+      authorId: string;
+      authorName: string;
+      postCount: number;
+      totalLikes: number;
+      totalShares: number;
+      totalComments: number;
+      influenceScore: number;
+    }
+  >();
+
+  // 遍历所有帖子统计身份数据
+  postViewList.forEach((postView) => {
+    const authorId = postView.post.author;
+    const latestArchive = postView.archive[0]; // 获取最新的归档数据
+
+    if (!latestArchive) return;
+
+    const likes = latestArchive.like || 0;
+    const shares = latestArchive.share || 0;
+    const comments = latestArchive.comment || 0;
+
+    if (identityStats.has(authorId)) {
+      const existing = identityStats.get(authorId)!;
+      existing.postCount += 1;
+      existing.totalLikes += likes;
+      existing.totalShares += shares;
+      existing.totalComments += comments;
+    } else {
+      identityStats.set(authorId, {
+        authorId,
+        authorName: `身份-${authorId.slice(0, 8)}`, // 显示前8位作为名称
+        postCount: 1,
+        totalLikes: likes,
+        totalShares: shares,
+        totalComments: comments,
+        influenceScore: 0,
+      });
+    }
+  });
+
+  // 计算影响力评分并排序
+  const result = Array.from(identityStats.values())
+    .map((identity) => {
+      // 计算加权影响力分数
+      const influenceScore = Math.round(
+        identity.totalLikes * INFLUENCE_WEIGHTS.like +
+          identity.totalShares * INFLUENCE_WEIGHTS.share +
+          identity.totalComments * INFLUENCE_WEIGHTS.comment,
+      );
+
+      return {
+        ...identity,
+        influenceScore,
+      };
+    })
+    .sort((a, b) => b.influenceScore - a.influenceScore) // 按影响力分数降序排序
+    .map((identity, index) => ({
+      ...identity,
+      rank: index + 1, // 添加排名
+    }));
+
+  const endTime = performance.now();
+  console.log(
+    `🔄 [PostStatistics] identityRankingList 计算完成，耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 个身份`,
+  );
+  return result;
+});
+
+// 身份排行表格列定义
+const identityColumns = [
+  {
+    name: 'rank',
+    label: '排名',
+    field: 'rank',
+    align: 'center' as const,
+    headerStyle: 'width: 80px;',
+    sortable: true,
+  },
+  {
+    name: 'authorName',
+    label: '身份',
+    field: 'authorName',
+    align: 'left' as const,
+    headerStyle: 'width: 150px;',
+  },
+  {
+    name: 'postCount',
+    label: '发帖数',
+    field: 'postCount',
+    align: 'center' as const,
+    headerStyle: 'width: 80px;',
+    sortable: true,
+  },
+  {
+    name: 'totalLikes',
+    label: '总点赞',
+    field: 'totalLikes',
+    align: 'center' as const,
+    headerStyle: 'width: 80px;',
+    sortable: true,
+  },
+  {
+    name: 'totalShares',
+    label: '总分享',
+    field: 'totalShares',
+    align: 'center' as const,
+    headerStyle: 'width: 80px;',
+    sortable: true,
+  },
+  {
+    name: 'totalComments',
+    label: '总评论',
+    field: 'totalComments',
+    align: 'center' as const,
+    headerStyle: 'width: 80px;',
+    sortable: true,
+  },
+  {
+    name: 'influenceScore',
+    label: '影响力分数',
+    field: 'influenceScore',
+    align: 'center' as const,
+    headerStyle: 'width: 120px;',
+    sortable: true,
+  },
+];
 
 const latestPostArchiveCutWordList = computed(() => {
   const startTime = performance.now();
