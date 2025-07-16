@@ -1,26 +1,53 @@
 <template>
   <div>
-    <q-table
-      dense
-      flat
-      separator="cell"
-      :pagination="{
-        rowsPerPage: 10,
-      }"
-      :rows="latestPostArchiveList"
-      :columns="columns"
-      class="fixed-layout-table"
-    >
-      <template #body-cell-createdAt="props">
-        <q-td :props="props">{{ dayjs(props.row.createdAt).format(Spec.DateFormatTemplate) }}</q-td>
-      </template>
-      <template #body-cell-capturedAt="props">
-        <q-td :props="props">{{
-          dayjs(props.row.capturedAt).format(Spec.DateFormatTemplate)
-        }}</q-td>
-      </template>
-    </q-table>
-    <div>
+    <!-- 数据表格 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">帖子数据表格</div>
+
+      <q-table
+        dense
+        flat
+        separator="cell"
+        :pagination="{
+          rowsPerPage: 10,
+        }"
+        :rows="latestPostArchiveList"
+        :columns="columns"
+        class="fixed-layout-table"
+      >
+        <template #body-cell-createdAt="props">
+          <q-td :props="props">{{
+            dayjs(props.row.createdAt).format(Spec.DateFormatTemplate)
+          }}</q-td>
+        </template>
+        <template #body-cell-capturedAt="props">
+          <q-td :props="props">{{
+            dayjs(props.row.capturedAt).format(Spec.DateFormatTemplate)
+          }}</q-td>
+        </template>
+      </q-table>
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-blue-1">
+          <div class="text-subtitle2 q-mb-sm">📝 数据表格批注</div>
+          <q-input
+            v-model="annotations.table.content"
+            type="textarea"
+            label="在此输入关于数据表格的分析和观察..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：观察到某些帖子的互动数据异常高，可能与热点事件相关..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
+    </div>
+
+    <!-- 点赞趋势图 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">点赞趋势分析</div>
+
       <AppKChart
         title="点赞趋势"
         :option="likeOption"
@@ -28,8 +55,28 @@
         :useImageMode="useImageMode"
         @rendered="onChartRendered"
       />
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-red-1">
+          <div class="text-subtitle2 q-mb-sm">❤️ 点赞趋势分析批注</div>
+          <q-input
+            v-model="annotations.like.content"
+            type="textarea"
+            label="在此输入关于点赞趋势的分析..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：点赞数在X月X日达到峰值，可能与某个热点话题相关..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
     </div>
-    <div>
+
+    <!-- 分享趋势图 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">分享趋势分析</div>
+
       <AppKChart
         title="分享趋势"
         :option="shareOption"
@@ -37,8 +84,28 @@
         :useImageMode="useImageMode"
         @rendered="onChartRendered"
       />
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-teal-1">
+          <div class="text-subtitle2 q-mb-sm">🔄 分享趋势分析批注</div>
+          <q-input
+            v-model="annotations.share.content"
+            type="textarea"
+            label="在此输入关于分享趋势的分析..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：分享数波动较大，说明内容传播性存在差异..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
     </div>
-    <div>
+
+    <!-- 评论趋势图 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">评论趋势分析</div>
+
       <AppKChart
         title="评论趋势"
         :option="commentOption"
@@ -46,54 +113,232 @@
         :useImageMode="useImageMode"
         @rendered="onChartRendered"
       />
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-orange-1">
+          <div class="text-subtitle2 q-mb-sm">💬 评论趋势分析批注</div>
+          <q-input
+            v-model="annotations.comment.content"
+            type="textarea"
+            label="在此输入关于评论趋势的分析..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：评论数与点赞数呈正相关，说明用户参与度较高..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
     </div>
-    <!-- <div>
-      <AppKChart title="点赞、分享、评论趋势对比" :option="interactionTrendOption" :height="400" />
-    </div> -->
-    <div>
+
+    <!-- 发文量统计 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">发文量统计</div>
+
       <AppKChart
-        title="每天发文量"
+        title="发文量统计"
         :option="postCountOption"
         :height="300"
         :useImageMode="useImageMode"
         @rendered="onChartRendered"
       />
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-green-1">
+          <div class="text-subtitle2 q-mb-sm">📊 发文量统计批注</div>
+          <q-input
+            v-model="annotations.postCount.content"
+            type="textarea"
+            label="在此输入关于发文量统计的分析..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：发文量在周末时段较高，平日较为平稳..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
     </div>
-    <div>
+
+    <!-- 交互分布散点图 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">交互分布散点图</div>
+
       <AppKChart
-        title="推文交互分布散点图 (点赞 : 评论)"
+        title="交互分布散点图"
         :option="scatterOption"
-        :height="500"
+        :height="400"
         :useImageMode="useImageMode"
         @rendered="onChartRendered"
       />
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-purple-1">
+          <div class="text-subtitle2 q-mb-sm">🎯 交互分布散点图批注</div>
+          <q-input
+            v-model="annotations.scatter.content"
+            type="textarea"
+            label="在此输入关于交互分布散点图的分析..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：散点图显示点赞数与评论数存在明显的聚类现象..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
     </div>
-    <div>
+
+    <!-- 交互分布热力图 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">交互分布热力图</div>
+
       <AppKChart
-        title="推文交互分布热力图 (点赞 : 评论)"
+        title="交互分布热力图"
         :option="heatmapOption"
+        :height="400"
+        :useImageMode="useImageMode"
+        @rendered="onChartRendered"
+      />
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-yellow-1">
+          <div class="text-subtitle2 q-mb-sm">🔥 交互分布热力图批注</div>
+          <q-input
+            v-model="annotations.heatmap.content"
+            type="textarea"
+            label="在此输入关于交互分布热力图的分析..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：热力图显示互动数据主要集中在特定时间段..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
+    </div>
+
+    <!-- 3D散点图 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">3D散点图</div>
+
+      <AppKChart
+        title="3D散点图"
+        :option="scatter3DOption"
         :height="500"
         :useImageMode="useImageMode"
         @rendered="onChartRendered"
       />
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-pink-1">
+          <div class="text-subtitle2 q-mb-sm">🎨 3D散点图批注</div>
+          <q-input
+            v-model="annotations.scatter3d.content"
+            type="textarea"
+            label="在此输入关于3D散点图的分析..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：3D散点图展现出点赞、评论、分享三者的关联性..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
     </div>
-    <div>
+
+    <!-- 词云图 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">词云图</div>
+
       <AppKChart
-        title="推文交互分布3D散点图 (点赞 : 评论 : 分享)"
-        :option="scatter3DOption"
-        :height="600"
-        :useImageMode="useImageMode"
-        @rendered="onChartRendered"
-      />
-    </div>
-    <div>
-      <AppKChart
-        title="词云"
+        title="词云图"
         :option="wordCloudOption"
         :height="400"
         :useImageMode="useImageMode"
         @rendered="onChartRendered"
       />
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-cyan-1">
+          <div class="text-subtitle2 q-mb-sm">☁️ 词云图批注</div>
+          <q-input
+            v-model="annotations.wordCloud.content"
+            type="textarea"
+            label="在此输入关于词云图的分析..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：词云图反映了帖子内容的主要关键词和热点话题..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
+    </div>
+
+    <!-- 批注汇总 -->
+    <div class="q-mt-xl">
+      <q-card class="q-pa-lg bg-grey-1">
+        <div class="row items-center justify-between q-mb-md">
+          <div class="text-h6">
+            <q-icon name="summarize" class="q-mr-sm" />
+            批注汇总
+          </div>
+          <q-chip 
+            :color="filledAnnotationsCount === totalAnnotationsCount ? 'positive' : 'info'" 
+            text-color="white"
+            icon="edit_note"
+          >
+            {{ filledAnnotationsCount }}/{{ totalAnnotationsCount }} 已填写
+          </q-chip>
+        </div>
+        
+        <div class="q-mb-md">
+          <div class="text-subtitle2 q-mb-sm">批注完成度</div>
+          <q-linear-progress
+            :value="filledAnnotationsCount / totalAnnotationsCount"
+            color="positive"
+            size="8px"
+            rounded
+            stripe
+            animation-speed="1000"
+          />
+        </div>
+        
+        <div class="row q-gutter-md">
+          <q-btn
+            color="primary"
+            label="导出批注报告"
+            icon="download"
+            @click="exportAnnotations"
+            :disable="filledAnnotationsCount === 0"
+          />
+          <q-btn
+            color="secondary"
+            label="清空所有批注"
+            icon="clear_all"
+            outline
+            @click="clearAllAnnotations"
+            :disable="filledAnnotationsCount === 0"
+          />
+        </div>
+        
+        <div v-if="filledAnnotationsCount > 0" class="q-mt-md">
+          <div class="text-subtitle2 q-mb-sm">批注预览</div>
+          <div class="row q-gutter-sm">
+            <q-chip 
+              v-for="(item, key) in annotations" 
+              :key="key"
+              :color="item.content.trim() ? 'positive' : 'grey-5'"
+              :text-color="item.content.trim() ? 'white' : 'grey-8'"
+              :icon="item.content.trim() ? 'check_circle' : 'radio_button_unchecked'"
+              size="sm"
+            >
+              {{ getAnnotationLabel(key) }}
+            </q-chip>
+          </div>
+        </div>
+      </q-card>
     </div>
   </div>
 </template>
@@ -109,6 +354,9 @@ import { computed, ref, onMounted, nextTick, watch } from 'vue';
 import * as Spec from 'src/specification';
 import { divideByDay } from 'src/query/utils';
 import type { EChartsOption } from 'echarts';
+import { useQuasar } from 'quasar';
+
+const $q = useQuasar();
 
 const { query, postViewList, cutWordCache, useImageMode } = defineProps<{
   query: QueryInterface;
@@ -124,6 +372,214 @@ const { query, postViewList, cutWordCache, useImageMode } = defineProps<{
 const emit = defineEmits<{
   rendered: [];
 }>();
+
+// 批注数据结构
+interface AnnotationItem {
+  content: string;
+}
+
+const annotations = ref<{
+  table: AnnotationItem;
+  like: AnnotationItem;
+  share: AnnotationItem;
+  comment: AnnotationItem;
+  postCount: AnnotationItem;
+  scatter: AnnotationItem;
+  heatmap: AnnotationItem;
+  scatter3d: AnnotationItem;
+  wordCloud: AnnotationItem;
+}>({
+  table: { content: '' },
+  like: { content: '' },
+  share: { content: '' },
+  comment: { content: '' },
+  postCount: { content: '' },
+  scatter: { content: '' },
+  heatmap: { content: '' },
+  scatter3d: { content: '' },
+  wordCloud: { content: '' },
+});
+
+// 本地存储相关
+const STORAGE_KEY = 'postListStatistics_annotations';
+
+// 保存批注到本地存储
+const saveAnnotationsToStorage = () => {
+  try {
+    const annotationsData = {
+      ...annotations.value,
+      timestamp: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(annotationsData));
+  } catch (error) {
+    console.warn('保存批注到本地存储失败:', error);
+  }
+};
+
+// 从本地存储加载批注
+const loadAnnotationsFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsedData = JSON.parse(stored);
+      // 只加载内容，不包括展开状态
+      Object.keys(annotations.value).forEach((key) => {
+        if (parsedData[key] && parsedData[key].content) {
+          (annotations.value as any)[key].content = parsedData[key].content;
+        }
+      });
+    }
+  } catch (error) {
+    console.warn('从本地存储加载批注失败:', error);
+  }
+};
+
+// 监听批注内容变化，自动保存
+watch(
+  () => annotations.value,
+  () => {
+    saveAnnotationsToStorage();
+  },
+  { deep: true },
+);
+
+// 导出批注功能
+const exportAnnotations = () => {
+  const annotationData = {
+    timestamp: new Date().toISOString(),
+    exportDate: dayjs().format('YYYY年MM月DD日 HH:mm:ss'),
+    dataTableAnnotation: annotations.value.table.content,
+    likesTrendAnnotation: annotations.value.like.content,
+    sharesTrendAnnotation: annotations.value.share.content,
+    commentsTrendAnnotation: annotations.value.comment.content,
+    postCountAnnotation: annotations.value.postCount.content,
+    scatterPlotAnnotation: annotations.value.scatter.content,
+    heatmapAnnotation: annotations.value.heatmap.content,
+    scatter3DAnnotation: annotations.value.scatter3d.content,
+    wordCloudAnnotation: annotations.value.wordCloud.content,
+  };
+
+  // 创建可读的文本格式
+  const textContent = `
+统计分析批注报告
+导出时间: ${annotationData.exportDate}
+
+=== 数据表格分析 ===
+${annotationData.dataTableAnnotation || '暂无批注'}
+
+=== 点赞趋势分析 ===
+${annotationData.likesTrendAnnotation || '暂无批注'}
+
+=== 分享趋势分析 ===
+${annotationData.sharesTrendAnnotation || '暂无批注'}
+
+=== 评论趋势分析 ===
+${annotationData.commentsTrendAnnotation || '暂无批注'}
+
+=== 发文量统计分析 ===
+${annotationData.postCountAnnotation || '暂无批注'}
+
+=== 交互分布散点图分析 ===
+${annotationData.scatterPlotAnnotation || '暂无批注'}
+
+=== 交互分布热力图分析 ===
+${annotationData.heatmapAnnotation || '暂无批注'}
+
+=== 3D交互分布图分析 ===
+${annotationData.scatter3DAnnotation || '暂无批注'}
+
+=== 词云分析 ===
+${annotationData.wordCloudAnnotation || '暂无批注'}
+
+---
+报告生成时间: ${annotationData.timestamp}
+  `.trim();
+
+  // 同时导出JSON和文本格式
+  const jsonBlob = new Blob([JSON.stringify(annotationData, null, 2)], {
+    type: 'application/json',
+  });
+  const textBlob = new Blob([textContent], { type: 'text/plain; charset=utf-8' });
+
+  const timestamp = dayjs().format('YYYY-MM-DD_HH-mm-ss');
+
+  // 导出JSON格式
+  const jsonLink = document.createElement('a');
+  jsonLink.href = URL.createObjectURL(jsonBlob);
+  jsonLink.download = `统计分析批注_${timestamp}.json`;
+  document.body.appendChild(jsonLink);
+  jsonLink.click();
+  document.body.removeChild(jsonLink);
+  URL.revokeObjectURL(jsonLink.href);
+
+  // 导出文本格式
+  const textLink = document.createElement('a');
+  textLink.href = URL.createObjectURL(textBlob);
+  textLink.download = `统计分析批注_${timestamp}.txt`;
+  document.body.appendChild(textLink);
+  textLink.click();
+  document.body.removeChild(textLink);
+  URL.revokeObjectURL(textLink.href);
+
+  $q.notify({
+    type: 'positive',
+    message: '批注已导出为JSON和TXT格式',
+    icon: 'download',
+    position: 'top',
+    timeout: 3000,
+  });
+};
+
+// 清空所有批注
+const clearAllAnnotations = () => {
+  $q.dialog({
+    title: '确认清空',
+    message: '您确定要清空所有批注吗？此操作不可撤销。',
+    cancel: true,
+    persistent: true,
+  }).onOk(() => {
+    Object.keys(annotations.value).forEach((key) => {
+      (annotations.value as any)[key].content = '';
+    });
+
+    // 清空本地存储
+    localStorage.removeItem(STORAGE_KEY);
+
+    $q.notify({
+      type: 'positive',
+      message: '所有批注已清空',
+      icon: 'clear_all',
+      position: 'top',
+      timeout: 2000,
+    });
+  });
+};
+
+// 获取批注标签
+const getAnnotationLabel = (key: string): string => {
+  const labelMap: Record<string, string> = {
+    table: '数据表格',
+    like: '点赞分析',
+    share: '分享分析',
+    comment: '评论分析',
+    postCount: '发帖数量',
+    scatter: '散点图',
+    heatmap: '热力图',
+    scatter3d: '3D散点图',
+    wordCloud: '词云图',
+  };
+  return labelMap[key] || key;
+};
+
+// 计算已填写批注的数量
+const filledAnnotationsCount = computed(() => {
+  return Object.values(annotations.value).filter((item) => item.content.trim()).length;
+});
+
+// 计算总批注数量
+const totalAnnotationsCount = computed(() => {
+  return Object.keys(annotations.value).length;
+});
 
 // 图表渲染完成计数器
 const renderedChartsCount = ref(0);
