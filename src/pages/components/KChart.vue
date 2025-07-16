@@ -3,6 +3,7 @@
     <div class="row items-center justify-between q-mb-md">
       <!-- 暂时隐藏标题 -->
       <!-- <div class="text-h6 q-ma-none">{{ title }}</div> -->
+      <div class="text-h6 q-ma-none"></div>
       <div class="row q-gutter-sm">
         <q-btn
           size="sm"
@@ -181,10 +182,10 @@ const generateChartImage = () => {
       .then(() => {
         if (chartInstance.value) {
           try {
-            // 生成图片
+            // 生成高质量图片
             chartImageUrl.value = chartInstance.value.getDataURL({
               type: 'png',
-              pixelRatio: 2, // 提高图片质量
+              pixelRatio: 3, // 进一步提高图片质量，适合PDF打印
               backgroundColor: '#fff', // 设置背景色为白色
             });
 
@@ -243,7 +244,7 @@ const downloadChart = () => {
   if (chartInstance.value) {
     const url = chartInstance.value.getDataURL({
       type: 'png',
-      pixelRatio: 2, // 提高图片质量
+      pixelRatio: 3, // 进一步提高图片质量，适合PDF打印
       backgroundColor: '#fff', // 设置背景色为白色
     });
 
@@ -268,7 +269,7 @@ const copyChart = async () => {
       // 原有的图表复制逻辑
       imageUrl = chartInstance.value.getDataURL({
         type: 'png',
-        pixelRatio: 2, // 提高图片质量
+        pixelRatio: 3, // 进一步提高图片质量，适合PDF打印
         backgroundColor: '#fff', // 设置背景色为白色
       });
     } else {

@@ -794,28 +794,47 @@ const exportAnnotations = async () => {
             if (chartElement) {
               const canvas = chartElement.querySelector('canvas');
               if (canvas) {
-                const imgData = canvas.toDataURL('image/png');
-                const imgWidth = contentWidth * 0.9; // 稍微减小图表宽度
+                // 使用高质量设置生成图片
+                const imgData = canvas.toDataURL('image/png', 1.0); // 最高质量
+
+                // 计算最优尺寸：使用完整内容区宽度，保持原始比例
+                const imgWidth = contentWidth;
                 const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-                // 添加图表边框
-                doc.setDrawColor(220, 220, 220);
-                doc.setLineWidth(0.3);
-                doc.rect(margin - 1, currentY - 1, imgWidth + 2, imgHeight + 2);
+                // 如果图片高度超过页面剩余空间，进行智能分页
+                const remainingHeight = pageHeight - currentY - margin - 20;
+                if (imgHeight > remainingHeight) {
+                  smartPageBreak(imgHeight + 20);
+                }
 
+                // 直接添加图片到PDF，不添加边框避免错位
                 doc.addImage(imgData, 'PNG', margin, currentY, imgWidth, imgHeight);
-                currentY += imgHeight + 8; // 更紧凑的间距
+                currentY += imgHeight + 12; // 适当增加间距
               }
             }
           } catch (error) {
             console.warn(`无法获取图表图片: ${section.title}`, error);
-            // 如果无法获取图片，显示占位符
-            doc.setFontSize(11);
+            // 如果无法获取图片，显示简洁的占位符
+            const placeholderHeight = 120; // 固定占位符高度
+
+            // 添加占位符背景
+            doc.setFillColor(248, 249, 250);
+            doc.rect(margin, currentY, contentWidth, placeholderHeight, 'F');
+
+            // 添加占位符文本
+            doc.setFontSize(14);
             doc.setFont('SourceHanSansCN', 'normal');
             doc.setTextColor(108, 117, 125);
-            doc.text(`[图表: ${section.title}]`, margin, currentY);
+            const placeholderText = `[图表: ${section.title}]`;
+            const textWidth = doc.getTextWidth(placeholderText);
+            doc.text(
+              placeholderText,
+              margin + (contentWidth - textWidth) / 2,
+              currentY + placeholderHeight / 2,
+            );
+
             doc.setTextColor(0, 0, 0);
-            currentY += 12; // 更紧凑的间距
+            currentY += placeholderHeight + 10;
           }
         }
       }
