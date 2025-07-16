@@ -514,13 +514,11 @@ watch(
 const exportAnnotations = async () => {
   try {
     // 显示加载状态
-    $q.notify({
-      type: 'ongoing',
+    $q.loading.show({
       message: '正在生成PDF报告...',
-      icon: 'description',
-      position: 'top',
-      timeout: 0,
-      actions: [{ icon: 'close', color: 'white' }],
+      boxClass: 'bg-grey-2 text-grey-9',
+      spinnerColor: 'primary',
+      spinnerSize: 40,
     });
 
     const annotationData = {
@@ -903,6 +901,7 @@ const exportAnnotations = async () => {
     doc.save(`统计分析批注报告_${timestamp}.pdf`);
 
     // 关闭加载状态并显示成功消息
+    $q.loading.hide();
     $q.notify({
       type: 'positive',
       message: 'PDF报告已成功导出',
@@ -912,6 +911,8 @@ const exportAnnotations = async () => {
     });
   } catch (error) {
     console.error('PDF生成失败:', error);
+    // 关闭加载状态并显示失败消息
+    $q.loading.hide();
     $q.notify({
       type: 'negative',
       message: 'PDF生成失败: ' + (error as Error).message,

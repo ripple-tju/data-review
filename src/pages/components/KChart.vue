@@ -1,7 +1,8 @@
 <template>
   <div class="k-chart-container">
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h6 q-ma-none">{{ title }}</div>
+      <!-- 暂时隐藏标题 -->
+      <!-- <div class="text-h6 q-ma-none">{{ title }}</div> -->
       <div class="row q-gutter-sm">
         <q-btn
           size="sm"
