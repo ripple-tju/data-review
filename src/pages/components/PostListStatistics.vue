@@ -1,6 +1,6 @@
 <template>
   <div>
-    <!-- 数据表格 -->
+    <!-- 推文排行 -->
     <div class="q-mb-lg">
       <div class="text-h6 q-mb-md">推文排行</div>
 
@@ -29,11 +29,11 @@
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-blue-1">
-          <div class="text-subtitle2 q-mb-sm">📝 数据表格批注</div>
+          <div class="text-subtitle2 q-mb-sm">📝 推文排行批注</div>
           <q-input
             v-model="annotations.table.content"
             type="textarea"
-            label="在此输入关于数据表格的分析和观察..."
+            label="在此输入关于推文排行的分析和观察..."
             outlined
             rows="3"
             autogrow
@@ -595,7 +595,7 @@ const exportAnnotations = async () => {
     // 重新设计的 sections 配置
     const sections = [
       {
-        title: '数据表格',
+        title: '推文排行',
         type: 'table' as const,
         annotation: annotationData.dataTableAnnotation,
         getData: () => {
@@ -874,7 +874,7 @@ const clearAllAnnotations = () => {
 // 获取批注标签
 const getAnnotationLabel = (key: string): string => {
   const labelMap: Record<string, string> = {
-    table: '数据表格',
+    table: '推文排行',
     identityRanking: '身份排行',
     like: '点赞分析',
     share: '分享分析',
