@@ -8,19 +8,21 @@ import * as CountByPeriod from './Statistics/CountByPeriod';
 import * as Target from './Target/Target';
 import * as DemoRawPeriodData from './Demo/DemoRawPeriodData';
 import * as IdentityStatisticsView from './Demo/IdentityStatisticsView';
+import * as Category from './Category';
 
 const DateFormatTemplate = 'YYYY-MM-DD HH:mm';
 
 export {
-	Post,
-	PostArchive,
-	PostView,
-	Identity,
-	IdentityArchive,
-	IdentityView,
-	CountByPeriod,
-	Target,
-	DemoRawPeriodData,
-	IdentityStatisticsView,
-	DateFormatTemplate,
+  Post,
+  PostArchive,
+  PostView,
+  Identity,
+  IdentityArchive,
+  IdentityView,
+  CountByPeriod,
+  Target,
+  DemoRawPeriodData,
+  IdentityStatisticsView,
+  Category,
+  DateFormatTemplate,
 };

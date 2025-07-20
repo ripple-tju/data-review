@@ -6,7 +6,8 @@
         <q-card-section>
           <div class="text-h6 q-mb-md">数据文件上传</div>
 
-          <div class="row q-gutter-md">
+          <!-- 基础数据上传区域 -->
+          <div class="row q-gutter-md q-mb-md">
             <div class="col">
               <q-file
                 v-model="archiveFile"
@@ -42,7 +43,46 @@
             </div>
           </div>
 
-          <div class="row q-gutter-md q-mt-md">
+          <div class="row q-gutter-md q-mb-md">
+            <div class="col">
+              <q-file
+                v-model="categoryIndexFile"
+                label="上传推文分类索引数据 (JSON)"
+                accept=".json"
+                outlined
+                clearable
+                @update:model-value="onCategoryIndexFileChange"
+              >
+                <template #prepend>
+                  <q-icon name="category" />
+                </template>
+              </q-file>
+              <div class="text-caption q-mt-xs text-grey">
+                推文分类索引数据，格式：Record&lt;PostId, CategoryId&gt;
+              </div>
+            </div>
+
+            <div class="col">
+              <q-file
+                v-model="agreementFile"
+                label="上传推文认同度数据 (JSON)"
+                accept=".json"
+                outlined
+                clearable
+                @update:model-value="onAgreementFileChange"
+              >
+                <template #prepend>
+                  <q-icon name="thumb_up" />
+                </template>
+              </q-file>
+              <div class="text-caption q-mt-xs text-grey">
+                推文认同度数据，格式：Record&lt;PostArchiveId, number&gt;
+              </div>
+            </div>
+          </div>
+
+          <!-- 处理数据按钮 -->
+          <div class="row q-gutter-md q-mb-md">
             <q-btn
               color="primary"
               label="处理数据"
@@ -60,7 +100,7 @@
             />
           </div>
 
-          <div v-if="uploadStatus" class="q-mt-md">
+          <div v-if="uploadStatus" class="q-mb-md">
             <q-banner
               :class="uploadStatus.type === 'error' ? 'bg-negative' : 'bg-positive'"
               text-color="white"
@@ -68,6 +108,79 @@
               {{ uploadStatus.message }}
             </q-banner>
           </div>
+
+          <q-separator class="q-my-md" />
+
+          <!-- 推文分类数据区域 -->
+          <div class="row items-center justify-between q-mb-md">
+            <div class="text-subtitle1">推文分类数据管理</div>
+            <q-btn
+              :icon="showCategoryUploadSection ? 'expand_less' : 'expand_more'"
+              :label="showCategoryUploadSection ? '收起分类上传' : '自定义分类数据'"
+              flat
+              color="secondary"
+              @click="showCategoryUploadSection = !showCategoryUploadSection"
+            />
+          </div>
+
+          <!-- 默认分类数据信息 -->
+          <div class="q-mb-md">
+            <q-banner class="bg-blue-1 text-blue-9">
+              <template #avatar>
+                <q-icon name="info" color="blue" />
+              </template>
+              <div class="text-subtitle2">默认分类数据已加载</div>
+              <div class="text-caption">
+                系统已预置 {{ categoryData.length }} 个分类定义（{{
+                  categoryData.map((c) => c.name).join('、')
+                }}）。 如需上传自定义分类数据，请点击上方"自定义分类数据"。
+              </div>
+            </q-banner>
+          </div>
+
+          <!-- 分类数据上传区域（可折叠） -->
+          <q-slide-transition>
+            <div v-show="showCategoryUploadSection">
+              <q-card flat bordered class="bg-grey-1 q-pa-md">
+                <div class="text-subtitle2 q-mb-md text-grey-8">自定义分类数据上传</div>
+
+                <div class="row q-gutter-md">
+                  <div class="col">
+                    <q-file
+                      v-model="categoryDataFile"
+                      label="上传推文分类数据 (JSON)"
+                      accept=".json"
+                      outlined
+                      clearable
+                      @update:model-value="onCategoryDataFileChange"
+                    >
+                      <template #prepend>
+                        <q-icon name="label" />
+                      </template>
+                    </q-file>
+                    <div class="text-caption q-mt-xs text-grey">
+                      推文分类数据，格式：Array&lt;Category&gt;
+                    </div>
+                  </div>
+
+                  <div class="col">
+                    <!-- 占位符，保持布局对称 -->
+                  </div>
+                </div>
+
+                <div class="q-mt-md">
+                  <q-banner class="bg-orange-1 text-orange-9">
+                    <template #avatar>
+                      <q-icon name="warning" color="orange" />
+                    </template>
+                    <div class="text-caption">
+                      上传自定义分类数据将替换默认的 26 个预置分类。请确保上传的数据格式正确。
+                    </div>
+                  </q-banner>
+                </div>
+              </q-card>
+            </div>
+          </q-slide-transition>
         </q-card-section>
       </q-card>
     </div>
@@ -289,6 +402,9 @@
             :postViewList="analysisResults.filteredAllPostView"
             :cutWordCache="cutwordCache"
             :id-list="idList"
+            :postCategoryMap="postCategoryMap"
+            :postAgreementData="postAgreementData"
+            :categoryData="categoryData"
             :key="'overview-' + selectedIdentityIds.join('-')"
           />
         </q-tab-panel>
@@ -331,6 +447,9 @@
               :postViewList="currentIdentityData.postViewList"
               :cutWordCache="cutwordCache"
               :id-list="idList"
+              :postCategoryMap="postCategoryMap"
+              :postAgreementData="postAgreementData"
+              :categoryData="categoryData"
               :key="'identity-' + currentIdentityData.name"
             />
           </div>
@@ -483,6 +602,7 @@ import { parseRippleForQuery } from 'src/query/transformRipple';
 import { divideByDay } from 'src/query/utils';
 import * as Spec from 'src/specification';
 import { IDENTITY_LIST } from 'src/specification/IdentityData';
+import { Categories } from 'src/specification/Category';
 
 const query = ref<QueryInterface>(Query(parseRippleForQuery([])));
 const idList = ref<Array<Spec.IdentityView.Type>>([]);
@@ -503,6 +623,15 @@ const cutwordCache = ref<{
   cutWordCache: [],
   reverseIndex: {},
 });
+
+// 推文分类数据 - 转换为 Map<CategoryId, Array<PostId>>
+const postCategoryMap = ref<Map<string, Array<string>>>(new Map());
+
+// 推文认同度数据
+const postAgreementData = ref<Record<string, number>>({});
+
+// 推文分类数据 - 类别定义（使用默认数据）
+const categoryData = ref<Array<Spec.Category.Type>>(Categories);
 
 // 身份筛选相关状态
 const selectedIdentityIds = ref<string[]>([]);
@@ -655,11 +784,20 @@ const exportFields = ref({
 // 文件上传相关状态
 const archiveFile = ref<File | null>(null);
 const cutwordFile = ref<File | null>(null);
+const categoryIndexFile = ref<File | null>(null);
+const categoryDataFile = ref<File | null>(null);
+const agreementFile = ref<File | null>(null);
 const isProcessing = ref(false);
 const uploadStatus = ref<{
   type: 'success' | 'error';
   message: string;
 } | null>(null);
+
+// 控制上传区域的展开/折叠状态
+const showUploadSection = ref(false);
+
+// 控制分类数据上传区域的展开/折叠状态
+const showCategoryUploadSection = ref(false);
 
 // 🔥 [身份筛选] 处理选择的身份进行数据分析
 const processSelectedData = () => {
@@ -1036,6 +1174,24 @@ const onCutwordFileChange = (file: File | null) => {
   uploadStatus.value = null;
 };
 
+// 处理推文分类索引文件上传
+const onCategoryIndexFileChange = (file: File | null) => {
+  categoryIndexFile.value = file;
+  uploadStatus.value = null;
+};
+
+// 处理推文分类数据文件上传
+const onCategoryDataFileChange = (file: File | null) => {
+  categoryDataFile.value = file;
+  uploadStatus.value = null;
+};
+
+// 处理推文认同度文件上传
+const onAgreementFileChange = (file: File | null) => {
+  agreementFile.value = file;
+  uploadStatus.value = null;
+};
+
 // 处理上传的数据
 const processUploadedData = async () => {
   const startTime = performance.now();
@@ -1110,6 +1266,92 @@ const processUploadedData = async () => {
       }
     }
 
+    // 读取推文分类索引文件（如果有）
+    if (categoryIndexFile.value) {
+      try {
+        const categoryIndexReadStart = performance.now();
+        console.log('📁 [性能分析] 开始读取推文分类索引文件...');
+        const categoryIndexData: Record<string, string> = await readFileAsJSON(
+          categoryIndexFile.value,
+        );
+
+        // 转换为 Map<CategoryId, Array<PostId>>
+        const categoryMap = new Map<string, Array<string>>();
+        Object.entries(categoryIndexData).forEach(([postId, categoryId]) => {
+          if (!categoryMap.has(categoryId)) {
+            categoryMap.set(categoryId, []);
+          }
+          categoryMap.get(categoryId)!.push(postId);
+        });
+
+        postCategoryMap.value = categoryMap;
+
+        const categoryIndexReadEnd = performance.now();
+        console.log(
+          `📁 [性能分析] 推文分类索引文件读取完成，耗时: ${(categoryIndexReadEnd - categoryIndexReadStart).toFixed(2)}ms`,
+        );
+        console.log(
+          `📊 [性能分析] 推文分类索引数据: ${Object.keys(categoryIndexData).length} 个推文，${categoryMap.size} 个分类`,
+        );
+      } catch (error) {
+        console.warn('推文分类索引文件读取失败:', error);
+        postCategoryMap.value = new Map();
+      }
+    }
+
+    // 读取推文分类数据文件（如果有）
+    if (categoryDataFile.value) {
+      try {
+        const categoryDataReadStart = performance.now();
+        console.log('📁 [性能分析] 开始读取推文分类数据文件...');
+        const categoryDataFromFile = await readFileAsJSON(categoryDataFile.value);
+
+        // 验证数据格式是否为 Array<Category>
+        if (Array.isArray(categoryDataFromFile)) {
+          categoryData.value = categoryDataFromFile;
+          console.log('📊 [分类数据] 推文分类数据验证通过');
+          console.log(`📊 [分类数据] 分类数量: ${categoryDataFromFile.length}`);
+          console.log(
+            '📊 [分类数据] 分类列表:',
+            categoryDataFromFile.map((cat) => `${cat.id}: ${cat.name}`).join(', '),
+          );
+        } else {
+          console.warn('推文分类数据格式不正确，期望 Array<Category>');
+          categoryData.value = [];
+        }
+
+        const categoryDataReadEnd = performance.now();
+        console.log(
+          `📁 [性能分析] 推文分类数据文件读取完成，耗时: ${(categoryDataReadEnd - categoryDataReadStart).toFixed(2)}ms`,
+        );
+      } catch (error) {
+        console.warn('推文分类数据文件读取失败:', error);
+        categoryData.value = [];
+      }
+    }
+
+    // 读取推文认同度文件（如果有）
+    if (agreementFile.value) {
+      try {
+        const agreementReadStart = performance.now();
+        console.log('📁 [性能分析] 开始读取推文认同度文件...');
+        const agreementData: Record<string, number> = await readFileAsJSON(agreementFile.value);
+
+        postAgreementData.value = agreementData;
+
+        const agreementReadEnd = performance.now();
+        console.log(
+          `📁 [性能分析] 推文认同度文件读取完成，耗时: ${(agreementReadEnd - agreementReadStart).toFixed(2)}ms`,
+        );
+        console.log(
+          `📊 [性能分析] 推文认同度数据: ${Object.keys(agreementData).length} 个推文存档`,
+        );
+      } catch (error) {
+        console.warn('推文认同度文件读取失败:', error);
+        postAgreementData.value = {};
+      }
+    }
+
     // 处理数据
     const processStart = performance.now();
     console.log('⚙️ [性能分析] 开始处理数据...');
@@ -1129,7 +1371,7 @@ const processUploadedData = async () => {
 
     uploadStatus.value = {
       type: 'success',
-      message: `数据处理成功！加载了 ${allPostView.value.length} 个帖子和 ${idList.value.length} 个身份，耗时 ${(totalTime / 1000).toFixed(2)}秒`,
+      message: `数据处理成功！加载了 ${allPostView.value.length} 个帖子和 ${idList.value.length} 个身份${postCategoryMap.value.size > 0 ? `，${postCategoryMap.value.size} 个分类索引` : ''}${categoryData.value.length > 0 ? `，${categoryData.value.length} 个分类定义` : ''}${Object.keys(postAgreementData.value).length > 0 ? `，${Object.keys(postAgreementData.value).length} 个认同度记录` : ''}，耗时 ${(totalTime / 1000).toFixed(2)}秒`,
     };
 
     // 重置分析结果，让用户重新选择
@@ -1186,6 +1428,12 @@ const loadDefaultData = async () => {
     const processStart = performance.now();
     console.log('⚙️ [性能分析] 开始处理默认数据...');
     await processOldData(test, testCache);
+
+    // 为默认数据设置空的分类和认同度数据
+    postCategoryMap.value = new Map();
+    postAgreementData.value = {};
+    console.log('📝 [数据初始化] 推文分类和认同度数据已初始化为空值');
+
     const processEnd = performance.now();
     console.log(
       `⚙️ [性能分析] 默认数据处理完成，耗时: ${(processEnd - processStart).toFixed(2)}ms`,

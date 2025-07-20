@@ -398,7 +398,16 @@ import { useQuasar } from 'quasar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const { query, postViewList, cutWordCache, idList, useImageMode } = defineProps<{
+const {
+  query,
+  postViewList,
+  cutWordCache,
+  idList,
+  useImageMode,
+  postCategoryMap,
+  postAgreementData,
+  categoryData,
+} = defineProps<{
   query: QueryInterface;
   postViewList: Array<Spec.PostView.Type>;
   cutWordCache: {
@@ -410,6 +419,9 @@ const { query, postViewList, cutWordCache, idList, useImageMode } = defineProps<
   };
   idList: Array<Spec.IdentityView.Type>;
   useImageMode?: boolean; // 新增：是否使用图片模式
+  postCategoryMap?: Map<string, Array<string>>; // 新增：帖子分类数据，类别ID -> 帖子ID列表
+  postAgreementData?: Record<string, number>; // 新增：帖子协议数据，帖子存档ID -> 协议值
+  categoryData?: Array<Spec.Category.Type>; // 新增：分类定义数据
 }>();
 
 // 定义事件发射器
