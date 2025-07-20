@@ -493,12 +493,16 @@ const postViewListGroupByIdentity = ref<
     postViewList: Array<Spec.PostView.Type>;
   }>
 >([]);
-const cutwordCache = ref<
-  Array<{
+const cutwordCache = ref<{
+  cutWordCache: Array<{
     id: Spec.PostArchive.Type['id'];
-    cut: Array<string>;
-  }>
->([]);
+    wordList: Array<string>;
+  }>;
+  reverseIndex: Record<string, Array<string>>;
+}>({
+  cutWordCache: [],
+  reverseIndex: {},
+});
 
 // 身份筛选相关状态
 const selectedIdentityIds = ref<string[]>([]);
@@ -1062,17 +1066,45 @@ const processUploadedData = async () => {
     );
 
     // 读取分词缓存文件（如果有）
-    let cutwordData: Array<{ id: string; cut: Array<string> }> = [];
+    let cutwordData:
+      | {
+          cutWordCache: Array<{ id: string; wordList: Array<string> }>;
+          reverseIndex: Record<string, Array<string>>;
+        }
+      | Array<{ id: string; cut: Array<string> }> = { cutWordCache: [], reverseIndex: {} };
     if (cutwordFile.value) {
       try {
         const cutwordReadStart = performance.now();
         console.log('📁 [性能分析] 开始读取分词缓存文件...');
-        cutwordData = await readFileAsJSON(cutwordFile.value);
+        const rawData = await readFileAsJSON(cutwordFile.value);
+
+        // 检查数据格式：新格式 {cutWordCache: [...], reverseIndex: {...}} 或旧格式 [...]
+        if (Array.isArray(rawData)) {
+          // 旧格式：转换为新格式
+          console.log('🔄 [数据格式] 检测到旧格式数据，正在转换为新格式...');
+          cutwordData = {
+            cutWordCache: rawData.map((item) => ({
+              id: item.id,
+              wordList: item.cut,
+            })),
+            reverseIndex: {},
+          };
+        } else if (rawData && rawData.cutWordCache) {
+          // 新格式
+          console.log('✅ [数据格式] 检测到新格式数据');
+          cutwordData = rawData;
+        } else {
+          console.warn('⚠️ [数据格式] 未识别的数据格式，使用默认空值');
+          cutwordData = { cutWordCache: [], reverseIndex: {} };
+        }
+
         const cutwordReadEnd = performance.now();
         console.log(
           `📁 [性能分析] 分词缓存文件读取完成，耗时: ${(cutwordReadEnd - cutwordReadStart).toFixed(2)}ms`,
         );
-        console.log(`📊 [性能分析] 分词缓存大小: ${cutwordData.length} 条记录`);
+        console.log(
+          `📊 [性能分析] 分词缓存大小: ${Array.isArray(cutwordData) ? cutwordData.length : cutwordData.cutWordCache.length} 条记录`,
+        );
       } catch (error) {
         console.warn('分词缓存文件读取失败，将使用空缓存:', error);
       }
@@ -1192,14 +1224,39 @@ const loadDefaultData = async () => {
 // 数据处理核心逻辑
 const processData = async (
   archiveData: any,
-  cutwordData: Array<{ id: string; cut: Array<string> }>,
+  cutwordData:
+    | {
+        cutWordCache: Array<{ id: string; wordList: Array<string> }>;
+        reverseIndex: Record<string, Array<string>>;
+      }
+    | Array<{ id: string; cut: Array<string> }>,
 ) => {
   console.log('🔧 [性能分析] 进入 processData 函数');
+
+  // 统一处理数据格式
+  let normalizedCutwordData: {
+    cutWordCache: Array<{ id: string; wordList: Array<string> }>;
+    reverseIndex: Record<string, Array<string>>;
+  };
+
+  if (Array.isArray(cutwordData)) {
+    // 旧格式：转换为新格式
+    normalizedCutwordData = {
+      cutWordCache: cutwordData.map((item) => ({
+        id: item.id,
+        wordList: item.cut,
+      })),
+      reverseIndex: {},
+    };
+  } else {
+    // 新格式：直接使用
+    normalizedCutwordData = cutwordData;
+  }
 
   // 设置分词缓存
   const cacheStart = performance.now();
   console.log('💾 [性能分析] 开始设置分词缓存...');
-  cutwordCache.value = cutwordData;
+  cutwordCache.value = normalizedCutwordData;
   const cacheEnd = performance.now();
   console.log(`💾 [性能分析] 分词缓存设置完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`);
 
@@ -1267,10 +1324,19 @@ const processOldData = async (
 ) => {
   console.log('🔧 [性能分析] 进入 processOldData 函数');
 
+  // 转换旧格式为新格式
+  const normalizedCutwordData = {
+    cutWordCache: cutwordData.map((item) => ({
+      id: item.id,
+      wordList: item.cut,
+    })),
+    reverseIndex: {},
+  };
+
   // 设置分词缓存
   const cacheStart = performance.now();
   console.log('💾 [性能分析] 开始设置分词缓存...');
-  cutwordCache.value = cutwordData;
+  cutwordCache.value = normalizedCutwordData;
   const cacheEnd = performance.now();
   console.log(`💾 [性能分析] 分词缓存设置完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`);
 

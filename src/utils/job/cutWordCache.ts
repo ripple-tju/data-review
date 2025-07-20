@@ -114,8 +114,16 @@ if (import.meta.url !== `file://${process.argv[1]}`) {
   const stopWordList = stopWordJSON;
 
   const { cutWordCache, reverseIndex } = buildAllCache(data, stopWordList);
-  writeFileSync(
-    resolve(__dirname, 'wordIndexCache.json'),
-    JSON.stringify({ cutWordCache, reverseIndex }, null, 2),
-  );
+
+  // 输出格式与 buildAllCache 返回格式保持一致
+  const outputData = {
+    cutWordCache,
+    reverseIndex,
+  };
+
+  writeFileSync(resolve(__dirname, 'wordIndexCache.json'), JSON.stringify(outputData, null, 2));
+
+  console.log(`📁 Results saved to wordIndexCache.json`);
+  console.log(`   Cut word cache entries: ${cutWordCache.length}`);
+  console.log(`   Reverse index entries: ${Object.keys(reverseIndex).length}`);
 }

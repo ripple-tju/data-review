@@ -401,10 +401,13 @@ import autoTable from 'jspdf-autotable';
 const { query, postViewList, cutWordCache, idList, useImageMode } = defineProps<{
   query: QueryInterface;
   postViewList: Array<Spec.PostView.Type>;
-  cutWordCache: Array<{
-    id: Spec.PostArchive.Type['id'];
-    cut: Array<string>;
-  }>;
+  cutWordCache: {
+    cutWordCache: Array<{
+      id: Spec.PostArchive.Type['id'];
+      wordList: Array<string>;
+    }>;
+    reverseIndex: Record<string, Array<string>>;
+  };
   idList: Array<Spec.IdentityView.Type>;
   useImageMode?: boolean; // 新增：是否使用图片模式
 }>();
@@ -1409,8 +1412,8 @@ const latestPostArchiveCutWordList = computed(() => {
   // 🔥 [性能优化] 将cutWordCache转换为Map索引，避免O(n²)查找
   const indexBuildStart = performance.now();
   const cutWordMap = new Map<string, Array<string>>();
-  for (const item of cutWordCache) {
-    cutWordMap.set(item.id, item.cut);
+  for (const item of cutWordCache.cutWordCache) {
+    cutWordMap.set(item.id, item.wordList);
   }
   const indexBuildEnd = performance.now();
   console.log(

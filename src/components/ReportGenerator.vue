@@ -201,7 +201,10 @@
                     <AppPostListStatistics
                       :query="props.query"
                       :postViewList="identity.postViewList"
-                      :cutWordCache="[]"
+                      :cutWordCache="{
+                        cutWordCache: [],
+                        reverseIndex: {},
+                      }"
                       :id-list="props.idList"
                       :useImageMode="true"
                       :key="'identity-stats-' + identity.name"
