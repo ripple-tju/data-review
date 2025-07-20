@@ -114,6 +114,8 @@ if (import.meta.url !== `file://${process.argv[1]}`) {
   const stopWordList = stopWordJSON;
 
   const { cutWordCache, reverseIndex } = buildAllCache(data, stopWordList);
-  writeFileSync(resolve(__dirname, 'cutWordCache.json'), JSON.stringify(cutWordCache, null, 2));
-  writeFileSync(resolve(__dirname, 'reverseIndex.json'), JSON.stringify(reverseIndex, null, 2));
+  writeFileSync(
+    resolve(__dirname, 'wordIndexCache.json'),
+    JSON.stringify({ cutWordCache, reverseIndex }, null, 2),
+  );
 }

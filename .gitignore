@@ -32,5 +32,4 @@ yarn-error.log*
 # local .env files
 .env.local*
 
-cutWordCache.json
-reverseIndex.json
+wordIndexCache.json
