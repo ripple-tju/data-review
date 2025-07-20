@@ -1079,16 +1079,20 @@ const selectRecentDates = (days: number) => {
   selectedDates.value = sortedDates;
 };
 
-// 监听身份选择变化，自动更新日期选择
+// 监听身份选择变化，自动更新日期选择并重新计算分析结果
 watch(
   selectedIdentityIds,
   (newIds: string[]) => {
     if (newIds.length > 0) {
       // 当身份选择变化时，默认选择所有可用日期
       selectedDates.value = filteredDateStats.value.map((stat) => stat.date);
+      // 重新计算分析结果
+      console.log('🔄 [身份筛选] 身份选择发生变化，重新计算分析结果...');
+      processSelectedData();
     } else {
-      // 如果没有选择身份，清空日期选择
+      // 如果没有选择身份，清空日期选择和分析结果
       selectedDates.value = [];
+      analysisResults.value = null;
     }
   },
   { immediate: false },
@@ -1108,6 +1112,34 @@ watch(
     }
   },
   { immediate: true },
+);
+
+// 🔥 [分类筛选] 监听分类选择变化，自动重新计算分析结果
+watch(
+  selectedCategoryIds,
+  (newCategoryIds: string[]) => {
+    console.log('🔄 [分类筛选] 分类选择发生变化:', newCategoryIds);
+    // 如果有选中的身份，重新处理数据
+    if (selectedIdentityIds.value.length > 0) {
+      console.log('🔄 [分类筛选] 重新计算分析结果...');
+      processSelectedData();
+    }
+  },
+  { immediate: false },
+);
+
+// 🔥 [日期筛选] 监听日期选择变化，自动重新计算分析结果
+watch(
+  selectedDates,
+  (newDates: string[]) => {
+    console.log('🔄 [日期筛选] 日期选择发生变化:', newDates);
+    // 如果有选中的身份，重新处理数据
+    if (selectedIdentityIds.value.length > 0) {
+      console.log('🔄 [日期筛选] 重新计算分析结果...');
+      processSelectedData();
+    }
+  },
+  { immediate: false },
 );
 
 // 根据作者ID查找作者名字

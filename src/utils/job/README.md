@@ -61,10 +61,10 @@ node --loader ts-node/esm src/utils/job/postCategory.ts posts.json
 
 **功能：**
 
-- 为每个推文生成认同度级别（强烈同意、同意、中性、不同意、强烈不同意）
-- 使用加权随机分布模拟真实场景
+- 为每个推文生成认同度分数（0-1之间的数值）
+- 认同度分数在 0.8 上下浮动 ±0.15（有效区间：0.65-0.95）
 - 基于推文ID的hash值确保结果可重现
-- 生成统计报告显示各认同度级别的分布
+- 生成详细的统计报告包括分数分布和分档统计
 
 **使用方法：**
 
@@ -88,19 +88,27 @@ node --loader ts-node/esm src/utils/job/postRecog.ts posts.json
 
 ```json
 {
-  "post_001": "agree",
-  "post_002": "neutral",
-  "post_003": "strongly_agree"
+  "post_001": 0.823,
+  "post_002": 0.745,
+  "post_003": 0.891
 }
 ```
 
-**认同度级别：**
+**数据格式：**
 
-- `strongly_agree`: 强烈同意 (15%)
-- `agree`: 同意 (35%)
-- `neutral`: 中性 (30%)
-- `disagree`: 不同意 (15%)
-- `strongly_disagree`: 强烈不同意 (5%)
+- 类型：`Record<PostArchiveId, number>`
+- 值域：0-1（连续数值）
+- 分布：基准值 0.8，浮动范围 ±0.15
+- 有效区间：[0.65, 0.95]
+- 精度：保留3位小数
+
+**统计分档：**
+
+- 极低认同 (0.0-0.3): < 1%
+- 低认同 (0.3-0.5): < 1%
+- 中等认同 (0.5-0.7): ~17%
+- 高认同 (0.7-0.9): ~67%
+- 极高认同 (0.9-1.0): ~17%
 
 输出文件：`postAgreementMockData.json`
 

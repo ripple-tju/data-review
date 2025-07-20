@@ -24,12 +24,14 @@ export function generatePostAgreementMockData(
   const postAgreementMap: Record<PostArchiveId, number> = {};
 
   // 认同度配置参数
-  const baseScore = 0.8;      // 基准认同度分数
-  const fluctuation = 0.15;   // 浮动范围 ±0.15
-  const minScore = Math.max(0, baseScore - fluctuation);   // 最小值：0.65
-  const maxScore = Math.min(1, baseScore + fluctuation);   // 最大值：0.95
+  const baseScore = 0.8; // 基准认同度分数
+  const fluctuation = 0.15; // 浮动范围 ±0.15
+  const minScore = Math.max(0, baseScore - fluctuation); // 最小值：0.65
+  const maxScore = Math.min(1, baseScore + fluctuation); // 最大值：0.95
 
-  console.log(`认同度配置: 基准 ${baseScore}, 浮动范围 ±${fluctuation}, 有效区间 [${minScore}, ${maxScore}]`);
+  console.log(
+    `认同度配置: 基准 ${baseScore}, 浮动范围 ±${fluctuation}, 有效区间 [${minScore}, ${maxScore}]`,
+  );
 
   // 为每个推文生成认同度分数
   posts.forEach((post, index) => {
@@ -44,7 +46,7 @@ export function generatePostAgreementMockData(
 
     // 在 [minScore, maxScore] 范围内生成认同度分数
     const agreementScore = minScore + normalizedRandom * (maxScore - minScore);
-    
+
     // 确保分数在有效范围内并保留3位小数
     const clampedScore = Math.max(0, Math.min(1, agreementScore));
     const finalScore = Math.round(clampedScore * 1000) / 1000;
@@ -73,7 +75,9 @@ export function generatePostAgreementMockData(
   console.log(`   最小值: ${minGenerated.toFixed(3)}`);
   console.log(`   最大值: ${maxGenerated.toFixed(3)}`);
   console.log(`   平均值: ${avgScore.toFixed(3)}`);
-  console.log(`   标准差: ${Math.sqrt(scores.reduce((sum, score) => sum + Math.pow(score - avgScore, 2), 0) / scores.length).toFixed(3)}`);
+  console.log(
+    `   标准差: ${Math.sqrt(scores.reduce((sum, score) => sum + Math.pow(score - avgScore, 2), 0) / scores.length).toFixed(3)}`,
+  );
 
   // 分档统计
   const ranges = [
@@ -85,8 +89,8 @@ export function generatePostAgreementMockData(
   ];
 
   console.log('📈 认同度分档分布:');
-  ranges.forEach(range => {
-    const count = scores.filter(score => score >= range.min && score < range.max).length;
+  ranges.forEach((range) => {
+    const count = scores.filter((score) => score >= range.min && score < range.max).length;
     const percentage = ((count / scores.length) * 100).toFixed(1);
     console.log(`   ${range.label}: ${count} 条推文 (${percentage}%)`);
   });
