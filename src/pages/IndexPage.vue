@@ -368,6 +368,7 @@
       >
         <q-tab name="overview" label="全平台概览" icon="analytics" />
         <q-tab name="byIdentity" label="按身份统计" icon="people" />
+        <q-tab name="topicAnalysis" label="推文分析" icon="topic" />
         <!-- <q-tab name="report" label="报告生成" icon="assessment" /> -->
         <q-tab name="export" label="数据导出" icon="download" />
       </q-tabs>
@@ -531,6 +532,172 @@
           /> -->
         </q-tab-panel>
 
+        <!-- 推文分析标签页 -->
+        <q-tab-panel name="topicAnalysis" class="q-pa-none">
+          <div class="row items-center q-mb-md">
+            <h3 class="q-ma-none">
+              推文主题分析
+              <q-chip
+                v-if="selectedTopic"
+                color="secondary"
+                text-color="white"
+                icon="topic"
+                :label="`已选择主题: ${selectedTopic}`"
+                class="q-ml-sm"
+              />
+            </h3>
+          </div>
+
+          <!-- 主题管理区域 -->
+          <div class="q-mb-md">
+            <q-expansion-item
+              v-model="showTopicManagement"
+              icon="topic"
+              label="主题管理"
+              class="q-mb-md"
+            >
+              <q-card flat bordered class="q-pa-md">
+                <!-- 创建新主题 -->
+                <div class="q-mb-md">
+                  <div class="text-h6 q-mb-md">创建新主题</div>
+                  <div class="row q-gutter-md items-end">
+                    <q-input
+                      v-model="newTopicName"
+                      label="主题名称"
+                      outlined
+                      dense
+                      style="min-width: 200px"
+                      :rules="[(val) => !!val || '请输入主题名称']"
+                    />
+                    <q-select
+                      v-model="selectedWords"
+                      :options="filteredWordOptions"
+                      label="选择关键词"
+                      outlined
+                      dense
+                      multiple
+                      use-chips
+                      use-input
+                      input-debounce="300"
+                      @filter="filterWords"
+                      style="min-width: 400px"
+                      :rules="[(val) => (val && val.length > 0) || '请至少选择一个关键词']"
+                    >
+                      <template #hint> 从分词结果中选择关键词组成主题 </template>
+                    </q-select>
+                    <q-btn
+                      color="primary"
+                      icon="add"
+                      label="创建主题"
+                      @click="createTopic"
+                      :disable="!newTopicName || selectedWords.length === 0"
+                    />
+                  </div>
+                </div>
+
+                <q-separator class="q-my-md" />
+
+                <!-- 主题列表 -->
+                <div class="text-h6 q-mb-md">已保存的主题</div>
+                <div v-if="savedTopics.length === 0" class="text-grey text-center q-pa-md">
+                  暂无保存的主题
+                </div>
+                <div v-else class="q-gutter-md">
+                  <q-card
+                    v-for="topic in savedTopics"
+                    :key="topic.id"
+                    flat
+                    bordered
+                    class="q-pa-md"
+                    :class="{ 'bg-grey-2': !topic.isValid }"
+                  >
+                    <div class="row items-center justify-between">
+                      <div class="col">
+                        <div class="text-subtitle1 q-mb-xs">
+                          {{ topic.name }}
+                          <q-chip
+                            v-if="!topic.isValid"
+                            color="warning"
+                            text-color="dark"
+                            icon="warning"
+                            size="sm"
+                            label="无效"
+                          />
+                          <q-chip
+                            v-else
+                            color="positive"
+                            text-color="white"
+                            icon="check"
+                            size="sm"
+                            label="有效"
+                          />
+                        </div>
+                        <div class="text-body2 text-grey q-mb-sm">
+                          关键词: {{ topic.words.join(', ') }}
+                        </div>
+                        <div class="text-caption text-grey">
+                          创建时间: {{ new Date(topic.createdAt).toLocaleString() }}
+                        </div>
+                      </div>
+                      <div class="col-auto q-gutter-sm">
+                        <q-btn flat color="negative" icon="delete" @click="deleteTopic(topic.id)" />
+                      </div>
+                    </div>
+                  </q-card>
+                </div>
+              </q-card>
+            </q-expansion-item>
+          </div>
+
+          <!-- 主题筛选器 -->
+          <div class="q-mb-md">
+            <q-select
+              v-model="selectedTopic"
+              :options="validTopicOptions"
+              label="选择要分析的主题"
+              emit-value
+              map-options
+              outlined
+              clearable
+              class="q-mb-md"
+            >
+              <template #prepend>
+                <q-icon name="topic" />
+              </template>
+              <template #hint> 只显示对当前数据集有效的主题 </template>
+            </q-select>
+          </div>
+
+          <!-- 统计分析组件 -->
+          <AppPostListStatistics
+            v-if="activeTab === 'topicAnalysis' && topicFilteredResults"
+            :query="query"
+            :postViewList="topicFilteredResults.filteredAllPostView"
+            :cutWordCache="cutwordCache"
+            :id-list="idList"
+            :postCategoryMap="postCategoryMap"
+            :postAgreementData="postAgreementData"
+            :categoryData="categoryData"
+            :key="'topic-' + selectedTopic"
+          />
+
+          <div v-else-if="activeTab === 'topicAnalysis'" class="text-center q-pa-xl text-grey">
+            <q-icon name="topic" size="4rem" class="q-mb-md" />
+            <div v-if="!analysisResults" class="text-h6 q-mb-md">请先进行数据统计分析</div>
+            <div v-else-if="!selectedTopic" class="text-h6 q-mb-md">请选择主题进行分析</div>
+            <div v-else class="text-h6 q-mb-md">主题数据加载中...</div>
+            <div class="text-body2">
+              <span v-if="!analysisResults">
+                请先在上方选择身份并点击"开始数据统计分析"，然后回到此标签页选择主题进行分析
+              </span>
+              <span v-else-if="!selectedTopic">
+                在上方创建或选择主题，系统将根据主题关键词筛选相关推文进行统计分析
+              </span>
+              <span v-else> 正在根据主题关键词筛选推文数据... </span>
+            </div>
+          </div>
+        </q-tab-panel>
+
         <!-- 数据导出标签页 -->
         <q-tab-panel name="export" class="q-pa-none">
           <div class="text-center q-pa-xl">
@@ -688,6 +855,25 @@ const postCategoryMap = ref<Map<string, Array<string>>>(new Map());
 // 推文认同度数据
 const postAgreementData = ref<Record<string, number>>({});
 
+// 主题分析相关状态
+type Topic = {
+  id: string;
+  name: string;
+  words: string[];
+  createdAt: number;
+  isValid: boolean;
+};
+
+const savedTopics = ref<Topic[]>([]);
+const selectedTopic = ref<string>(''); // 改为单选
+const newTopicName = ref('');
+const selectedWords = ref<string[]>([]);
+const showTopicManagement = ref(false);
+
+// 分词选项（用于主题创建）
+const wordOptions = ref<string[]>([]);
+const filteredWordOptions = ref<string[]>([]);
+
 // 推文分类数据 - 类别定义（使用默认数据）
 const categoryData = ref<Array<Spec.Category.Type>>(Categories);
 
@@ -729,6 +915,251 @@ const currentIdentityData = computed(() => {
     ) || null
   );
 });
+
+// 主题分析相关计算属性
+const validTopicOptions = computed(() => {
+  return savedTopics.value
+    .filter((topic) => topic.isValid)
+    .map((topic) => ({
+      label: `${topic.name} (${topic.words.length} 个关键词)`,
+      value: topic.name, // 使用 topic.name 作为 value
+    }));
+});
+
+// 根据主题筛选的结果
+const topicFilteredResults = computed(() => {
+  console.log('🔍 [主题筛选] 计算 topicFilteredResults...');
+  console.log('🔍 [主题筛选] analysisResults:', !!analysisResults.value);
+  console.log('🔍 [主题筛选] selectedTopic:', selectedTopic.value);
+
+  if (!analysisResults.value || !selectedTopic.value) {
+    console.log('🔍 [主题筛选] 返回 null - 缺少必要条件');
+    return null;
+  }
+
+  const topic = savedTopics.value.find((t) => t.name === selectedTopic.value);
+  console.log('🔍 [主题筛选] 找到的主题:', topic);
+  if (!topic) {
+    console.log('🔍 [主题筛选] 返回 null - 未找到主题');
+    return null;
+  }
+
+  const selectedTopicWords = new Set<string>(topic.words);
+  if (selectedTopicWords.size === 0) {
+    return null;
+  }
+
+  console.log('🎯 [主题筛选] 开始按主题筛选帖子数据...');
+  console.log('🎯 [主题筛选] 选中的关键词:', Array.from(selectedTopicWords));
+
+  // 使用反向索引获取包含选中关键词的帖子ID
+  const relevantPostIds = new Set<string>();
+  selectedTopicWords.forEach((word) => {
+    const postIds = cutwordCache.value.reverseIndex[word];
+    if (postIds) {
+      postIds.forEach((postId) => relevantPostIds.add(postId));
+    }
+  });
+
+  console.log('🎯 [主题筛选] 找到相关帖子数量:', relevantPostIds.size);
+
+  // 筛选帖子
+  const filteredAllPostView = analysisResults.value.filteredAllPostView.filter((postView) =>
+    relevantPostIds.has(postView.post.id),
+  );
+
+  console.log('🎯 [主题筛选] 筛选后帖子数量:', filteredAllPostView.length);
+
+  return {
+    filteredAllPostView,
+  };
+});
+
+// 主题分析相关函数
+const loadSavedTopics = () => {
+  try {
+    const saved = localStorage.getItem('dataReview_savedTopics');
+    if (saved) {
+      const topics: Topic[] = JSON.parse(saved);
+      savedTopics.value = topics;
+      updateTopicValidity();
+    }
+  } catch (error) {
+    console.warn('加载保存的主题失败:', error);
+  }
+};
+
+const saveTopicsToStorage = () => {
+  try {
+    localStorage.setItem('dataReview_savedTopics', JSON.stringify(savedTopics.value));
+  } catch (error) {
+    console.warn('保存主题到本地存储失败:', error);
+  }
+};
+
+const updateTopicValidity = () => {
+  // 从反向索引获取当前可用的所有词汇
+  const availableWords = new Set<string>(Object.keys(cutwordCache.value.reverseIndex));
+
+  // 更新每个主题的有效性
+  savedTopics.value.forEach((topic) => {
+    topic.isValid = topic.words.some((word) => availableWords.has(word));
+  });
+
+  console.log(`🔍 [主题管理] 更新主题有效性，可用词汇: ${availableWords.size} 个`);
+};
+
+const updateWordOptions = () => {
+  // 从反向索引中提取所有词汇及其出现次数
+  const reverseIndex = cutwordCache.value.reverseIndex;
+  const wordStats = Object.entries(reverseIndex)
+    .filter(([word]) => word.length > 1) // 过滤单字词
+    .map(([word, postIds]) => ({
+      word,
+      count: postIds.length, // 出现次数
+      length: word.length, // 词汇长度
+    }));
+
+  console.log(`🔄 [主题分析] 从反向索引获取词汇，共 ${wordStats.length} 个词汇`);
+
+  // 排序：先按长度降序，再按出现次数降序
+  const sortedWords = wordStats
+    .sort((a, b) => {
+      // 首先按长度排序（长词优先）
+      if (a.length !== b.length) {
+        return b.length - a.length;
+      }
+      // 长度相同时按出现次数排序（高频优先）
+      return b.count - a.count;
+    })
+    .map(({ word }) => word);
+
+  wordOptions.value = sortedWords;
+  // 初始显示排名前30的词汇
+  filteredWordOptions.value = wordOptions.value.slice(0, 30);
+
+  console.log(`🎯 [主题分析] 词汇排序完成，显示前30个高质量词汇`);
+  if (wordOptions.value.length > 0) {
+    console.log(
+      `🏆 [主题分析] 排名前5的词汇:`,
+      wordOptions.value
+        .slice(0, 5)
+        .map((word) => {
+          const count = reverseIndex[word]?.length || 0;
+          return `${word}(${word.length}字,${count}次)`;
+        })
+        .join(', '),
+    );
+  }
+};
+
+const filterWords = (val: string, update: (fn: () => void) => void) => {
+  update(() => {
+    if (!val) {
+      // 没有输入时显示前30个高质量词汇
+      filteredWordOptions.value = wordOptions.value.slice(0, 30);
+      return;
+    }
+
+    const needle = val.toLowerCase();
+    const reverseIndex = cutwordCache.value.reverseIndex;
+
+    // 搜索匹配的词汇
+    const matchedWords = wordOptions.value
+      .filter((word) => word.toLowerCase().includes(needle))
+      .map((word) => ({
+        word,
+        count: reverseIndex[word]?.length || 0,
+        length: word.length,
+        // 计算匹配相关性分数
+        relevance: calculateRelevance(word, needle),
+      }))
+      .sort((a, b) => {
+        // 按相关性排序，然后按长度和出现次数
+        if (a.relevance !== b.relevance) {
+          return b.relevance - a.relevance;
+        }
+        if (a.length !== b.length) {
+          return b.length - a.length;
+        }
+        return b.count - a.count;
+      })
+      .slice(0, 50) // 限制显示前50个匹配结果
+      .map(({ word }) => word);
+
+    filteredWordOptions.value = matchedWords;
+  });
+};
+
+// 计算词汇与搜索词的相关性分数
+const calculateRelevance = (word: string, needle: string): number => {
+  const wordLower = word.toLowerCase();
+  const needleLower = needle.toLowerCase();
+
+  // 完全匹配得分最高
+  if (wordLower === needleLower) return 1000;
+
+  // 开头匹配得分很高
+  if (wordLower.startsWith(needleLower)) return 800;
+
+  // 结尾匹配得分较高
+  if (wordLower.endsWith(needleLower)) return 600;
+
+  // 包含匹配的基础分数
+  let score = 400;
+
+  // 匹配字符占比越高分数越高
+  const matchRatio = needleLower.length / wordLower.length;
+  score += matchRatio * 200;
+
+  // 词汇越短（相对于匹配内容）分数越高
+  const lengthPenalty = Math.max(0, wordLower.length - needleLower.length) * 5;
+  score -= lengthPenalty;
+
+  return Math.max(0, score);
+};
+
+const createTopic = () => {
+  if (!newTopicName.value || selectedWords.value.length === 0) {
+    return;
+  }
+
+  const newTopic: Topic = {
+    id: Date.now().toString(),
+    name: newTopicName.value,
+    words: [...selectedWords.value],
+    createdAt: Date.now(),
+    isValid: true, // 新创建的主题默认有效
+  };
+
+  savedTopics.value.push(newTopic);
+  saveTopicsToStorage();
+
+  // 清空表单
+  newTopicName.value = '';
+  selectedWords.value = [];
+
+  console.log('✅ [主题管理] 创建新主题:', newTopic);
+};
+
+const deleteTopic = (topicId: string) => {
+  const index = savedTopics.value.findIndex((topic) => topic.id === topicId);
+  if (index !== -1) {
+    const topic = savedTopics.value[index];
+    if (topic) {
+      const topicName = topic.name;
+      savedTopics.value.splice(index, 1);
+      saveTopicsToStorage();
+
+      // 如果删除的主题正在被选中，清空选中状态
+      if (selectedTopic.value === topicName) {
+        selectedTopic.value = '';
+      }
+
+      console.log('🗑️ [主题管理] 删除主题:', topicId);
+    }
+  }
+};
 
 // 计算分类选项
 const categoryOptions = computed(() => {
@@ -1142,6 +1573,16 @@ watch(
   { immediate: false },
 );
 
+// 🔥 [主题分析] 监听分词缓存变化，更新词汇选项和主题有效性
+watch(
+  cutwordCache,
+  () => {
+    console.log('🔄 [主题分析] 分词缓存发生变化，更新词汇选项...');
+    updateTopicValidity();
+  },
+  { immediate: false, deep: true },
+);
+
 // 根据作者ID查找作者名字
 const getAuthorNameById = (authorId: string): string => {
   const identity = IDENTITY_LIST.find((item) => item.id === authorId);
@@ -1358,35 +1799,22 @@ const processUploadedData = async () => {
     );
 
     // 读取分词缓存文件（如果有）
-    let cutwordData:
-      | {
-          cutWordCache: Array<{ id: string; wordList: Array<string> }>;
-          reverseIndex: Record<string, Array<string>>;
-        }
-      | Array<{ id: string; cut: Array<string> }> = { cutWordCache: [], reverseIndex: {} };
+    let cutwordData: {
+      cutWordCache: Array<{ id: string; wordList: Array<string> }>;
+      reverseIndex: Record<string, Array<string>>;
+    } = { cutWordCache: [], reverseIndex: {} };
     if (cutwordFile.value) {
       try {
         const cutwordReadStart = performance.now();
         console.log('📁 [性能分析] 开始读取分词缓存文件...');
         const rawData = await readFileAsJSON(cutwordFile.value);
 
-        // 检查数据格式：新格式 {cutWordCache: [...], reverseIndex: {...}} 或旧格式 [...]
-        if (Array.isArray(rawData)) {
-          // 旧格式：转换为新格式
-          console.log('🔄 [数据格式] 检测到旧格式数据，正在转换为新格式...');
-          cutwordData = {
-            cutWordCache: rawData.map((item) => ({
-              id: item.id,
-              wordList: item.cut,
-            })),
-            reverseIndex: {},
-          };
-        } else if (rawData && rawData.cutWordCache) {
-          // 新格式
-          console.log('✅ [数据格式] 检测到新格式数据');
+        // 使用新格式数据
+        if (rawData && rawData.cutWordCache && rawData.reverseIndex) {
+          console.log('✅ [数据格式] 加载新格式分词数据');
           cutwordData = rawData;
         } else {
-          console.warn('⚠️ [数据格式] 未识别的数据格式，使用默认空值');
+          console.warn('⚠️ [数据格式] 数据格式不正确，使用默认空值');
           cutwordData = { cutWordCache: [], reverseIndex: {} };
         }
 
@@ -1394,9 +1822,7 @@ const processUploadedData = async () => {
         console.log(
           `📁 [性能分析] 分词缓存文件读取完成，耗时: ${(cutwordReadEnd - cutwordReadStart).toFixed(2)}ms`,
         );
-        console.log(
-          `📊 [性能分析] 分词缓存大小: ${Array.isArray(cutwordData) ? cutwordData.length : cutwordData.cutWordCache.length} 条记录`,
-        );
+        console.log(`📊 [性能分析] 分词缓存大小: ${cutwordData.cutWordCache.length} 条记录`);
       } catch (error) {
         console.warn('分词缓存文件读取失败，将使用空缓存:', error);
       }
@@ -1594,6 +2020,12 @@ const loadDefaultData = async () => {
 
     // 重置分析结果，让用户重新选择
     analysisResults.value = null;
+
+    // 🔥 [主题分析] 更新词汇选项（如果有分词缓存）
+    if (cutwordCache.value.cutWordCache.length > 0) {
+      console.log('🔄 [主题分析] 更新词汇选项...');
+      updateWordOptions();
+    }
   } catch (error) {
     console.error('Default data loading error:', error);
     uploadStatus.value = {
@@ -1608,39 +2040,22 @@ const loadDefaultData = async () => {
 // 数据处理核心逻辑
 const processData = async (
   archiveData: any,
-  cutwordData:
-    | {
-        cutWordCache: Array<{ id: string; wordList: Array<string> }>;
-        reverseIndex: Record<string, Array<string>>;
-      }
-    | Array<{ id: string; cut: Array<string> }>,
+  cutwordData: {
+    cutWordCache: Array<{ id: string; wordList: Array<string> }>;
+    reverseIndex: Record<string, Array<string>>;
+  },
 ) => {
   console.log('🔧 [性能分析] 进入 processData 函数');
 
-  // 统一处理数据格式
-  let normalizedCutwordData: {
-    cutWordCache: Array<{ id: string; wordList: Array<string> }>;
-    reverseIndex: Record<string, Array<string>>;
-  };
-
-  if (Array.isArray(cutwordData)) {
-    // 旧格式：转换为新格式
-    normalizedCutwordData = {
-      cutWordCache: cutwordData.map((item) => ({
-        id: item.id,
-        wordList: item.cut,
-      })),
-      reverseIndex: {},
-    };
-  } else {
-    // 新格式：直接使用
-    normalizedCutwordData = cutwordData;
-  }
-
-  // 设置分词缓存
+  // 设置分词缓存（使用新格式）
   const cacheStart = performance.now();
   console.log('💾 [性能分析] 开始设置分词缓存...');
-  cutwordCache.value = normalizedCutwordData;
+  console.log(`💾 [分词缓存] cutWordCache 数量: ${cutwordData.cutWordCache.length}`);
+  console.log(
+    `💾 [分词缓存] reverseIndex 词汇数量: ${Object.keys(cutwordData.reverseIndex).length}`,
+  );
+
+  cutwordCache.value = cutwordData;
   const cacheEnd = performance.now();
   console.log(`💾 [性能分析] 分词缓存设置完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`);
 
@@ -1699,6 +2114,10 @@ const processData = async (
 
   // 分析日期统计
   analyzeDateStats();
+
+  // 🔥 [主题分析] 更新词汇选项
+  console.log('🔄 [主题分析] 更新词汇选项...');
+  updateWordOptions();
 };
 
 // 数据处理核心逻辑
@@ -1800,8 +2219,16 @@ onUnmounted(() => {
   console.log('🚪 [组件卸载] 组件卸载，依赖浏览器自动清理 WebGL 上下文');
 });
 
-onMounted(async () => {
+onMounted(() => {
   // 页面加载时自动加载默认数据
   // await loadDefaultData();
+
+  // 🔥 [主题分析] 加载保存的主题
+  console.log('🔄 [主题分析] 组件挂载，加载保存的主题...');
+  loadSavedTopics();
+
+  // 🔥 [主题分析] 初始化词汇选项
+  console.log('🔄 [主题分析] 初始化词汇选项...');
+  updateWordOptions();
 });
 </script>
