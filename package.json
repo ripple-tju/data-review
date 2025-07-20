@@ -14,8 +14,8 @@
     "build": "quasar build",
     "postinstall": "quasar prepare",
     "buildCutWordCache": "tsx src/utils/job/cutWordCache.ts",
-    "mockCategory": "tsx src/utils/job/mockCategory.ts",
-    "mockRecog": "tsx src/utils/job/mockRecog.ts"
+    "mockCategory": "tsx src/utils/job/postCategory.ts",
+    "mockRecog": "tsx src/utils/job/postRecog.ts"
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",

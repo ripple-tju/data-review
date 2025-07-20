@@ -392,7 +392,36 @@
                 :label="`已选择 ${selectedIdentityIds.length} 个身份`"
                 class="q-ml-sm"
               />
+              <q-chip
+                v-if="selectedCategoryIds.length > 0"
+                color="secondary"
+                text-color="white"
+                icon="category"
+                :label="`已选择 ${selectedCategoryIds.length} 个分类`"
+                class="q-ml-sm"
+              />
             </h3>
+          </div>
+
+          <!-- 分类筛选器 -->
+          <div class="q-mb-md">
+            <q-select
+              v-model="selectedCategoryIds"
+              :options="categoryOptions"
+              label="选择要分析的帖子分类（可多选）"
+              emit-value
+              map-options
+              outlined
+              multiple
+              clearable
+              use-chips
+              class="q-mb-md"
+            >
+              <template #prepend>
+                <q-icon name="category" />
+              </template>
+              <template #hint> 默认分析所有分类的帖子，可选择特定分类进行针对性分析 </template>
+            </q-select>
           </div>
 
           <!-- 只在当前标签页激活时渲染组件，避免WebGL上下文冲突 -->
@@ -405,7 +434,7 @@
             :postCategoryMap="postCategoryMap"
             :postAgreementData="postAgreementData"
             :categoryData="categoryData"
-            :key="'overview-' + selectedIdentityIds.join('-')"
+            :key="'overview-' + selectedIdentityIds.join('-') + '-' + selectedCategoryIds.join('-')"
           />
         </q-tab-panel>
 
@@ -429,6 +458,27 @@
             </q-select>
           </div>
 
+          <!-- 分类筛选器 -->
+          <div class="q-mb-md">
+            <q-select
+              v-model="selectedCategoryIds"
+              :options="categoryOptions"
+              label="选择要分析的帖子分类（可多选）"
+              emit-value
+              map-options
+              outlined
+              multiple
+              clearable
+              use-chips
+              class="q-mb-md"
+            >
+              <template #prepend>
+                <q-icon name="category" />
+              </template>
+              <template #hint> 默认分析所有分类的帖子，可选择特定分类进行针对性分析 </template>
+            </q-select>
+          </div>
+
           <!-- 只显示选中的身份统计，避免同时渲染多个图表 -->
           <div v-if="currentIdentityData">
             <div class="row items-center q-mb-md">
@@ -438,6 +488,14 @@
                 text-color="white"
                 icon="article"
                 :label="`${currentIdentityData.postViewList.length} 个帖子`"
+                class="q-ml-sm"
+              />
+              <q-chip
+                v-if="selectedCategoryIds.length > 0"
+                color="secondary"
+                text-color="white"
+                icon="category"
+                :label="`已选择 ${selectedCategoryIds.length} 个分类`"
                 class="q-ml-sm"
               />
             </div>
@@ -450,7 +508,7 @@
               :postCategoryMap="postCategoryMap"
               :postAgreementData="postAgreementData"
               :categoryData="categoryData"
-              :key="'identity-' + currentIdentityData.name"
+              :key="'identity-' + currentIdentityData.name + '-' + selectedCategoryIds.join('-')"
             />
           </div>
 
@@ -648,6 +706,9 @@ const analysisResults = ref<{
 const activeTab = ref('overview');
 const selectedIdentityForView = ref<string | null>(null);
 
+// 分类筛选相关状态
+const selectedCategoryIds = ref<string[]>([]);
+
 // 计算身份选项
 const identityOptions = computed(() => {
   if (!analysisResults.value) return [];
@@ -669,7 +730,43 @@ const currentIdentityData = computed(() => {
   );
 });
 
-// 🔥 [优化] 计算筛选后的帖子数据 - 按帖子创建时间筛选
+// 计算分类选项
+const categoryOptions = computed(() => {
+  return categoryData.value.map((category) => ({
+    label: `${category.name} (${category.id})`,
+    value: category.id,
+  }));
+});
+
+// 计算按分类筛选后的帖子数据
+const getCategoryFilteredPostView = (posts: Array<Spec.PostView.Type>) => {
+  // 如果没有选择分类或没有分类索引数据，返回原始数据
+  if (selectedCategoryIds.value.length === 0 || postCategoryMap.value.size === 0) {
+    return posts;
+  }
+
+  console.log('📊 [分类筛选] 开始按分类筛选帖子数据...');
+  console.log('📊 [分类筛选] 选中的分类:', selectedCategoryIds.value);
+
+  // 获取所有选中分类对应的帖子ID
+  const selectedPostIds = new Set<string>();
+  selectedCategoryIds.value.forEach((categoryId) => {
+    const postIds = postCategoryMap.value.get(categoryId);
+    if (postIds) {
+      postIds.forEach((postId) => selectedPostIds.add(postId));
+    }
+  });
+
+  console.log('📊 [分类筛选] 找到的帖子ID数量:', selectedPostIds.size);
+
+  // 筛选帖子
+  const filteredPosts = posts.filter((postView) => selectedPostIds.has(postView.post.id));
+
+  console.log('📊 [分类筛选] 筛选后帖子数量:', filteredPosts.length);
+  return filteredPosts;
+};
+
+// 🔥 [优化] 计算筛选后的帖子数据 - 按身份、分类、日期筛选
 const getFilteredPostView = () => {
   console.log('📊 [数据筛选] 开始计算筛选后的帖子数据...');
 
@@ -677,6 +774,9 @@ const getFilteredPostView = () => {
   let filteredAllPostView = allPostView.value.filter((postView) =>
     selectedIdentityIds.value.includes(postView.post.author),
   );
+
+  // 按分类筛选
+  filteredAllPostView = getCategoryFilteredPostView(filteredAllPostView);
 
   // 如果选择了特定日期，按帖子创建时间进一步筛选
   if (selectedDates.value.length > 0) {
@@ -718,6 +818,10 @@ const getFilteredGroupByIdentity = () => {
 
         // 如果有日期筛选，按帖子创建时间对帖子进行筛选
         let postViewList = existingGroup.postViewList;
+
+        // 按分类筛选
+        postViewList = getCategoryFilteredPostView(postViewList);
+
         if (selectedDates.value.length > 0) {
           postViewList = postViewList.filter((postView) => {
             try {
