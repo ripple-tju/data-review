@@ -435,6 +435,7 @@
             :postCategoryMap="postCategoryMap"
             :postAgreementData="postAgreementData"
             :categoryData="categoryData"
+            :selectedDates="selectedDates"
             :key="'overview-' + selectedIdentityIds.join('-') + '-' + selectedCategoryIds.join('-')"
           />
         </q-tab-panel>
@@ -509,6 +510,7 @@
               :postCategoryMap="postCategoryMap"
               :postAgreementData="postAgreementData"
               :categoryData="categoryData"
+              :selectedDates="selectedDates"
               :key="'identity-' + currentIdentityData.name + '-' + selectedCategoryIds.join('-')"
             />
           </div>
@@ -678,6 +680,7 @@
             :postCategoryMap="postCategoryMap"
             :postAgreementData="postAgreementData"
             :categoryData="categoryData"
+            :selectedDates="selectedDates"
             :key="'topic-' + selectedTopic"
           />
 
@@ -828,6 +831,8 @@ import { divideByDay } from 'src/query/utils';
 import * as Spec from 'src/specification';
 import { IDENTITY_LIST } from 'src/specification/IdentityData';
 import { Categories } from 'src/specification/Category';
+import { calculateInfluenceRanking } from 'src/utils/influenceCalculator';
+import type { InfluenceRankingItem } from 'src/utils/influenceCalculator';
 
 const query = ref<QueryInterface>(Query(parseRippleForQuery([])));
 const idList = ref<Array<Spec.IdentityView.Type>>([]);

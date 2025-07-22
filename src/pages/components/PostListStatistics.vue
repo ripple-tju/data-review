@@ -75,7 +75,73 @@
         </template>
         <template #body-cell-influenceScore="props">
           <q-td :props="props">
-            <div class="text-weight-bold text-primary">{{ props.row.influenceScore }}</div>
+            <div class="text-weight-bold text-primary">
+              {{
+                typeof props.row.influenceScore === 'number'
+                  ? props.row.influenceScore.toFixed(2)
+                  : props.row.influenceScore
+              }}
+            </div>
+          </q-td>
+        </template>
+        <template #body-cell-visibilityScore="props">
+          <q-td :props="props">
+            <div class="text-center">
+              <q-circular-progress
+                :value="props.row.visibilityScore || 0"
+                size="30px"
+                :thickness="0.15"
+                color="blue"
+                class="q-mr-xs"
+              />
+              <div class="text-caption">
+                {{
+                  typeof props.row.visibilityScore === 'number'
+                    ? props.row.visibilityScore.toFixed(1)
+                    : '0.0'
+                }}
+              </div>
+            </div>
+          </q-td>
+        </template>
+        <template #body-cell-engagementScore="props">
+          <q-td :props="props">
+            <div class="text-center">
+              <q-circular-progress
+                :value="props.row.engagementScore || 0"
+                size="30px"
+                :thickness="0.15"
+                color="orange"
+                class="q-mr-xs"
+              />
+              <div class="text-caption">
+                {{
+                  typeof props.row.engagementScore === 'number'
+                    ? props.row.engagementScore.toFixed(1)
+                    : '0.0'
+                }}
+              </div>
+            </div>
+          </q-td>
+        </template>
+        <template #body-cell-sentimentScore="props">
+          <q-td :props="props">
+            <div class="text-center">
+              <q-circular-progress
+                :value="props.row.sentimentScore || 0"
+                size="30px"
+                :thickness="0.15"
+                color="green"
+                class="q-mr-xs"
+              />
+              <div class="text-caption">
+                {{
+                  typeof props.row.sentimentScore === 'number'
+                    ? props.row.sentimentScore.toFixed(1)
+                    : '0.0'
+                }}
+              </div>
+            </div>
           </q-td>
         </template>
       </q-table>
@@ -397,6 +463,8 @@ import type { EChartsOption } from 'echarts';
 import { useQuasar } from 'quasar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { calculateInfluenceRanking } from 'src/utils/influenceCalculator';
+import type { InfluenceRankingItem } from 'src/utils/influenceCalculator';
 
 const {
   query,
@@ -407,6 +475,7 @@ const {
   postCategoryMap,
   postAgreementData,
   categoryData,
+  selectedDates,
 } = defineProps<{
   query: QueryInterface;
   postViewList: Array<Spec.PostView.Type>;
@@ -422,6 +491,7 @@ const {
   postCategoryMap?: Map<string, Array<string>>; // 新增：帖子分类数据，类别ID -> 帖子ID列表
   postAgreementData?: Record<string, number>; // 新增：帖子协议数据，帖子存档ID -> 协议值
   categoryData?: Array<Spec.Category.Type>; // 新增：分类定义数据
+  selectedDates?: string[]; // 新增：用户选择的日期列表
 }>();
 
 // 定义事件发射器
@@ -640,7 +710,7 @@ const exportAnnotations = async () => {
         },
         getHeaders: () => ['排名', '身份', '发帖数', '总点赞', '总分享', '总评论', '影响力分数'],
         tableColor: [156, 39, 176] as [number, number, number],
-        extraInfo: `影响力评分说明：点赞权重 ${INFLUENCE_WEIGHTS.like}，分享权重 ${INFLUENCE_WEIGHTS.share}，评论权重 ${INFLUENCE_WEIGHTS.comment}`,
+        extraInfo: `影响力评分说明：采用多维度评估体系，包含可见度(30%)、讨论度(30%)、认同度(40%)三个维度的综合评分`,
       },
       {
         title: '点赞趋势',
@@ -1270,102 +1340,98 @@ const latestPostArchiveList = computed(() => {
   return result;
 });
 
-// 影响力评分权重系数（可根据需要调整）
-const INFLUENCE_WEIGHTS = {
-  like: 1.0, // 点赞权重
-  share: 3.0, // 分享权重（分享比点赞更有影响力）
-  comment: 2.0, // 评论权重
-} as const;
-
-// 身份排行计算
+// 身份排行计算 - 使用新的影响力计算算法
 const identityRankingList = computed(() => {
   const startTime = performance.now();
-  console.log('🔄 [PostStatistics] 开始计算 identityRankingList...');
+  console.log('🔄 [PostStatistics] 开始计算 identityRankingList (新算法)...');
 
-  // 按身份ID分组统计
-  const identityStats = new Map<
-    string,
-    {
-      authorId: string;
-      authorName: string;
-      postCount: number;
-      totalLikes: number;
-      totalShares: number;
-      totalComments: number;
-      influenceScore: number;
-    }
-  >();
+  // 按身份分组帖子
+  const identityGroups = new Map<string, Array<Spec.PostView.Type>>();
 
-  // 遍历所有帖子统计身份数据
   postViewList.forEach((postView) => {
     const authorId = postView.post.author;
-    const latestArchive = postView.archive[0]; // 获取最新的归档数据
+    if (!identityGroups.has(authorId)) {
+      identityGroups.set(authorId, []);
+    }
+    identityGroups.get(authorId)!.push(postView);
+  });
 
-    if (!latestArchive) return;
+  console.log('identityGroups: ', identityGroups);
 
-    const likes = latestArchive.like || 0;
-    const shares = latestArchive.share || 0;
-    const comments = latestArchive.comment || 0;
-
-    if (identityStats.has(authorId)) {
-      const existing = identityStats.get(authorId)!;
-      existing.postCount += 1;
-      existing.totalLikes += likes;
-      existing.totalShares += shares;
-      existing.totalComments += comments;
-    } else {
+  // 转换为影响力计算所需的格式
+  const identityGroupsArray = Array.from(identityGroups.entries()).map(
+    ([authorId, postViewList]) => {
       // 从 idList 中查找身份的真实名称
       const identityView = idList.find((id) => id.identity.id === authorId);
       const identityName = identityView?.archive?.[0]?.name || `身份-${authorId.slice(0, 8)}`;
 
-      identityStats.set(authorId, {
-        authorId,
-        authorName: identityName,
-        postCount: 1,
-        totalLikes: likes,
-        totalShares: shares,
-        totalComments: comments,
-        influenceScore: 0,
-      });
-    }
-  });
-
-  // 计算影响力评分并排序
-  const result = Array.from(identityStats.values())
-    .map((identity) => {
-      // 计算加权影响力分数
-      const influenceScore = Math.round(
-        identity.totalLikes * INFLUENCE_WEIGHTS.like +
-          identity.totalShares * INFLUENCE_WEIGHTS.share +
-          identity.totalComments * INFLUENCE_WEIGHTS.comment,
-      );
-
       return {
-        ...identity,
-        influenceScore,
+        name: identityName,
+        postViewList,
       };
-    })
-    .sort((a, b) => b.influenceScore - a.influenceScore) // 按影响力分数降序排序
-    .map((identity, index) => ({
-      ...identity,
-      rank: index + 1, // 添加排名
-    }));
+    },
+  );
+
+  // 使用新的影响力计算算法
+  const influenceRanking = calculateInfluenceRanking(
+    identityGroupsArray,
+    postAgreementData || {},
+    categoryData || [],
+    selectedDates || [], // 使用用户选择的日期
+    7, // 如果没有选择日期，则分析最近7天的数据
+  );
+
+  // 转换为组件所需的格式，保持向后兼容
+  const result = influenceRanking.map((item) => ({
+    rank: item.rank,
+    authorId:
+      identityGroupsArray.find((g) => g.name === item.name)?.postViewList[0]?.post.author || '',
+    authorName: item.name,
+    postCount: identityGroupsArray.find((g) => g.name === item.name)?.postViewList.length || 0,
+    totalLikes: item.influence.engagement.likeVolume,
+    totalShares: item.influence.engagement.shareVolume,
+    totalComments: item.influence.engagement.commentVolume,
+    influenceScore: item.influence.overallScore,
+    // 新增：详细的影响力指标
+    visibilityScore: item.influence.visibility.visibilityScore,
+    engagementScore: item.influence.engagement.engagementScore,
+    sentimentScore: item.influence.sentiment.sentimentScore,
+    contentVolume: item.influence.visibility.contentVolume,
+    contentStability: item.influence.visibility.contentStability,
+    shareGrowthCycle: item.influence.engagement.shareGrowthCycle,
+    commentGrowthCycle: item.influence.engagement.commentGrowthCycle,
+  }));
 
   const endTime = performance.now();
   console.log(
-    `🔄 [PostStatistics] identityRankingList 计算完成，耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 个身份`,
+    `🔄 [PostStatistics] identityRankingList (新算法) 计算完成，耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 个身份`,
   );
+
+  // 输出前5名的详细信息
+  result.slice(0, 5).forEach((item, index) => {
+    console.log(`🏆 第${index + 1}名: ${item.authorName}`, {
+      综合影响力: item.influenceScore,
+      可见度: item.visibilityScore,
+      讨论度: item.engagementScore,
+      认同度: item.sentimentScore,
+      内容量: item.contentVolume,
+      稳定性: item.contentStability,
+      转发增长周期: item.shareGrowthCycle,
+      评论增长周期: item.commentGrowthCycle,
+    });
+  });
+
   return result;
 });
 
-// 身份排行表格列定义
+// 身份排行表格列定义 - 增强版
 const identityColumns = [
   {
     name: 'rank',
     label: '排名',
     field: 'rank',
     align: 'center' as const,
-    headerStyle: 'width: 80px;',
+    headerStyle: 'width: 60px;',
     sortable: true,
   },
   {
@@ -1373,14 +1439,50 @@ const identityColumns = [
     label: '身份',
     field: 'authorName',
     align: 'left' as const,
-    headerStyle: 'width: 150px;',
+    headerStyle: 'width: 120px;',
+  },
+  {
+    name: 'influenceScore',
+    label: '综合影响力',
+    field: 'influenceScore',
+    align: 'center' as const,
+    headerStyle: 'width: 100px;',
+    sortable: true,
+    format: (val: number) => val.toFixed(2),
+  },
+  {
+    name: 'visibilityScore',
+    label: '可见度',
+    field: 'visibilityScore',
+    align: 'center' as const,
+    headerStyle: 'width: 80px;',
+    sortable: true,
+    format: (val: number) => val.toFixed(1),
+  },
+  {
+    name: 'engagementScore',
+    label: '讨论度',
+    field: 'engagementScore',
+    align: 'center' as const,
+    headerStyle: 'width: 80px;',
+    sortable: true,
+    format: (val: number) => val.toFixed(1),
+  },
+  {
+    name: 'sentimentScore',
+    label: '认同度',
+    field: 'sentimentScore',
+    align: 'center' as const,
+    headerStyle: 'width: 80px;',
+    sortable: true,
+    format: (val: number) => val.toFixed(1),
   },
   {
     name: 'postCount',
     label: '发帖数',
     field: 'postCount',
     align: 'center' as const,
-    headerStyle: 'width: 80px;',
+    headerStyle: 'width: 70px;',
     sortable: true,
   },
   {
@@ -1388,7 +1490,7 @@ const identityColumns = [
     label: '总点赞',
     field: 'totalLikes',
     align: 'center' as const,
-    headerStyle: 'width: 80px;',
+    headerStyle: 'width: 70px;',
     sortable: true,
   },
   {
@@ -1396,7 +1498,7 @@ const identityColumns = [
     label: '总分享',
     field: 'totalShares',
     align: 'center' as const,
-    headerStyle: 'width: 80px;',
+    headerStyle: 'width: 70px;',
     sortable: true,
   },
   {
@@ -1404,15 +1506,7 @@ const identityColumns = [
     label: '总评论',
     field: 'totalComments',
     align: 'center' as const,
-    headerStyle: 'width: 80px;',
-    sortable: true,
-  },
-  {
-    name: 'influenceScore',
-    label: '影响力分数',
-    field: 'influenceScore',
-    align: 'center' as const,
-    headerStyle: 'width: 120px;',
+    headerStyle: 'width: 70px;',
     sortable: true,
   },
 ];
