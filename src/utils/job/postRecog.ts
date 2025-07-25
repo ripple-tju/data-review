@@ -1,7 +1,7 @@
 import * as Spec from '../../specification';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Option } from 'effect';
 
 type PostId = string;
@@ -102,7 +102,7 @@ export function generatePostAgreementMockData(
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [dataJSONPath] = process.argv.slice(2);
   console.log('参数:', { dataJSONPath });
 

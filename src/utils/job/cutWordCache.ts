@@ -1,7 +1,7 @@
 import { cut_for_search } from 'jieba-wasm';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Option } from 'effect';
 type Id = string;
 type Content = string;
@@ -90,7 +90,7 @@ export function buildAllCache(
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-if (import.meta.url !== `file://${process.argv[1]}`) {
+if (!process.argv[1] || import.meta.url !== pathToFileURL(process.argv[1]).href) {
   console.log('This module is not run as a standalone script.');
 } else {
   const [dataJSONPath, stopWordJSONPath] = process.argv.slice(2);

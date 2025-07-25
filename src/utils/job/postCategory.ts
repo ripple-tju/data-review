@@ -1,7 +1,7 @@
 import * as Spec from '../../specification';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Option } from 'effect';
 
 type PostId = string;
@@ -22,10 +22,23 @@ export function generatePostCategoryMockData(
   console.log(`可用分类数量: ${Spec.Category.Categories.length}`);
 
   const postCategoryMap: Record<PostId, CategoryId> = {};
-  const availableCategories = Spec.Category.Categories.map((cat) => cat.id);
+  const availableCategories = Spec.Category.Categories.map((cat) => cat.id).filter(
+    (id) => id && id.trim() !== '',
+  );
+
+  console.log(`有效分类数量: ${availableCategories.length}`);
+  if (availableCategories.length === 0) {
+    throw new Error('没有可用的有效分类');
+  }
 
   // 为每个推文随机分配一个分类
   posts.forEach((post, index) => {
+    // 确保推文有有效的ID
+    if (!post.id || post.id.trim() === '') {
+      console.warn(`跳过无效ID的推文，索引: ${index}`);
+      return;
+    }
+
     // 使用简单的伪随机算法，基于推文ID的hash值确保结果可重现
     const hash = post.id.split('').reduce((a, b) => {
       a = (a << 5) - a + b.charCodeAt(0);
@@ -35,8 +48,18 @@ export function generatePostCategoryMockData(
     const categoryIndex = Math.abs(hash) % availableCategories.length;
     const categoryId = availableCategories[categoryIndex];
 
-    if (categoryId) {
+    // 确保每个推文都分配一个分类
+    if (categoryId && categoryId.trim() !== '') {
       postCategoryMap[post.id] = categoryId;
+    } else {
+      // 如果计算出的分类无效，使用第一个有效分类作为默认值
+      const defaultCategory = availableCategories[0];
+      if (defaultCategory) {
+        postCategoryMap[post.id] = defaultCategory;
+        console.warn(`推文 ${post.id} 使用默认分类: ${defaultCategory}`);
+      } else {
+        console.error(`无法为推文 ${post.id} 分配分类: 没有可用的有效分类`);
+      }
     }
 
     // 每处理1000条记录打印一次进度
@@ -74,7 +97,7 @@ export function generatePostCategoryMockData(
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [dataJSONPath] = process.argv.slice(2);
   console.log('参数:', { dataJSONPath });
 

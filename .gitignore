@@ -33,3 +33,5 @@ yarn-error.log*
 .env.local*
 
 wordIndexCache.json
+postAgreementMockData.json
+postCategoryMockData.json
