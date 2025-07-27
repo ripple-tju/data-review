@@ -15,15 +15,59 @@
         :columns="columns"
         class="fixed-layout-table"
       >
-        <template #body-cell-createdAt="props">
-          <q-td :props="props">{{
-            dayjs(props.row.createdAt).format(Spec.DateFormatTemplate)
-          }}</q-td>
+        <!-- 推文内容列：添加tooltip和点击事件 -->
+        <template #body-cell-content="props">
+          <q-td
+            :props="props"
+            class="cursor-pointer text-left"
+            @click="openPostDetailDialog(props.row)"
+          >
+            <q-tooltip class="bg-grey-8" :delay="500" max-width="400px" :offset="[10, 10]">
+              {{ props.row.content || '无内容' }}
+            </q-tooltip>
+            <div class="text-truncate" style="max-width: 280px">
+              {{
+                (props.row.content || '无内容').substring(0, 50) +
+                (props.row.content && props.row.content.length > 50 ? '...' : '')
+              }}
+            </div>
+          </q-td>
         </template>
-        <template #body-cell-capturedAt="props">
-          <q-td :props="props">{{
-            dayjs(props.row.capturedAt).format(Spec.DateFormatTemplate)
-          }}</q-td>
+        <!-- 其他行也添加点击事件 -->
+        <template #body="props">
+          <q-tr :props="props" class="cursor-pointer" @click="openPostDetailDialog(props.row)">
+            <q-td
+              v-for="col in props.cols"
+              :key="col.name"
+              :props="props"
+              :style="col.style"
+              :class="col.name === 'content' ? 'text-left' : col.align || 'text-right'"
+            >
+              <!-- 特殊处理内容列 -->
+              <div v-if="col.name === 'content'">
+                <q-tooltip class="bg-grey-8" :delay="500" max-width="400px" :offset="[10, 10]">
+                  {{ props.row.content || '无内容' }}
+                </q-tooltip>
+                <div class="text-truncate" style="max-width: 280px">
+                  {{
+                    (props.row.content || '无内容').substring(0, 50) +
+                    (props.row.content && props.row.content.length > 50 ? '...' : '')
+                  }}
+                </div>
+              </div>
+              <!-- 时间列格式化 -->
+              <div v-else-if="col.name === 'createdAt'">
+                {{ dayjs(props.row.createdAt).format(Spec.DateFormatTemplate) }}
+              </div>
+              <div v-else-if="col.name === 'capturedAt'">
+                {{ dayjs(props.row.capturedAt).format(Spec.DateFormatTemplate) }}
+              </div>
+              <!-- 其他列正常显示 -->
+              <div v-else>
+                {{ col.format ? col.format(props.row[col.name]) : props.row[col.name] }}
+              </div>
+            </q-td>
+          </q-tr>
         </template>
       </q-table>
 
@@ -674,6 +718,150 @@
         </div>
       </q-card>
     </div>
+
+    <!-- 推文详情对话框 -->
+    <q-dialog v-model="showPostDetailDialog" persistent>
+      <q-card style="min-width: 600px; max-width: 800px">
+        <q-card-section class="bg-primary text-white">
+          <div class="text-h6">
+            <q-icon name="article" class="q-mr-sm" />
+            推文详情
+          </div>
+        </q-card-section>
+
+        <q-card-section v-if="selectedPostDetail" class="q-pa-md">
+          <!-- 作者信息 -->
+          <div class="row q-mb-md">
+            <div class="col-6">
+              <div class="text-subtitle2 text-grey-7">作者</div>
+              <div class="text-body1">
+                {{ selectedPostDetail.authorName || selectedPostDetail.authorId || '未知' }}
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="text-subtitle2 text-grey-7">作者ID</div>
+              <div class="text-body1">{{ selectedPostDetail.authorId || '未知' }}</div>
+            </div>
+          </div>
+
+          <!-- 时间信息 -->
+          <div class="row q-mb-md">
+            <div class="col-6">
+              <div class="text-subtitle2 text-grey-7">创建时间</div>
+              <div class="text-body1">
+                {{ dayjs(selectedPostDetail.createdAt).format('YYYY-MM-DD HH:mm:ss') }}
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="text-subtitle2 text-grey-7">抓取时间</div>
+              <div class="text-body1">
+                {{ dayjs(selectedPostDetail.capturedAt).format('YYYY-MM-DD HH:mm:ss') }}
+              </div>
+            </div>
+          </div>
+
+          <!-- 推文内容 -->
+          <div class="q-mb-md">
+            <div class="text-subtitle2 text-grey-7 q-mb-sm">推文内容</div>
+            <q-card flat bordered class="q-pa-md bg-grey-1">
+              <div class="text-body1" style="white-space: pre-wrap; word-break: break-word">
+                {{ selectedPostDetail.content || '无内容' }}
+              </div>
+            </q-card>
+          </div>
+
+          <!-- 推文链接 -->
+          <div class="q-mb-md" v-if="selectedPostDetail.url">
+            <div class="text-subtitle2 text-grey-7 q-mb-sm">推文链接</div>
+            <q-btn
+              flat
+              color="primary"
+              :href="selectedPostDetail.url"
+              target="_blank"
+              icon="open_in_new"
+              class="q-pa-none text-left"
+              style="text-transform: none"
+            >
+              {{ selectedPostDetail.url }}
+            </q-btn>
+          </div>
+
+          <!-- 互动数据 -->
+          <div class="row q-mb-md">
+            <div class="col-3">
+              <div class="text-subtitle2 text-grey-7">点赞数</div>
+              <div class="text-h6 text-pink">
+                <q-icon name="favorite" class="q-mr-xs" />
+                {{ selectedPostDetail.like || 0 }}
+              </div>
+              <div
+                class="text-caption text-grey-6"
+                v-if="selectedPostDetail.likeGrowthRate !== undefined"
+              >
+                增速: {{ selectedPostDetail.likeGrowthRate?.toFixed(2) || 0 }}%
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="text-subtitle2 text-grey-7">分享数</div>
+              <div class="text-h6 text-blue">
+                <q-icon name="share" class="q-mr-xs" />
+                {{ selectedPostDetail.share || 0 }}
+              </div>
+              <div
+                class="text-caption text-grey-6"
+                v-if="selectedPostDetail.shareGrowthRate !== undefined"
+              >
+                增速: {{ selectedPostDetail.shareGrowthRate?.toFixed(2) || 0 }}%
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="text-subtitle2 text-grey-7">评论数</div>
+              <div class="text-h6 text-orange">
+                <q-icon name="comment" class="q-mr-xs" />
+                {{ selectedPostDetail.comment || 0 }}
+              </div>
+              <div
+                class="text-caption text-grey-6"
+                v-if="selectedPostDetail.commentGrowthRate !== undefined"
+              >
+                增速: {{ selectedPostDetail.commentGrowthRate?.toFixed(2) || 0 }}%
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="text-subtitle2 text-grey-7">认同度</div>
+              <div class="text-h6 text-purple">
+                <q-icon name="sentiment_satisfied" class="q-mr-xs" />
+                {{ selectedPostDetail.endorsement !== null ? selectedPostDetail.endorsement : '-' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- 其他信息 -->
+          <div class="row" v-if="selectedPostDetail.view || selectedPostDetail.favorite">
+            <div class="col-6" v-if="selectedPostDetail.view">
+              <div class="text-subtitle2 text-grey-7">浏览数</div>
+              <div class="text-body1">{{ selectedPostDetail.view || '-' }}</div>
+            </div>
+            <div class="col-6" v-if="selectedPostDetail.favorite">
+              <div class="text-subtitle2 text-grey-7">收藏数</div>
+              <div class="text-body1">{{ selectedPostDetail.favorite || '-' }}</div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="关闭" color="grey" @click="showPostDetailDialog = false" />
+          <q-btn
+            v-if="selectedPostDetail?.url"
+            color="primary"
+            label="查看原文"
+            icon="open_in_new"
+            :href="selectedPostDetail.url"
+            target="_blank"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -1388,6 +1576,16 @@ const ViewDataSchema = Spec.PostArchive.Schema.extend({
 
 export type ViewDataType = z.infer<typeof ViewDataSchema>;
 type Key = keyof typeof ViewDataSchema.shape;
+
+// 推文详情对话框相关
+const showPostDetailDialog = ref(false);
+const selectedPostDetail = ref<ViewDataType | null>(null);
+
+// 打开推文详情对话框
+const openPostDetailDialog = (postData: ViewDataType) => {
+  selectedPostDetail.value = postData;
+  showPostDetailDialog.value = true;
+};
 
 const defaultOrder: Array<Key> = [
   'content',
