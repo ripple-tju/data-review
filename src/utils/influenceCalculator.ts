@@ -205,7 +205,7 @@ const calculateVarianceStability = (dailyCounts: number[]): number => {
  * @param postViewList 帖子列表
  * @param categoryData 分类数据
  * @param timeRangeDays 时间范围
- * @returns 可见度指标
+ * @returns 可见度指标（原始值，不标准化）
  */
 const calculateVisibilityMetrics = (
   postViewList: Array<Spec.PostView.Type>,
@@ -214,33 +214,28 @@ const calculateVisibilityMetrics = (
 ) => {
   console.log('👁️ [可见度计算] 开始计算可见度指标...');
 
-  // 1. 内容发布总量 (10%) - 账号在过去一周发布的内容总量
+  // 1. 内容发布总量 - 账号在过去一周发布的内容总量（原始值）
   const contentVolume = postViewList.length;
   console.log(`👁️ [可见度] 内容发布总量: ${contentVolume}`);
 
-  // 2. 内容发布稳定性 (10%) - 账号在过去一周内容发布量的方差
-  // 按日分组计算每日发布量，然后计算方差
+  // 2. 内容发布稳定性 - 按日分组计算每日发布量的标准差（原始值）
   const dailyPostCounts = calculateDailyPostCounts(postViewList, timeRangeDays);
-  const contentStability = calculateVarianceStability(dailyPostCounts);
-  console.log(`👁️ [可见度] 内容发布稳定性: ${contentStability}`);
+  const mean = dailyPostCounts.reduce((sum, count) => sum + count, 0) / dailyPostCounts.length;
+  const variance =
+    dailyPostCounts.reduce((sum, count) => sum + Math.pow(count - mean, 2), 0) /
+    dailyPostCounts.length;
+  const contentStability = Math.sqrt(variance); // 标准差作为原始值
+  console.log(`👁️ [可见度] 内容发布稳定性(标准差): ${contentStability}`);
 
-  // 3. 内容发布主要领域覆盖率 (5%) - 一周内账号原创内容各容量的比重
-  // TODO: 需要基于分类数据计算，暂时设置为1
+  // 3. 内容发布主要领域覆盖率 - 暂时设置为1（原始值）
   const domainCoverage = 1;
   console.log(`👁️ [可见度] 领域覆盖率: ${domainCoverage} (待实现)`);
-
-  // 计算可见度综合得分 (0-100)
-  const visibilityScore = calculateVisibilityScore({
-    contentVolume,
-    contentStability,
-    domainCoverage,
-  });
 
   return {
     contentVolume,
     contentStability,
     domainCoverage,
-    visibilityScore,
+    visibilityScore: 0, // 暂时设置为0，将通过系数计算
   };
 };
 
@@ -248,7 +243,7 @@ const calculateVisibilityMetrics = (
  * 计算讨论度相关指标 (专门针对身份)
  * @param postViewList 帖子列表
  * @param timeRangeDays 时间范围
- * @returns 讨论度指标
+ * @returns 讨论度指标（原始值，不标准化）
  */
 const calculateEngagementMetricsForIdentity = (
   postViewList: Array<Spec.PostView.Type>,
@@ -273,19 +268,19 @@ const calculateEngagementMetricsForIdentity = (
     `💬 [讨论度计算] 处理了 ${postViewList.length} 个帖子，找到 ${latestArchives.length} 个有效存档`,
   );
 
-  // 1. 推文转发总量 (10%)
+  // 1. 推文转发总量（原始值）
   const shareVolume = latestArchives.reduce((sum, archive) => sum + (archive?.share || 0), 0);
 
-  // 2. 转发增长周期 (5%) - 使用增长周期计算
+  // 2. 转发增长周期（原始值，天数）
   const shareGrowthCycle = calculateAverageGrowthCycle(postViewList, 'share');
 
-  // 3. 推文评论总量 (10%)
+  // 3. 推文评论总量（原始值）
   const commentVolume = latestArchives.reduce((sum, archive) => sum + (archive?.comment || 0), 0);
 
-  // 4. 评论增长周期 (5%) - 使用增长周期计算
+  // 4. 评论增长周期（原始值，天数）
   const commentGrowthCycle = calculateAverageGrowthCycle(postViewList, 'comment');
 
-  // 5. 点赞总量 (10%)
+  // 5. 点赞总量（原始值）
   const likeVolume = latestArchives.reduce((sum, archive) => sum + (archive?.like || 0), 0);
 
   console.log('💬 [讨论度] 统计结果:', {
@@ -296,22 +291,13 @@ const calculateEngagementMetricsForIdentity = (
     点赞总量: likeVolume,
   });
 
-  // 计算讨论度综合得分
-  const engagementScore = calculateEngagementScore({
-    shareVolume,
-    shareGrowthCycle,
-    commentVolume,
-    commentGrowthCycle,
-    likeVolume,
-  });
-
   return {
     shareVolume,
     shareGrowthCycle,
     commentVolume,
     commentGrowthCycle,
     likeVolume,
-    engagementScore,
+    engagementScore: 0, // 暂时设置为0，将通过系数计算
   };
 };
 
@@ -319,7 +305,7 @@ const calculateEngagementMetricsForIdentity = (
  * 计算认同度相关指标
  * @param postViewList 帖子列表
  * @param postAgreementData 认同度数据
- * @returns 认同度指标
+ * @returns 认同度指标（原始值，不标准化）
  */
 const calculateSentimentMetrics = (
   postViewList: Array<Spec.PostView.Type>,
@@ -327,13 +313,11 @@ const calculateSentimentMetrics = (
 ) => {
   console.log('❤️ [认同度计算] 开始计算认同度指标...');
 
-  // 1. 评论同向性 (10%) - 转发文本与推送文本的同向程度
-  // TODO: 需要文本分析能力，暂时设置为1
-  const commentAlignment = 1;
+  // 1. 评论同向性（原始值，0-1之间）
+  let commentAlignment = 0.5; // 默认值
 
-  // 2. 评论同向变化 (5%) - 评论文本与推送文本同向程度的变化趋势
-  // TODO: 需要时间序列分析，暂时设置为1
-  const alignmentTrend = 1;
+  // 2. 评论同向变化（原始值，变化趋势指数）
+  let alignmentTrend = 0.5; // 默认值
 
   // 如果有认同度数据，可以基于实际数据计算
   if (Object.keys(postAgreementData).length > 0) {
@@ -353,11 +337,28 @@ const calculateSentimentMetrics = (
     console.log(`❤️ [认同度] 找到 ${relevantAgreementScores.length} 个相关认同度数据点`);
 
     if (relevantAgreementScores.length > 0) {
-      // 使用实际认同度数据
-      const averageAgreement =
+      // 使用实际认同度数据计算同向性
+      commentAlignment =
         relevantAgreementScores.reduce((sum, score) => sum + score, 0) /
         relevantAgreementScores.length;
-      console.log(`❤️ [认同度] 平均认同度: ${averageAgreement.toFixed(3)}`);
+
+      // 计算变化趋势（如果有多个数据点）
+      if (relevantAgreementScores.length > 1) {
+        const firstHalf = relevantAgreementScores.slice(
+          0,
+          Math.floor(relevantAgreementScores.length / 2),
+        );
+        const secondHalf = relevantAgreementScores.slice(
+          Math.floor(relevantAgreementScores.length / 2),
+        );
+        const firstAvg = firstHalf.reduce((sum, score) => sum + score, 0) / firstHalf.length;
+        const secondAvg = secondHalf.reduce((sum, score) => sum + score, 0) / secondHalf.length;
+        alignmentTrend = secondAvg - firstAvg; // 变化量
+      }
+
+      console.log(
+        `❤️ [认同度] 平均认同度: ${commentAlignment.toFixed(3)}, 变化趋势: ${alignmentTrend.toFixed(3)}`,
+      );
     }
   }
 
@@ -366,16 +367,10 @@ const calculateSentimentMetrics = (
     同向变化趋势: alignmentTrend,
   });
 
-  // 计算认同度综合得分
-  const sentimentScore = calculateSentimentScore({
-    commentAlignment,
-    alignmentTrend,
-  });
-
   return {
     commentAlignment,
     alignmentTrend,
-    sentimentScore,
+    sentimentScore: 0, // 暂时设置为0，将通过系数计算
   };
 };
 
@@ -482,7 +477,7 @@ const calculateSentimentScore = (metrics: {
  * @param categoryData 分类数据
  * @param selectedDates 用户选择的日期列表，如果提供则使用这些日期进行筛选，否则使用timeRangeDays
  * @param timeRangeDays 分析时间范围（天数），默认7天，仅在selectedDates为空时使用
- * @returns 影响力评估结果
+ * @returns 影响力评估结果（原始值）
  */
 export const calculateIdentityInfluence = (
   identityName: string,
@@ -522,36 +517,132 @@ export const calculateIdentityInfluence = (
   // 计算实际的时间范围天数，用于稳定性计算
   const actualTimeRangeDays = selectedDates.length > 0 ? selectedDates.length : timeRangeDays;
 
-  // 1. 计算可见度指标 (30%权重)
+  // 1. 计算可见度指标（原始值）
   const visibility = calculateVisibilityMetrics(recentPosts, categoryData, actualTimeRangeDays);
 
-  // 2. 计算讨论度指标 (30%权重)
+  // 2. 计算讨论度指标（原始值）
   const engagement = calculateEngagementMetricsForIdentity(recentPosts, actualTimeRangeDays);
 
-  // 3. 计算认同度指标 (40%权重)
+  // 3. 计算认同度指标（原始值）
   const sentiment = calculateSentimentMetrics(recentPosts, postAgreementData);
 
-  // 4. 计算综合影响力得分
-  const overallScore =
-    visibility.visibilityScore * 0.3 +
-    engagement.engagementScore * 0.3 +
-    sentiment.sentimentScore * 0.4;
-
+  // 注意：这里不计算综合得分，将在组件中通过用户设置的系数计算
   const result: InfluenceMetrics = {
     visibility,
     engagement,
     sentiment,
-    overallScore: Math.round(overallScore * 100) / 100,
+    overallScore: 0, // 暂时设置为0，将通过用户设置的系数计算
   };
 
-  console.log(`📊 [影响力计算] 身份 "${identityName}" 影响力计算完成:`, {
-    可见度: result.visibility.visibilityScore,
-    讨论度: result.engagement.engagementScore,
-    认同度: result.sentiment.sentimentScore,
-    综合得分: result.overallScore,
+  console.log(`📊 [影响力计算] 身份 "${identityName}" 影响力原始数据计算完成:`, {
+    可见度: result.visibility,
+    讨论度: result.engagement,
+    认同度: result.sentiment,
   });
 
   return result;
+};
+
+/**
+ * 影响力系数配置接口
+ */
+export interface InfluenceCoefficients {
+  visibility: {
+    contentVolume: number;
+    contentStability: number;
+    domainCoverage: number;
+    weight: number; // 可见度整体权重
+  };
+  engagement: {
+    shareVolume: number;
+    shareGrowthCycle: number;
+    commentVolume: number;
+    commentGrowthCycle: number;
+    likeVolume: number;
+    weight: number; // 讨论度整体权重
+  };
+  sentiment: {
+    commentAlignment: number;
+    alignmentTrend: number;
+    weight: number; // 认同度整体权重
+  };
+}
+
+/**
+ * 默认影响力系数
+ */
+export const DEFAULT_INFLUENCE_COEFFICIENTS: InfluenceCoefficients = {
+  visibility: {
+    contentVolume: 1.0,
+    contentStability: -0.1, // 负系数，因为标准差越小越好
+    domainCoverage: 1.0,
+    weight: 0.3,
+  },
+  engagement: {
+    shareVolume: 0.001,
+    shareGrowthCycle: -0.1, // 负系数，因为周期越短越好
+    commentVolume: 0.002,
+    commentGrowthCycle: -0.1, // 负系数，因为周期越短越好
+    likeVolume: 0.0002,
+    weight: 0.3,
+  },
+  sentiment: {
+    commentAlignment: 100.0,
+    alignmentTrend: 50.0,
+    weight: 0.4,
+  },
+};
+
+/**
+ * 使用系数计算影响力得分
+ * @param metrics 原始影响力指标
+ * @param coefficients 系数配置
+ * @returns 计算后的影响力得分
+ */
+export const calculateInfluenceWithCoefficients = (
+  metrics: InfluenceMetrics,
+  coefficients: InfluenceCoefficients,
+): InfluenceMetrics => {
+  // 计算可见度得分
+  const visibilityScore =
+    metrics.visibility.contentVolume * coefficients.visibility.contentVolume +
+    metrics.visibility.contentStability * coefficients.visibility.contentStability +
+    metrics.visibility.domainCoverage * coefficients.visibility.domainCoverage;
+
+  // 计算讨论度得分
+  const engagementScore =
+    metrics.engagement.shareVolume * coefficients.engagement.shareVolume +
+    metrics.engagement.shareGrowthCycle * coefficients.engagement.shareGrowthCycle +
+    metrics.engagement.commentVolume * coefficients.engagement.commentVolume +
+    metrics.engagement.commentGrowthCycle * coefficients.engagement.commentGrowthCycle +
+    metrics.engagement.likeVolume * coefficients.engagement.likeVolume;
+
+  // 计算认同度得分
+  const sentimentScore =
+    metrics.sentiment.commentAlignment * coefficients.sentiment.commentAlignment +
+    metrics.sentiment.alignmentTrend * coefficients.sentiment.alignmentTrend;
+
+  // 计算综合得分
+  const overallScore =
+    visibilityScore * coefficients.visibility.weight +
+    engagementScore * coefficients.engagement.weight +
+    sentimentScore * coefficients.sentiment.weight;
+
+  return {
+    visibility: {
+      ...metrics.visibility,
+      visibilityScore: Math.round(visibilityScore * 100) / 100,
+    },
+    engagement: {
+      ...metrics.engagement,
+      engagementScore: Math.round(engagementScore * 100) / 100,
+    },
+    sentiment: {
+      ...metrics.sentiment,
+      sentimentScore: Math.round(sentimentScore * 100) / 100,
+    },
+    overallScore: Math.round(overallScore * 100) / 100,
+  };
 };
 
 /**
@@ -561,6 +652,7 @@ export const calculateIdentityInfluence = (
  * @param categoryData 分类数据
  * @param selectedDates 用户选择的日期列表，如果提供则使用这些日期进行筛选，否则使用timeRangeDays
  * @param timeRangeDays 分析时间范围（天数），默认7天，仅在selectedDates为空时使用
+ * @param coefficients 影响力系数配置
  * @returns 影响力排行榜
  */
 export const calculateInfluenceRanking = (
@@ -572,11 +664,13 @@ export const calculateInfluenceRanking = (
   categoryData: Array<Spec.Category.Type> = [],
   selectedDates: string[] = [],
   timeRangeDays: number = 7,
+  coefficients: InfluenceCoefficients = DEFAULT_INFLUENCE_COEFFICIENTS,
 ): InfluenceRankingItem[] => {
   console.log('🏆 [影响力排名] 开始计算影响力排行榜...');
 
   const rankings: InfluenceRankingItem[] = identityGroups.map((group, index) => {
-    const influence = calculateIdentityInfluence(
+    // 先计算原始数据
+    const rawInfluence = calculateIdentityInfluence(
       group.name,
       group.postViewList,
       postAgreementData,
@@ -584,6 +678,9 @@ export const calculateInfluenceRanking = (
       selectedDates,
       timeRangeDays,
     );
+
+    // 然后使用系数计算最终得分
+    const influence = calculateInfluenceWithCoefficients(rawInfluence, coefficients);
 
     return {
       name: group.name,

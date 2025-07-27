@@ -48,6 +48,194 @@
     <div class="q-mb-lg" v-if="identityRankingList.length > 1">
       <div class="text-h6 q-mb-md">身份影响力排行</div>
 
+      <!-- 影响力系数调节面板 -->
+      <q-expansion-item
+        icon="tune"
+        label="影响力系数设置"
+        header-class="text-primary"
+        class="q-mb-md"
+      >
+        <q-card class="q-pa-sm bg-grey-1">
+          <div class="text-subtitle2 q-mb-md text-center">
+            调整各项指标的线性系数来定制影响力计算
+          </div>
+
+          <div class="row">
+            <!-- 可见度系数 -->
+            <div class="col-4">
+              <q-card flat bordered class="q-pa-sm q-mr-xs">
+                <div class="text-subtitle2 q-mb-sm text-blue text-center">
+                  <q-icon name="visibility" class="q-mr-xs" />
+                  可见度系数
+                </div>
+
+                <q-input
+                  v-model.number="influenceCoefficients.visibility.weight"
+                  label="整体权重"
+                  type="number"
+                  step="0.1"
+                  outlined
+                  dense
+                  class="q-mb-xs"
+                />
+
+                <q-input
+                  v-model.number="influenceCoefficients.visibility.contentVolume"
+                  label="内容发布总量"
+                  type="number"
+                  step="0.1"
+                  outlined
+                  dense
+                  class="q-mb-xs"
+                />
+
+                <q-input
+                  v-model.number="influenceCoefficients.visibility.contentStability"
+                  label="内容稳定性"
+                  type="number"
+                  step="0.01"
+                  outlined
+                  dense
+                  class="q-mb-xs"
+                />
+
+                <q-input
+                  v-model.number="influenceCoefficients.visibility.domainCoverage"
+                  label="领域覆盖率"
+                  type="number"
+                  step="0.1"
+                  outlined
+                  dense
+                />
+
+                <!-- 占位符，保持高度一致 -->
+                <div style="height: 56px" class="q-mb-xs"></div>
+                <div style="height: 56px" class="q-mb-xs"></div>
+                <div style="height: 56px"></div>
+              </q-card>
+            </div>
+
+            <!-- 讨论度系数 -->
+            <div class="col-4">
+              <q-card flat bordered class="q-pa-sm q-mx-xs">
+                <div class="text-subtitle2 q-mb-sm text-orange text-center">
+                  <q-icon name="forum" class="q-mr-xs" />
+                  讨论度系数
+                </div>
+
+                <q-input
+                  v-model.number="influenceCoefficients.engagement.weight"
+                  label="整体权重"
+                  type="number"
+                  step="0.1"
+                  outlined
+                  dense
+                  class="q-mb-xs"
+                />
+
+                <q-input
+                  v-model.number="influenceCoefficients.engagement.shareVolume"
+                  label="转发总量"
+                  type="number"
+                  step="0.0001"
+                  outlined
+                  dense
+                  class="q-mb-xs"
+                />
+
+                <q-input
+                  v-model.number="influenceCoefficients.engagement.shareGrowthCycle"
+                  label="转发增长周期"
+                  type="number"
+                  step="0.01"
+                  outlined
+                  dense
+                  class="q-mb-xs"
+                />
+
+                <q-input
+                  v-model.number="influenceCoefficients.engagement.commentVolume"
+                  label="评论总量"
+                  type="number"
+                  step="0.0001"
+                  outlined
+                  dense
+                  class="q-mb-xs"
+                />
+
+                <q-input
+                  v-model.number="influenceCoefficients.engagement.commentGrowthCycle"
+                  label="评论增长周期"
+                  type="number"
+                  step="0.01"
+                  outlined
+                  dense
+                  class="q-mb-xs"
+                />
+
+                <q-input
+                  v-model.number="influenceCoefficients.engagement.likeVolume"
+                  label="点赞总量"
+                  type="number"
+                  step="0.00001"
+                  outlined
+                  dense
+                />
+              </q-card>
+            </div>
+
+            <!-- 认同度系数 -->
+            <div class="col-4">
+              <q-card flat bordered class="q-pa-sm q-ml-xs">
+                <div class="text-subtitle2 q-mb-sm text-pink text-center">
+                  <q-icon name="favorite" class="q-mr-xs" />
+                  认同度系数
+                </div>
+
+                <q-input
+                  v-model.number="influenceCoefficients.sentiment.weight"
+                  label="整体权重"
+                  type="number"
+                  step="0.1"
+                  outlined
+                  dense
+                  class="q-mb-xs"
+                />
+
+                <q-input
+                  v-model.number="influenceCoefficients.sentiment.commentAlignment"
+                  label="评论同向性"
+                  type="number"
+                  step="1"
+                  outlined
+                  dense
+                  class="q-mb-xs"
+                />
+
+                <q-input
+                  v-model.number="influenceCoefficients.sentiment.alignmentTrend"
+                  label="同向变化趋势"
+                  type="number"
+                  step="1"
+                  outlined
+                  dense
+                />
+
+                <!-- 占位符，保持高度一致 -->
+                <div style="height: 56px" class="q-mb-xs"></div>
+                <div style="height: 56px" class="q-mb-xs"></div>
+                <div style="height: 56px"></div>
+              </q-card>
+            </div>
+          </div>
+          <!-- 操作按钮 -->
+          <div class="row justify-center q-mt-md q-gutter-sm">
+            <q-btn flat color="secondary" label="重置为默认" @click="resetCoefficients" />
+            <q-btn color="primary" label="应用设置" @click="applyCoefficients" />
+          </div>
+        </q-card>
+      </q-expansion-item>
+
       <q-table
         dense
         flat
@@ -59,6 +247,73 @@
         :columns="identityColumns"
         class="fixed-layout-table"
       >
+        <!-- 自定义表头 -->
+        <template #header="props">
+          <q-tr :props="props">
+            <q-th
+              v-for="col in props.cols"
+              :key="col.name"
+              :props="props"
+              :style="col.headerStyle"
+              class="text-center"
+            >
+              <div v-if="col.name === 'visibilityScore'" class="text-center">
+                <div>👁️ 可见度</div>
+                <div class="text-caption">{{ influenceCoefficients.visibility.weight }}</div>
+              </div>
+              <div v-else-if="col.name === 'contentVolume'" class="text-center">
+                <div>内容总量</div>
+                <div class="text-caption">{{ influenceCoefficients.visibility.contentVolume }}</div>
+              </div>
+              <div v-else-if="col.name === 'contentStability'" class="text-center">
+                <div>稳定性</div>
+                <div class="text-caption">
+                  {{ influenceCoefficients.visibility.contentStability }}
+                </div>
+              </div>
+              <div v-else-if="col.name === 'domainCoverage'" class="text-center">
+                <div>领域覆盖</div>
+                <div class="text-caption">
+                  {{ influenceCoefficients.visibility.domainCoverage }}
+                </div>
+              </div>
+              <div v-else-if="col.name === 'engagementScore'" class="text-center">
+                <div>💬 讨论度</div>
+                <div class="text-caption">{{ influenceCoefficients.engagement.weight }}</div>
+              </div>
+              <div v-else-if="col.name === 'shareVolume'" class="text-center">
+                <div>转发量</div>
+                <div class="text-caption">{{ influenceCoefficients.engagement.shareVolume }}</div>
+              </div>
+              <div v-else-if="col.name === 'commentVolume'" class="text-center">
+                <div>评论量</div>
+                <div class="text-caption">{{ influenceCoefficients.engagement.commentVolume }}</div>
+              </div>
+              <div v-else-if="col.name === 'likeVolume'" class="text-center">
+                <div>点赞量</div>
+                <div class="text-caption">{{ influenceCoefficients.engagement.likeVolume }}</div>
+              </div>
+              <div v-else-if="col.name === 'sentimentScore'" class="text-center">
+                <div>❤️ 认同度</div>
+                <div class="text-caption">{{ influenceCoefficients.sentiment.weight }}</div>
+              </div>
+              <div v-else-if="col.name === 'commentAlignment'" class="text-center">
+                <div>同向性</div>
+                <div class="text-caption">
+                  {{ influenceCoefficients.sentiment.commentAlignment }}
+                </div>
+              </div>
+              <div v-else-if="col.name === 'alignmentTrend'" class="text-center">
+                <div>变化趋势</div>
+                <div class="text-caption">{{ influenceCoefficients.sentiment.alignmentTrend }}</div>
+              </div>
+              <div v-else>
+                {{ col.label }}
+              </div>
+            </q-th>
+          </q-tr>
+        </template>
+
         <template #body-cell-rank="props">
           <q-td :props="props">
             <q-badge
@@ -86,61 +341,34 @@
         </template>
         <template #body-cell-visibilityScore="props">
           <q-td :props="props">
-            <div class="text-center">
-              <q-circular-progress
-                :value="props.row.visibilityScore || 0"
-                size="30px"
-                :thickness="0.15"
-                color="blue"
-                class="q-mr-xs"
-              />
-              <div class="text-caption">
-                {{
-                  typeof props.row.visibilityScore === 'number'
-                    ? props.row.visibilityScore.toFixed(1)
-                    : '0.0'
-                }}
-              </div>
+            <div class="text-center text-weight-bold text-blue">
+              {{
+                typeof props.row.visibilityScore === 'number'
+                  ? props.row.visibilityScore.toFixed(2)
+                  : '0.00'
+              }}
             </div>
           </q-td>
         </template>
         <template #body-cell-engagementScore="props">
           <q-td :props="props">
-            <div class="text-center">
-              <q-circular-progress
-                :value="props.row.engagementScore || 0"
-                size="30px"
-                :thickness="0.15"
-                color="orange"
-                class="q-mr-xs"
-              />
-              <div class="text-caption">
-                {{
-                  typeof props.row.engagementScore === 'number'
-                    ? props.row.engagementScore.toFixed(1)
-                    : '0.0'
-                }}
-              </div>
+            <div class="text-center text-weight-bold text-orange">
+              {{
+                typeof props.row.engagementScore === 'number'
+                  ? props.row.engagementScore.toFixed(2)
+                  : '0.00'
+              }}
             </div>
           </q-td>
         </template>
         <template #body-cell-sentimentScore="props">
           <q-td :props="props">
-            <div class="text-center">
-              <q-circular-progress
-                :value="props.row.sentimentScore || 0"
-                size="30px"
-                :thickness="0.15"
-                color="green"
-                class="q-mr-xs"
-              />
-              <div class="text-caption">
-                {{
-                  typeof props.row.sentimentScore === 'number'
-                    ? props.row.sentimentScore.toFixed(1)
-                    : '0.0'
-                }}
-              </div>
+            <div class="text-center text-weight-bold text-green">
+              {{
+                typeof props.row.sentimentScore === 'number'
+                  ? props.row.sentimentScore.toFixed(2)
+                  : '0.00'
+              }}
             </div>
           </q-td>
         </template>
@@ -463,8 +691,11 @@ import type { EChartsOption } from 'echarts';
 import { useQuasar } from 'quasar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { calculateInfluenceRanking } from 'src/utils/influenceCalculator';
-import type { InfluenceRankingItem } from 'src/utils/influenceCalculator';
+import {
+  calculateInfluenceRanking,
+  DEFAULT_INFLUENCE_COEFFICIENTS,
+} from 'src/utils/influenceCalculator';
+import type { InfluenceRankingItem, InfluenceCoefficients } from 'src/utils/influenceCalculator';
 
 const {
   query,
@@ -501,6 +732,30 @@ const emit = defineEmits<{
 
 // 使用 Quasar 的 dialog 和 notify 功能
 const $q = useQuasar();
+
+// 影响力系数相关
+const influenceCoefficients = ref<InfluenceCoefficients>({ ...DEFAULT_INFLUENCE_COEFFICIENTS });
+
+// 重置系数为默认值
+const resetCoefficients = () => {
+  influenceCoefficients.value = { ...DEFAULT_INFLUENCE_COEFFICIENTS };
+  $q.notify({
+    type: 'positive',
+    message: '已重置为默认系数',
+    position: 'top',
+  });
+};
+
+// 应用系数设置
+const applyCoefficients = () => {
+  $q.notify({
+    type: 'positive',
+    message: '系数设置已应用',
+    position: 'top',
+  });
+  // 触发重新计算排行榜
+  // identityRankingList 是一个 computed，会自动重新计算
+};
 
 // 批注数据结构
 interface AnnotationItem {
@@ -1372,13 +1627,14 @@ const identityRankingList = computed(() => {
     },
   );
 
-  // 使用新的影响力计算算法
+  // 使用新的影响力计算算法，传入用户设置的系数
   const influenceRanking = calculateInfluenceRanking(
     identityGroupsArray,
     postAgreementData || {},
     categoryData || [],
     selectedDates || [], // 使用用户选择的日期
     7, // 如果没有选择日期，则分析最近7天的数据
+    influenceCoefficients.value, // 使用用户设置的系数
   );
 
   // 转换为组件所需的格式，保持向后兼容
@@ -1425,7 +1681,7 @@ const identityRankingList = computed(() => {
 });
 
 // 身份排行表格列定义 - 增强版
-const identityColumns = [
+const identityColumns = computed(() => [
   {
     name: 'rank',
     label: '排名',
@@ -1443,73 +1699,116 @@ const identityColumns = [
   },
   {
     name: 'influenceScore',
-    label: '综合影响力',
+    label: '🏆 综合影响力',
     field: 'influenceScore',
     align: 'center' as const,
-    headerStyle: 'width: 100px;',
+    headerStyle: 'width: 120px; font-weight: bold; background-color: #f5f5f5;',
+    sortable: true,
+    format: (val: number) => val.toFixed(2),
+  },
+  // 可见度大项
+  {
+    name: 'visibilityScore',
+    label: '👁️ 可见度',
+    field: 'visibilityScore',
+    align: 'center' as const,
+    headerStyle: 'width: 100px; font-weight: bold; background-color: #e3f2fd;',
     sortable: true,
     format: (val: number) => val.toFixed(2),
   },
   {
-    name: 'visibilityScore',
-    label: '可见度',
-    field: 'visibilityScore',
+    name: 'contentVolume',
+    label: '内容总量',
+    field: (row: any) => row.influence?.visibility?.contentVolume || 0,
     align: 'center' as const,
-    headerStyle: 'width: 80px;',
+    headerStyle: 'width: 90px;',
     sortable: true,
-    format: (val: number) => val.toFixed(1),
+    format: (val: number) => val.toFixed(0),
   },
+  {
+    name: 'contentStability',
+    label: '稳定性',
+    field: (row: any) => row.influence?.visibility?.contentStability || 0,
+    align: 'center' as const,
+    headerStyle: 'width: 90px;',
+    sortable: true,
+    format: (val: number) => val.toFixed(2),
+  },
+  {
+    name: 'domainCoverage',
+    label: '领域覆盖',
+    field: (row: any) => row.influence?.visibility?.domainCoverage || 0,
+    align: 'center' as const,
+    headerStyle: 'width: 90px;',
+    sortable: true,
+    format: (val: number) => val.toFixed(2),
+  },
+  // 讨论度大项
   {
     name: 'engagementScore',
-    label: '讨论度',
+    label: '💬 讨论度',
     field: 'engagementScore',
     align: 'center' as const,
-    headerStyle: 'width: 80px;',
+    headerStyle: 'width: 100px; font-weight: bold; background-color: #fff3e0;',
     sortable: true,
-    format: (val: number) => val.toFixed(1),
+    format: (val: number) => val.toFixed(2),
   },
+  {
+    name: 'shareVolume',
+    label: '转发量',
+    field: (row: any) => row.influence?.engagement?.shareVolume || 0,
+    align: 'center' as const,
+    headerStyle: 'width: 90px;',
+    sortable: true,
+    format: (val: number) => val.toFixed(0),
+  },
+  {
+    name: 'commentVolume',
+    label: '评论量',
+    field: (row: any) => row.influence?.engagement?.commentVolume || 0,
+    align: 'center' as const,
+    headerStyle: 'width: 90px;',
+    sortable: true,
+    format: (val: number) => val.toFixed(0),
+  },
+  {
+    name: 'likeVolume',
+    label: '点赞量',
+    field: (row: any) => row.influence?.engagement?.likeVolume || 0,
+    align: 'center' as const,
+    headerStyle: 'width: 90px;',
+    sortable: true,
+    format: (val: number) => val.toFixed(0),
+  },
+  // 认同度大项
   {
     name: 'sentimentScore',
-    label: '认同度',
+    label: '❤️ 认同度',
     field: 'sentimentScore',
     align: 'center' as const,
-    headerStyle: 'width: 80px;',
+    headerStyle: 'width: 100px; font-weight: bold; background-color: #f3e5f5;',
     sortable: true,
-    format: (val: number) => val.toFixed(1),
+    format: (val: number) => val.toFixed(2),
   },
   {
-    name: 'postCount',
-    label: '发帖数',
-    field: 'postCount',
+    name: 'commentAlignment',
+    label: '同向性',
+    field: (row: any) => row.influence?.sentiment?.commentAlignment || 0,
     align: 'center' as const,
-    headerStyle: 'width: 70px;',
+    headerStyle: 'width: 90px;',
     sortable: true,
+    format: (val: number) => val.toFixed(3),
   },
   {
-    name: 'totalLikes',
-    label: '总点赞',
-    field: 'totalLikes',
+    name: 'alignmentTrend',
+    label: '变化趋势',
+    field: (row: any) => row.influence?.sentiment?.alignmentTrend || 0,
     align: 'center' as const,
-    headerStyle: 'width: 70px;',
+    headerStyle: 'width: 90px;',
     sortable: true,
+    format: (val: number) => val.toFixed(3),
   },
-  {
-    name: 'totalShares',
-    label: '总分享',
-    field: 'totalShares',
-    align: 'center' as const,
-    headerStyle: 'width: 70px;',
-    sortable: true,
-  },
-  {
-    name: 'totalComments',
-    label: '总评论',
-    field: 'totalComments',
-    align: 'center' as const,
-    headerStyle: 'width: 70px;',
-    sortable: true,
-  },
-];
+]);
 
 const latestPostArchiveCutWordList = computed(() => {
   const startTime = performance.now();
