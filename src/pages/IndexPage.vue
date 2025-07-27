@@ -585,7 +585,9 @@
                       style="min-width: 400px"
                       :rules="[(val) => (val && val.length > 0) || '请至少选择一个关键词']"
                     >
-                      <template #hint> 从分词结果中选择关键词组成主题 </template>
+                      <template #hint>
+                        从分词结果中选择关键词组成主题（多个关键词为"与"关系，即帖子必须同时包含所有关键词）
+                      </template>
                     </q-select>
                     <q-btn
                       color="primary"
@@ -957,20 +959,52 @@ const topicFilteredResults = computed(() => {
   console.log('🎯 [主题筛选] 开始按主题筛选帖子数据...');
   console.log('🎯 [主题筛选] 选中的关键词:', Array.from(selectedTopicWords));
 
-  // 使用反向索引获取包含选中关键词的帖子ID
-  const relevantPostIds = new Set<string>();
+  // 改为"与"关系：只有包含所有关键词的帖子才会被选中
+  const wordPostIdsMap = new Map<string, Set<string>>();
+
+  // 为每个关键词获取包含它的帖子ID集合
   selectedTopicWords.forEach((word) => {
     const postIds = cutwordCache.value.reverseIndex[word];
     if (postIds) {
-      postIds.forEach((postId) => relevantPostIds.add(postId));
+      wordPostIdsMap.set(word, new Set(postIds));
+    } else {
+      // 如果某个关键词不存在于任何帖子中，则没有帖子可以满足"与"条件
+      wordPostIdsMap.set(word, new Set());
     }
   });
 
-  console.log('🎯 [主题筛选] 找到相关帖子数量:', relevantPostIds.size);
+  // 找到同时包含所有关键词的帖子ID（交集）
+  let relevantPostIds: Set<string> | null = null;
+
+  for (const [word, postIds] of wordPostIdsMap) {
+    if (relevantPostIds === null) {
+      // 第一个词的帖子ID作为初始集合
+      relevantPostIds = new Set(postIds);
+    } else {
+      // 计算与当前帖子ID集合的交集
+      const intersection = new Set<string>();
+      for (const postId of relevantPostIds) {
+        if (postIds.has(postId)) {
+          intersection.add(postId);
+        }
+      }
+      relevantPostIds = intersection;
+    }
+
+    // 如果交集为空，没必要继续处理剩余关键词
+    if (relevantPostIds.size === 0) {
+      break;
+    }
+  }
+
+  // 如果没有关键词或交集为空，返回空结果
+  const finalRelevantPostIds = relevantPostIds || new Set<string>();
+
+  console.log('🎯 [主题筛选] 同时包含所有关键词的帖子数量:', finalRelevantPostIds.size);
 
   // 筛选帖子
   const filteredAllPostView = analysisResults.value.filteredAllPostView.filter((postView) =>
-    relevantPostIds.has(postView.post.id),
+    finalRelevantPostIds.has(postView.post.id),
   );
 
   console.log('🎯 [主题筛选] 筛选后帖子数量:', filteredAllPostView.length);
