@@ -586,7 +586,13 @@
                       :rules="[(val) => (val && val.length > 0) || '请至少选择一个关键词']"
                     >
                       <template #hint>
-                        从分词结果中选择关键词组成主题（多个关键词为"与"关系，即帖子必须同时包含所有关键词）
+                        从分词结果中选择关键词组成主题（多个关键词为"{{
+                          topicKeywordRelation === 'AND' ? '与' : '或'
+                        }}"关系，即帖子{{
+                          topicKeywordRelation === 'AND'
+                            ? '必须同时包含所有关键词'
+                            : '包含任意一个关键词即可'
+                        }}）
                       </template>
                     </q-select>
                     <q-btn
@@ -670,6 +676,32 @@
               </template>
               <template #hint> 只显示对当前数据集有效的主题 </template>
             </q-select>
+
+            <!-- 关键词关系选择器 -->
+            <div v-if="selectedTopic" class="q-mb-md">
+              <q-card flat bordered class="q-pa-md bg-blue-1">
+                <div class="row items-center q-gutter-md">
+                  <div class="text-subtitle2">关键词关系:</div>
+                  <q-btn-toggle
+                    v-model="topicKeywordRelation"
+                    :options="[
+                      { label: 'AND (与)', value: 'AND', icon: 'intersect' },
+                      { label: 'OR (或)', value: 'OR', icon: 'union' },
+                    ]"
+                    color="primary"
+                    toggle-color="primary"
+                    text-color="primary"
+                    outline
+                    no-caps
+                    dense
+                  />
+                  <div class="text-caption text-grey-7">
+                    <span v-if="topicKeywordRelation === 'AND'"> 帖子必须包含所有关键词 </span>
+                    <span v-else> 帖子包含任意一个关键词即可 </span>
+                  </div>
+                </div>
+              </q-card>
+            </div>
           </div>
 
           <!-- 统计分析组件 -->
@@ -873,6 +905,7 @@ type Topic = {
 
 const savedTopics = ref<Topic[]>([]);
 const selectedTopic = ref<string>(''); // 改为单选
+const topicKeywordRelation = ref<'AND' | 'OR'>('AND'); // 关键词关系：AND(与) 或 OR(或)
 const newTopicName = ref('');
 const selectedWords = ref<string[]>([]);
 const showTopicManagement = ref(false);
@@ -958,49 +991,60 @@ const topicFilteredResults = computed(() => {
 
   console.log('🎯 [主题筛选] 开始按主题筛选帖子数据...');
   console.log('🎯 [主题筛选] 选中的关键词:', Array.from(selectedTopicWords));
-
-  // 改为"与"关系：只有包含所有关键词的帖子才会被选中
-  const wordPostIdsMap = new Map<string, Set<string>>();
+  console.log('🎯 [主题筛选] 关键词关系:', topicKeywordRelation.value);
 
   // 为每个关键词获取包含它的帖子ID集合
+  const wordPostIdsMap = new Map<string, Set<string>>();
   selectedTopicWords.forEach((word) => {
     const postIds = cutwordCache.value.reverseIndex[word];
     if (postIds) {
       wordPostIdsMap.set(word, new Set(postIds));
     } else {
-      // 如果某个关键词不存在于任何帖子中，则没有帖子可以满足"与"条件
       wordPostIdsMap.set(word, new Set());
     }
   });
 
-  // 找到同时包含所有关键词的帖子ID（交集）
-  let relevantPostIds: Set<string> | null = null;
+  let finalRelevantPostIds: Set<string>;
 
-  for (const [word, postIds] of wordPostIdsMap) {
-    if (relevantPostIds === null) {
-      // 第一个词的帖子ID作为初始集合
-      relevantPostIds = new Set(postIds);
-    } else {
-      // 计算与当前帖子ID集合的交集
-      const intersection = new Set<string>();
-      for (const postId of relevantPostIds) {
-        if (postIds.has(postId)) {
-          intersection.add(postId);
+  if (topicKeywordRelation.value === 'AND') {
+    // AND关系：只有包含所有关键词的帖子才会被选中（交集）
+    let relevantPostIds: Set<string> | null = null;
+
+    for (const [word, postIds] of wordPostIdsMap) {
+      if (relevantPostIds === null) {
+        // 第一个词的帖子ID作为初始集合
+        relevantPostIds = new Set(postIds);
+      } else {
+        // 计算与当前帖子ID集合的交集
+        const intersection = new Set<string>();
+        for (const postId of relevantPostIds) {
+          if (postIds.has(postId)) {
+            intersection.add(postId);
+          }
         }
+        relevantPostIds = intersection;
       }
-      relevantPostIds = intersection;
+
+      // 如果交集为空，没必要继续处理剩余关键词
+      if (relevantPostIds.size === 0) {
+        break;
+      }
     }
 
-    // 如果交集为空，没必要继续处理剩余关键词
-    if (relevantPostIds.size === 0) {
-      break;
+    finalRelevantPostIds = relevantPostIds || new Set<string>();
+    console.log('🎯 [主题筛选] AND关系 - 同时包含所有关键词的帖子数量:', finalRelevantPostIds.size);
+  } else {
+    // OR关系：包含任意一个关键词的帖子都会被选中（并集）
+    finalRelevantPostIds = new Set<string>();
+
+    for (const [word, postIds] of wordPostIdsMap) {
+      for (const postId of postIds) {
+        finalRelevantPostIds.add(postId);
+      }
     }
+
+    console.log('🎯 [主题筛选] OR关系 - 包含任意关键词的帖子数量:', finalRelevantPostIds.size);
   }
-
-  // 如果没有关键词或交集为空，返回空结果
-  const finalRelevantPostIds = relevantPostIds || new Set<string>();
-
-  console.log('🎯 [主题筛选] 同时包含所有关键词的帖子数量:', finalRelevantPostIds.size);
 
   // 筛选帖子
   const filteredAllPostView = analysisResults.value.filteredAllPostView.filter((postView) =>
@@ -1277,8 +1321,17 @@ const getFilteredGroupByIdentity = () => {
     const identity = idList.value.find((id) => id.identity.id === selectedId);
     if (identity) {
       // 从已有的分组数据中查找，避免重复API调用
+      // 获取身份的最新存档名称
+      let identityName = 'Unknown';
+      if (identity.archive && identity.archive.length > 0) {
+        const sortedIdentityArchive = identity.archive.sort(
+          (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+        );
+        identityName = sortedIdentityArchive[0]?.name || 'Unknown';
+      }
+
       const existingGroup = postViewListGroupByIdentity.value.find(
-        (group) => group.name === (identity.archive[0]?.name || 'Unknown'),
+        (group) => group.name === identityName,
       );
 
       if (existingGroup) {
@@ -2135,8 +2188,18 @@ const processData = async (
   postViewListGroupByIdentity.value = await Promise.all(
     idList.value.map(async (id, index) => {
       const groupItemStart = performance.now();
+
+      // 获取身份的最新存档名称
+      let identityName = 'Unknown';
+      if (id.archive && id.archive.length > 0) {
+        const sortedIdentityArchive = id.archive.sort(
+          (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+        );
+        identityName = sortedIdentityArchive[0]?.name || 'Unknown';
+      }
+
       const result = {
-        name: id.archive[0]?.name || 'Unknown',
+        name: identityName,
         postViewList: await query.value.Target('fb').getPostViewListByIdentityId(id.identity.id),
       };
       const groupItemEnd = performance.now();
@@ -2218,8 +2281,18 @@ const processOldData = async (
   postViewListGroupByIdentity.value = await Promise.all(
     idList.value.map(async (id, index) => {
       const groupItemStart = performance.now();
+
+      // 获取身份的最新存档名称
+      let identityName = 'Unknown';
+      if (id.archive && id.archive.length > 0) {
+        const sortedIdentityArchive = id.archive.sort(
+          (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+        );
+        identityName = sortedIdentityArchive[0]?.name || 'Unknown';
+      }
+
       const result = {
-        name: id.archive[0]?.name || 'Unknown',
+        name: identityName,
         postViewList: await query.value.Target('fb').getPostViewListByIdentityId(id.identity.id),
       };
       const groupItemEnd = performance.now();

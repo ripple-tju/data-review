@@ -1,5 +1,65 @@
 <template>
   <div>
+    <!-- 推文统计概览 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">推文统计概览</div>
+      <div class="row q-gutter-md">
+        <q-card flat bordered class="col-2">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-primary q-mb-xs">{{ postStatsSummary.totalPosts }}</div>
+            <div class="text-body2 text-grey-7">主推文数</div>
+          </q-card-section>
+        </q-card>
+
+        <q-card flat bordered class="col-2">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-red q-mb-xs">
+              {{ postStatsSummary.totalLikes.toLocaleString() }}
+            </div>
+            <div class="text-body2 text-grey-7">总喜欢数</div>
+          </q-card-section>
+        </q-card>
+
+        <q-card flat bordered class="col-2">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-blue q-mb-xs">
+              {{ postStatsSummary.totalShares.toLocaleString() }}
+            </div>
+            <div class="text-body2 text-grey-7">总转发数</div>
+          </q-card-section>
+        </q-card>
+
+        <q-card flat bordered class="col-2">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-orange q-mb-xs">
+              {{ postStatsSummary.totalComments.toLocaleString() }}
+            </div>
+            <div class="text-body2 text-grey-7">总评论数</div>
+          </q-card-section>
+        </q-card>
+
+        <q-card flat bordered class="col-3">
+          <q-card-section class="text-center">
+            <div class="text-body1 text-grey-8 q-mb-xs">平均互动数</div>
+            <div class="row justify-around">
+              <div class="text-center">
+                <div class="text-body2 text-red">{{ postStatsSummary.avgLikes }}</div>
+                <div class="text-caption text-grey-6">喜欢</div>
+              </div>
+              <div class="text-center">
+                <div class="text-body2 text-blue">{{ postStatsSummary.avgShares }}</div>
+                <div class="text-caption text-grey-6">转发</div>
+              </div>
+              <div class="text-center">
+                <div class="text-body2 text-orange">{{ postStatsSummary.avgComments }}</div>
+                <div class="text-caption text-grey-6">评论</div>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
     <!-- 推文排行 -->
     <div class="q-mb-lg">
       <div class="text-h6 q-mb-md">推文排行</div>
@@ -114,7 +174,7 @@
                 </div>
 
                 <q-input
-                  v-model.number="influenceCoefficients.visibility.weight"
+                  v-model.number="influenceWeights.visibility"
                   label="整体权重"
                   type="number"
                   step="0.1"
@@ -168,7 +228,7 @@
                 </div>
 
                 <q-input
-                  v-model.number="influenceCoefficients.engagement.weight"
+                  v-model.number="influenceWeights.engagement"
                   label="整体权重"
                   type="number"
                   step="0.1"
@@ -237,7 +297,7 @@
                 </div>
 
                 <q-input
-                  v-model.number="influenceCoefficients.sentiment.weight"
+                  v-model.number="influenceWeights.sentiment"
                   label="整体权重"
                   type="number"
                   step="0.1"
@@ -303,7 +363,7 @@
             >
               <div v-if="col.name === 'visibilityScore'" class="text-center">
                 <div>👁️ 可见度</div>
-                <div class="text-caption">{{ influenceCoefficients.visibility.weight }}</div>
+                <div class="text-caption">{{ influenceWeights.visibility }}</div>
               </div>
               <div v-else-if="col.name === 'contentVolume'" class="text-center">
                 <div>内容总量</div>
@@ -323,7 +383,7 @@
               </div>
               <div v-else-if="col.name === 'engagementScore'" class="text-center">
                 <div>💬 讨论度</div>
-                <div class="text-caption">{{ influenceCoefficients.engagement.weight }}</div>
+                <div class="text-caption">{{ influenceWeights.engagement }}</div>
               </div>
               <div v-else-if="col.name === 'shareVolume'" class="text-center">
                 <div>转发量</div>
@@ -339,7 +399,7 @@
               </div>
               <div v-else-if="col.name === 'sentimentScore'" class="text-center">
                 <div>❤️ 认同度</div>
-                <div class="text-caption">{{ influenceCoefficients.sentiment.weight }}</div>
+                <div class="text-caption">{{ influenceWeights.sentiment }}</div>
               </div>
               <div v-else-if="col.name === 'commentAlignment'" class="text-center">
                 <div>同向性</div>
@@ -882,8 +942,13 @@ import autoTable from 'jspdf-autotable';
 import {
   calculateInfluenceRanking,
   DEFAULT_INFLUENCE_COEFFICIENTS,
+  DEFAULT_INFLUENCE_WEIGHTS,
 } from 'src/utils/influenceCalculator';
-import type { InfluenceRankingItem, InfluenceCoefficients } from 'src/utils/influenceCalculator';
+import type {
+  InfluenceRankingItem,
+  InfluenceCoefficients,
+  InfluenceWeights,
+} from 'src/utils/influenceCalculator';
 
 const {
   query,
@@ -923,13 +988,15 @@ const $q = useQuasar();
 
 // 影响力系数相关
 const influenceCoefficients = ref<InfluenceCoefficients>({ ...DEFAULT_INFLUENCE_COEFFICIENTS });
+const influenceWeights = ref<InfluenceWeights>({ ...DEFAULT_INFLUENCE_WEIGHTS });
 
 // 重置系数为默认值
 const resetCoefficients = () => {
   influenceCoefficients.value = { ...DEFAULT_INFLUENCE_COEFFICIENTS };
+  influenceWeights.value = { ...DEFAULT_INFLUENCE_WEIGHTS };
   $q.notify({
     type: 'positive',
-    message: '已重置为默认系数',
+    message: '已重置为默认系数和权重',
     position: 'top',
   });
 };
@@ -1690,10 +1757,6 @@ const columns = Object.entries(ViewDataSchema.shape)
     } as any,
   ]);
 
-const postArchiveList = computed(() => {
-  return postViewList.flatMap((postView) => postView.archive);
-});
-
 const calcPercentageGrowth = (latest: number, earliest: number, dayCount: number) => {
   if (dayCount === 0) return latest;
   if (earliest === 0) return 0;
@@ -1733,64 +1796,91 @@ const latestPostArchiveList = computed(() => {
   const startTime = performance.now();
   console.log('🔄 [PostStatistics] 开始计算 latestPostArchiveList...');
 
-  const result = postViewList.map((post) => {
-    const sortedArchive = post.archive;
-    // .sort(
-    //   (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
-    // );
-    const latestArchive = sortedArchive.at(0);
-    const earliestArchive = sortedArchive.at(-1);
+  const result = postViewList
+    .map((post) => {
+      // 按 capturedAt 时间降序排序，获取最新的存档
+      const sortedArchive = post.archive.sort(
+        (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+      );
+      const latestArchive = sortedArchive.at(0);
+      const earliestArchive = sortedArchive.at(-1);
 
-    // const likeGrowthRate = calcPercentageGrowth(
-    //   latestArchive?.like ?? 0,
-    //   earliestArchive?.like ?? 0,
-    //   latestArchive?.capturedAt && earliestArchive?.capturedAt
-    //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
-    //         (1000 * 60 * 60 * 24)
-    //     : 1, // 默认1天，避免除以0
-    // );
-    // const shareGrowthRate = calcPercentageGrowth(
-    //   latestArchive?.share ?? 0,
-    //   earliestArchive?.share ?? 0,
-    //   latestArchive?.capturedAt && earliestArchive?.capturedAt
-    //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
-    //         (1000 * 60 * 60 * 24)
-    //     : 1, // 默认1天，避免除以0
-    // );
-    // const commentGrowthRate = calcPercentageGrowth(
-    //   latestArchive?.comment ?? 0,
-    //   earliestArchive?.comment ?? 0,
-    //   latestArchive?.capturedAt && earliestArchive?.capturedAt
-    //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
-    //         (1000 * 60 * 60 * 24)
-    //     : 1, // 默认1天，避免除以0
-    // );
+      if (!latestArchive) {
+        console.warn('⚠️ [PostStatistics] 发现没有存档数据的帖子:', post.post.id);
+        return null;
+      }
 
-    const likeGrowthRate = latestArchive!.like / 5;
-    const shareGrowthRate = latestArchive!.share / 5;
-    const commentGrowthRate = latestArchive!.comment / 5;
+      // const likeGrowthRate = calcPercentageGrowth(
+      //   latestArchive?.like ?? 0,
+      //   earliestArchive?.like ?? 0,
+      //   latestArchive?.capturedAt && earliestArchive?.capturedAt
+      //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+      //         (1000 * 60 * 60 * 24)
+      //     : 1, // 默认1天，避免除以0
+      // );
+      // const shareGrowthRate = calcPercentageGrowth(
+      //   latestArchive?.share ?? 0,
+      //   earliestArchive?.share ?? 0,
+      //   latestArchive?.capturedAt && earliestArchive?.capturedAt
+      //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+      //         (1000 * 60 * 60 * 24)
+      //     : 1, // 默认1天，避免除以0
+      // );
+      // const commentGrowthRate = calcPercentageGrowth(
+      //   latestArchive?.comment ?? 0,
+      //   earliestArchive?.comment ?? 0,
+      //   latestArchive?.capturedAt && earliestArchive?.capturedAt
+      //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+      //         (1000 * 60 * 60 * 24)
+      //     : 1, // 默认1天，避免除以0
+      // );
 
-    //认同度暂时使用假数据 评论数高于30的，0.8向下浮动0.1，向上浮动0.2。评论数低于30的都为null
-    const endorsement = latestArchive?.comment
-      ? latestArchive.comment > 30
-        ? (0.8 + Math.random() * 0.4 - 0.2).toFixed(3)
-        : null
-      : null;
+      const likeGrowthRate = latestArchive.like / 5;
+      const shareGrowthRate = latestArchive.share / 5;
+      const commentGrowthRate = latestArchive.comment / 5;
 
-    return {
-      ...latestArchive,
-      likeGrowthRate,
-      shareGrowthRate,
-      commentGrowthRate,
-      endorsement,
-    };
-  });
+      // 从上传的认同度数据中获取真实认同度，如果没有则为null
+      const endorsement = postAgreementData?.[latestArchive.id] ?? null;
+
+      return {
+        ...latestArchive,
+        likeGrowthRate,
+        shareGrowthRate,
+        commentGrowthRate,
+        endorsement,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   const endTime = performance.now();
   console.log(
     `🔄 [PostStatistics] latestPostArchiveList 计算完成，耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 条记录`,
   );
   return result;
+});
+
+// 推文统计汇总
+const postStatsSummary = computed(() => {
+  const posts = latestPostArchiveList.value;
+  const totalPosts = posts.length;
+  const totalLikes = posts.reduce((sum, post) => sum + (post.like || 0), 0);
+  const totalShares = posts.reduce((sum, post) => sum + (post.share || 0), 0);
+  const totalComments = posts.reduce((sum, post) => sum + (post.comment || 0), 0);
+
+  // 计算平均值，保留一位小数
+  const avgLikes = totalPosts > 0 ? (totalLikes / totalPosts).toFixed(1) : '0.0';
+  const avgShares = totalPosts > 0 ? (totalShares / totalPosts).toFixed(1) : '0.0';
+  const avgComments = totalPosts > 0 ? (totalComments / totalPosts).toFixed(1) : '0.0';
+
+  return {
+    totalPosts,
+    totalLikes,
+    totalShares,
+    totalComments,
+    avgLikes,
+    avgShares,
+    avgComments,
+  };
 });
 
 // 身份排行计算 - 使用新的影响力计算算法
@@ -1816,7 +1906,16 @@ const identityRankingList = computed(() => {
     ([authorId, postViewList]) => {
       // 从 idList 中查找身份的真实名称
       const identityView = idList.find((id) => id.identity.id === authorId);
-      const identityName = identityView?.archive?.[0]?.name || `身份-${authorId.slice(0, 8)}`;
+
+      // 获取身份的最新存档名称
+      let identityName = `身份-${authorId.slice(0, 8)}`;
+      if (identityView?.archive && identityView.archive.length > 0) {
+        // 按 capturedAt 时间降序排序，获取最新的存档
+        const sortedIdentityArchive = identityView.archive.sort(
+          (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+        );
+        identityName = sortedIdentityArchive[0]?.name || identityName;
+      }
 
       return {
         name: identityName,
@@ -1825,7 +1924,7 @@ const identityRankingList = computed(() => {
     },
   );
 
-  // 使用新的影响力计算算法，传入用户设置的系数
+  // 使用新的影响力计算算法，传入用户设置的系数和权重
   const influenceRanking = calculateInfluenceRanking(
     identityGroupsArray,
     postAgreementData || {},
@@ -1833,6 +1932,7 @@ const identityRankingList = computed(() => {
     selectedDates || [], // 使用用户选择的日期
     7, // 如果没有选择日期，则分析最近7天的数据
     influenceCoefficients.value, // 使用用户设置的系数
+    influenceWeights.value, // 使用用户设置的权重
   );
 
   // 转换为组件所需的格式，保持向后兼容
@@ -1852,8 +1952,11 @@ const identityRankingList = computed(() => {
     sentimentScore: item.influence.sentiment.sentimentScore,
     contentVolume: item.influence.visibility.contentVolume,
     contentStability: item.influence.visibility.contentStability,
+    domainCoverage: item.influence.visibility.domainCoverage,
     shareGrowthCycle: item.influence.engagement.shareGrowthCycle,
     commentGrowthCycle: item.influence.engagement.commentGrowthCycle,
+    commentAlignment: item.influence.sentiment.commentAlignment,
+    alignmentTrend: item.influence.sentiment.alignmentTrend,
   }));
 
   const endTime = performance.now();
@@ -1917,7 +2020,7 @@ const identityColumns = computed(() => [
   {
     name: 'contentVolume',
     label: '内容总量',
-    field: (row: any) => row.influence?.visibility?.contentVolume || 0,
+    field: 'contentVolume',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1926,7 +2029,7 @@ const identityColumns = computed(() => [
   {
     name: 'contentStability',
     label: '稳定性',
-    field: (row: any) => row.influence?.visibility?.contentStability || 0,
+    field: 'contentStability',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1935,7 +2038,7 @@ const identityColumns = computed(() => [
   {
     name: 'domainCoverage',
     label: '领域覆盖',
-    field: (row: any) => row.influence?.visibility?.domainCoverage || 0,
+    field: 'domainCoverage',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1954,7 +2057,7 @@ const identityColumns = computed(() => [
   {
     name: 'shareVolume',
     label: '转发量',
-    field: (row: any) => row.influence?.engagement?.shareVolume || 0,
+    field: 'totalShares',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1963,7 +2066,7 @@ const identityColumns = computed(() => [
   {
     name: 'commentVolume',
     label: '评论量',
-    field: (row: any) => row.influence?.engagement?.commentVolume || 0,
+    field: 'totalComments',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1972,7 +2075,7 @@ const identityColumns = computed(() => [
   {
     name: 'likeVolume',
     label: '点赞量',
-    field: (row: any) => row.influence?.engagement?.likeVolume || 0,
+    field: 'totalLikes',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1991,7 +2094,7 @@ const identityColumns = computed(() => [
   {
     name: 'commentAlignment',
     label: '同向性',
-    field: (row: any) => row.influence?.sentiment?.commentAlignment || 0,
+    field: 'commentAlignment',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -2000,7 +2103,7 @@ const identityColumns = computed(() => [
   {
     name: 'alignmentTrend',
     label: '变化趋势',
-    field: (row: any) => row.influence?.sentiment?.alignmentTrend || 0,
+    field: 'alignmentTrend',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -2384,11 +2487,22 @@ const totalStatsDivided = computed(() => {
   return postViewDivideByDay.value.map((day) => {
     const date = day.date;
     const stat = day.itemList.reduce(
-      (stats, post) => ({
-        like: stats.like + (post.archive[0]!.like ?? 0),
-        share: stats.share + (post.archive[0]!.share ?? 0),
-        comment: stats.comment + (post.archive[0]!.comment ?? 0),
-      }),
+      (stats, post) => {
+        // 按 capturedAt 时间降序排序，获取最新的存档
+        const sortedArchive = post.archive.sort(
+          (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+        );
+        const latestArchive = sortedArchive[0];
+
+        if (latestArchive) {
+          return {
+            like: stats.like + (latestArchive.like ?? 0),
+            share: stats.share + (latestArchive.share ?? 0),
+            comment: stats.comment + (latestArchive.comment ?? 0),
+          };
+        }
+        return stats;
+      },
       { like: 0, share: 0, comment: 0 },
     );
     return {
