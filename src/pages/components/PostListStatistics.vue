@@ -1690,10 +1690,6 @@ const columns = Object.entries(ViewDataSchema.shape)
     } as any,
   ]);
 
-const postArchiveList = computed(() => {
-  return postViewList.flatMap((postView) => postView.archive);
-});
-
 const calcPercentageGrowth = (latest: number, earliest: number, dayCount: number) => {
   if (dayCount === 0) return latest;
   if (earliest === 0) return 0;
@@ -1733,58 +1729,65 @@ const latestPostArchiveList = computed(() => {
   const startTime = performance.now();
   console.log('🔄 [PostStatistics] 开始计算 latestPostArchiveList...');
 
-  const result = postViewList.map((post) => {
-    const sortedArchive = post.archive;
-    // .sort(
-    //   (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
-    // );
-    const latestArchive = sortedArchive.at(0);
-    const earliestArchive = sortedArchive.at(-1);
+  const result = postViewList
+    .map((post) => {
+      // 按 capturedAt 时间降序排序，获取最新的存档
+      const sortedArchive = post.archive.sort(
+        (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+      );
+      const latestArchive = sortedArchive.at(0);
+      const earliestArchive = sortedArchive.at(-1);
 
-    // const likeGrowthRate = calcPercentageGrowth(
-    //   latestArchive?.like ?? 0,
-    //   earliestArchive?.like ?? 0,
-    //   latestArchive?.capturedAt && earliestArchive?.capturedAt
-    //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
-    //         (1000 * 60 * 60 * 24)
-    //     : 1, // 默认1天，避免除以0
-    // );
-    // const shareGrowthRate = calcPercentageGrowth(
-    //   latestArchive?.share ?? 0,
-    //   earliestArchive?.share ?? 0,
-    //   latestArchive?.capturedAt && earliestArchive?.capturedAt
-    //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
-    //         (1000 * 60 * 60 * 24)
-    //     : 1, // 默认1天，避免除以0
-    // );
-    // const commentGrowthRate = calcPercentageGrowth(
-    //   latestArchive?.comment ?? 0,
-    //   earliestArchive?.comment ?? 0,
-    //   latestArchive?.capturedAt && earliestArchive?.capturedAt
-    //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
-    //         (1000 * 60 * 60 * 24)
-    //     : 1, // 默认1天，避免除以0
-    // );
+      if (!latestArchive) {
+        console.warn('⚠️ [PostStatistics] 发现没有存档数据的帖子:', post.post.id);
+        return null;
+      }
 
-    const likeGrowthRate = latestArchive!.like / 5;
-    const shareGrowthRate = latestArchive!.share / 5;
-    const commentGrowthRate = latestArchive!.comment / 5;
+      // const likeGrowthRate = calcPercentageGrowth(
+      //   latestArchive?.like ?? 0,
+      //   earliestArchive?.like ?? 0,
+      //   latestArchive?.capturedAt && earliestArchive?.capturedAt
+      //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+      //         (1000 * 60 * 60 * 24)
+      //     : 1, // 默认1天，避免除以0
+      // );
+      // const shareGrowthRate = calcPercentageGrowth(
+      //   latestArchive?.share ?? 0,
+      //   earliestArchive?.share ?? 0,
+      //   latestArchive?.capturedAt && earliestArchive?.capturedAt
+      //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+      //         (1000 * 60 * 60 * 24)
+      //     : 1, // 默认1天，避免除以0
+      // );
+      // const commentGrowthRate = calcPercentageGrowth(
+      //   latestArchive?.comment ?? 0,
+      //   earliestArchive?.comment ?? 0,
+      //   latestArchive?.capturedAt && earliestArchive?.capturedAt
+      //     ? (latestArchive.capturedAt.getTime() - earliestArchive.capturedAt.getTime()) /
+      //         (1000 * 60 * 60 * 24)
+      //     : 1, // 默认1天，避免除以0
+      // );
 
-    //认同度暂时使用假数据 评论数高于30的，0.8向下浮动0.1，向上浮动0.2。评论数低于30的都为null
-    const endorsement = latestArchive?.comment
-      ? latestArchive.comment > 30
-        ? (0.8 + Math.random() * 0.4 - 0.2).toFixed(3)
-        : null
-      : null;
+      const likeGrowthRate = latestArchive.like / 5;
+      const shareGrowthRate = latestArchive.share / 5;
+      const commentGrowthRate = latestArchive.comment / 5;
 
-    return {
-      ...latestArchive,
-      likeGrowthRate,
-      shareGrowthRate,
-      commentGrowthRate,
-      endorsement,
-    };
-  });
+      //认同度暂时使用假数据 评论数高于30的，0.8向下浮动0.1，向上浮动0.2。评论数低于30的都为null
+      const endorsement = latestArchive?.comment
+        ? latestArchive.comment > 30
+          ? (0.8 + Math.random() * 0.4 - 0.2).toFixed(3)
+          : null
+        : null;
+
+      return {
+        ...latestArchive,
+        likeGrowthRate,
+        shareGrowthRate,
+        commentGrowthRate,
+        endorsement,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   const endTime = performance.now();
   console.log(
@@ -2384,11 +2387,22 @@ const totalStatsDivided = computed(() => {
   return postViewDivideByDay.value.map((day) => {
     const date = day.date;
     const stat = day.itemList.reduce(
-      (stats, post) => ({
-        like: stats.like + (post.archive[0]!.like ?? 0),
-        share: stats.share + (post.archive[0]!.share ?? 0),
-        comment: stats.comment + (post.archive[0]!.comment ?? 0),
-      }),
+      (stats, post) => {
+        // 按 capturedAt 时间降序排序，获取最新的存档
+        const sortedArchive = post.archive.sort(
+          (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+        );
+        const latestArchive = sortedArchive[0];
+
+        if (latestArchive) {
+          return {
+            like: stats.like + (latestArchive.like ?? 0),
+            share: stats.share + (latestArchive.share ?? 0),
+            comment: stats.comment + (latestArchive.comment ?? 0),
+          };
+        }
+        return stats;
+      },
       { like: 0, share: 0, comment: 0 },
     );
     return {
