@@ -114,7 +114,7 @@
                 </div>
 
                 <q-input
-                  v-model.number="influenceCoefficients.visibility.weight"
+                  v-model.number="influenceWeights.visibility"
                   label="整体权重"
                   type="number"
                   step="0.1"
@@ -168,7 +168,7 @@
                 </div>
 
                 <q-input
-                  v-model.number="influenceCoefficients.engagement.weight"
+                  v-model.number="influenceWeights.engagement"
                   label="整体权重"
                   type="number"
                   step="0.1"
@@ -237,7 +237,7 @@
                 </div>
 
                 <q-input
-                  v-model.number="influenceCoefficients.sentiment.weight"
+                  v-model.number="influenceWeights.sentiment"
                   label="整体权重"
                   type="number"
                   step="0.1"
@@ -303,7 +303,7 @@
             >
               <div v-if="col.name === 'visibilityScore'" class="text-center">
                 <div>👁️ 可见度</div>
-                <div class="text-caption">{{ influenceCoefficients.visibility.weight }}</div>
+                <div class="text-caption">{{ influenceWeights.visibility }}</div>
               </div>
               <div v-else-if="col.name === 'contentVolume'" class="text-center">
                 <div>内容总量</div>
@@ -323,7 +323,7 @@
               </div>
               <div v-else-if="col.name === 'engagementScore'" class="text-center">
                 <div>💬 讨论度</div>
-                <div class="text-caption">{{ influenceCoefficients.engagement.weight }}</div>
+                <div class="text-caption">{{ influenceWeights.engagement }}</div>
               </div>
               <div v-else-if="col.name === 'shareVolume'" class="text-center">
                 <div>转发量</div>
@@ -339,7 +339,7 @@
               </div>
               <div v-else-if="col.name === 'sentimentScore'" class="text-center">
                 <div>❤️ 认同度</div>
-                <div class="text-caption">{{ influenceCoefficients.sentiment.weight }}</div>
+                <div class="text-caption">{{ influenceWeights.sentiment }}</div>
               </div>
               <div v-else-if="col.name === 'commentAlignment'" class="text-center">
                 <div>同向性</div>
@@ -882,8 +882,13 @@ import autoTable from 'jspdf-autotable';
 import {
   calculateInfluenceRanking,
   DEFAULT_INFLUENCE_COEFFICIENTS,
+  DEFAULT_INFLUENCE_WEIGHTS,
 } from 'src/utils/influenceCalculator';
-import type { InfluenceRankingItem, InfluenceCoefficients } from 'src/utils/influenceCalculator';
+import type {
+  InfluenceRankingItem,
+  InfluenceCoefficients,
+  InfluenceWeights,
+} from 'src/utils/influenceCalculator';
 
 const {
   query,
@@ -923,13 +928,15 @@ const $q = useQuasar();
 
 // 影响力系数相关
 const influenceCoefficients = ref<InfluenceCoefficients>({ ...DEFAULT_INFLUENCE_COEFFICIENTS });
+const influenceWeights = ref<InfluenceWeights>({ ...DEFAULT_INFLUENCE_WEIGHTS });
 
 // 重置系数为默认值
 const resetCoefficients = () => {
   influenceCoefficients.value = { ...DEFAULT_INFLUENCE_COEFFICIENTS };
+  influenceWeights.value = { ...DEFAULT_INFLUENCE_WEIGHTS };
   $q.notify({
     type: 'positive',
-    message: '已重置为默认系数',
+    message: '已重置为默认系数和权重',
     position: 'top',
   });
 };
@@ -1833,7 +1840,7 @@ const identityRankingList = computed(() => {
     },
   );
 
-  // 使用新的影响力计算算法，传入用户设置的系数
+  // 使用新的影响力计算算法，传入用户设置的系数和权重
   const influenceRanking = calculateInfluenceRanking(
     identityGroupsArray,
     postAgreementData || {},
@@ -1841,6 +1848,7 @@ const identityRankingList = computed(() => {
     selectedDates || [], // 使用用户选择的日期
     7, // 如果没有选择日期，则分析最近7天的数据
     influenceCoefficients.value, // 使用用户设置的系数
+    influenceWeights.value, // 使用用户设置的权重
   );
 
   // 转换为组件所需的格式，保持向后兼容

@@ -551,64 +551,78 @@ export const calculateIdentityInfluence = (
 };
 
 /**
- * 影响力系数配置接口
+ * 影响力权重配置接口 - 各大项占比
+ */
+export interface InfluenceWeights {
+  visibility: number; // 可见度权重（0-1）
+  engagement: number; // 讨论度权重（0-1）
+  sentiment: number; // 认同度权重（0-1）
+}
+
+/**
+ * 影响力系数配置接口 - 各小项计算系数
  */
 export interface InfluenceCoefficients {
   visibility: {
-    contentVolume: number;
-    contentStability: number;
-    domainCoverage: number;
-    weight: number; // 可见度整体权重
+    contentVolume: number; // 内容总量系数
+    contentStability: number; // 稳定性系数
+    domainCoverage: number; // 领域覆盖系数
   };
   engagement: {
-    shareVolume: number;
-    shareGrowthCycle: number;
-    commentVolume: number;
-    commentGrowthCycle: number;
-    likeVolume: number;
-    weight: number; // 讨论度整体权重
+    shareVolume: number; // 转发量系数
+    shareGrowthCycle: number; // 转发增长周期系数
+    commentVolume: number; // 评论量系数
+    commentGrowthCycle: number; // 评论增长周期系数
+    likeVolume: number; // 点赞量系数
   };
   sentiment: {
-    commentAlignment: number;
-    alignmentTrend: number;
-    weight: number; // 认同度整体权重
+    commentAlignment: number; // 同向性系数
+    alignmentTrend: number; // 变化趋势系数
   };
 }
 
 /**
- * 默认影响力系数
+ * 默认影响力权重配置
+ */
+export const DEFAULT_INFLUENCE_WEIGHTS: InfluenceWeights = {
+  visibility: 0.2, // 可见度占比 20%
+  engagement: 0.7, // 讨论度占比 70%
+  sentiment: 0.1, // 认同度占比 10%
+};
+
+/**
+ * 默认影响力系数配置
  */
 export const DEFAULT_INFLUENCE_COEFFICIENTS: InfluenceCoefficients = {
   visibility: {
-    contentVolume: 1.0,
-    contentStability: -0.1, // 负系数，因为标准差越小越好
-    domainCoverage: 1.0,
-    weight: 0.3,
+    contentVolume: 1.0, // 内容总量系数
+    contentStability: -0.1, // 稳定性系数（负系数，因为标准差越小越好）
+    domainCoverage: 1.0, // 领域覆盖系数
   },
   engagement: {
-    shareVolume: 0.001,
-    shareGrowthCycle: -0.1, // 负系数，因为周期越短越好
-    commentVolume: 0.002,
-    commentGrowthCycle: -0.1, // 负系数，因为周期越短越好
-    likeVolume: 0.0002,
-    weight: 0.3,
+    shareVolume: 0.01, // 转发量系数（从0.001调整到0.01，增加10倍权重）
+    shareGrowthCycle: 0.1, // 转发增长周期系数（正系数，因为周期越长说明热度持续时间越长）
+    commentVolume: 0.02, // 评论量系数（从0.002调整到0.02，增加10倍权重）
+    commentGrowthCycle: 0.1, // 评论增长周期系数（正系数，因为周期越长说明热度持续时间越长）
+    likeVolume: 0.002, // 点赞量系数（从0.0002调整到0.002，增加10倍权重）
   },
   sentiment: {
-    commentAlignment: 100.0,
-    alignmentTrend: 50.0,
-    weight: 0.4,
+    commentAlignment: 100.0, // 同向性系数
+    alignmentTrend: 50.0, // 变化趋势系数
   },
 };
 
 /**
- * 使用系数计算影响力得分
+ * 使用系数和权重计算影响力得分
  * @param metrics 原始影响力指标
  * @param coefficients 系数配置
+ * @param weights 权重配置
  * @returns 计算后的影响力得分
  */
 export const calculateInfluenceWithCoefficients = (
   metrics: InfluenceMetrics,
   coefficients: InfluenceCoefficients,
+  weights: InfluenceWeights = DEFAULT_INFLUENCE_WEIGHTS,
 ): InfluenceMetrics => {
   // 计算可见度得分
   const visibilityScore =
@@ -629,11 +643,11 @@ export const calculateInfluenceWithCoefficients = (
     metrics.sentiment.commentAlignment * coefficients.sentiment.commentAlignment +
     metrics.sentiment.alignmentTrend * coefficients.sentiment.alignmentTrend;
 
-  // 计算综合得分
+  // 计算综合得分（使用权重配置）
   const overallScore =
-    visibilityScore * coefficients.visibility.weight +
-    engagementScore * coefficients.engagement.weight +
-    sentimentScore * coefficients.sentiment.weight;
+    visibilityScore * weights.visibility +
+    engagementScore * weights.engagement +
+    sentimentScore * weights.sentiment;
 
   return {
     visibility: {
@@ -660,6 +674,7 @@ export const calculateInfluenceWithCoefficients = (
  * @param selectedDates 用户选择的日期列表，如果提供则使用这些日期进行筛选，否则使用timeRangeDays
  * @param timeRangeDays 分析时间范围（天数），默认7天，仅在selectedDates为空时使用
  * @param coefficients 影响力系数配置
+ * @param weights 影响力权重配置
  * @returns 影响力排行榜
  */
 export const calculateInfluenceRanking = (
@@ -672,6 +687,7 @@ export const calculateInfluenceRanking = (
   selectedDates: string[] = [],
   timeRangeDays: number = 7,
   coefficients: InfluenceCoefficients = DEFAULT_INFLUENCE_COEFFICIENTS,
+  weights: InfluenceWeights = DEFAULT_INFLUENCE_WEIGHTS,
 ): InfluenceRankingItem[] => {
   console.log('🏆 [影响力排名] 开始计算影响力排行榜...');
 
@@ -686,8 +702,8 @@ export const calculateInfluenceRanking = (
       timeRangeDays,
     );
 
-    // 然后使用系数计算最终得分
-    const influence = calculateInfluenceWithCoefficients(rawInfluence, coefficients);
+    // 然后使用系数和权重计算最终得分
+    const influence = calculateInfluenceWithCoefficients(rawInfluence, coefficients, weights);
 
     return {
       name: group.name,
