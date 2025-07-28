@@ -10,28 +10,34 @@
             <div class="text-body2 text-grey-7">主推文数</div>
           </q-card-section>
         </q-card>
-        
+
         <q-card flat bordered class="col-2">
           <q-card-section class="text-center">
-            <div class="text-h4 text-red q-mb-xs">{{ postStatsSummary.totalLikes.toLocaleString() }}</div>
+            <div class="text-h4 text-red q-mb-xs">
+              {{ postStatsSummary.totalLikes.toLocaleString() }}
+            </div>
             <div class="text-body2 text-grey-7">总喜欢数</div>
           </q-card-section>
         </q-card>
-        
+
         <q-card flat bordered class="col-2">
           <q-card-section class="text-center">
-            <div class="text-h4 text-blue q-mb-xs">{{ postStatsSummary.totalShares.toLocaleString() }}</div>
+            <div class="text-h4 text-blue q-mb-xs">
+              {{ postStatsSummary.totalShares.toLocaleString() }}
+            </div>
             <div class="text-body2 text-grey-7">总转发数</div>
           </q-card-section>
         </q-card>
-        
+
         <q-card flat bordered class="col-2">
           <q-card-section class="text-center">
-            <div class="text-h4 text-orange q-mb-xs">{{ postStatsSummary.totalComments.toLocaleString() }}</div>
+            <div class="text-h4 text-orange q-mb-xs">
+              {{ postStatsSummary.totalComments.toLocaleString() }}
+            </div>
             <div class="text-body2 text-grey-7">总评论数</div>
           </q-card-section>
         </q-card>
-        
+
         <q-card flat bordered class="col-3">
           <q-card-section class="text-center">
             <div class="text-body1 text-grey-8 q-mb-xs">平均互动数</div>
@@ -1860,12 +1866,12 @@ const postStatsSummary = computed(() => {
   const totalLikes = posts.reduce((sum, post) => sum + (post.like || 0), 0);
   const totalShares = posts.reduce((sum, post) => sum + (post.share || 0), 0);
   const totalComments = posts.reduce((sum, post) => sum + (post.comment || 0), 0);
-  
+
   // 计算平均值，保留一位小数
   const avgLikes = totalPosts > 0 ? (totalLikes / totalPosts).toFixed(1) : '0.0';
   const avgShares = totalPosts > 0 ? (totalShares / totalPosts).toFixed(1) : '0.0';
   const avgComments = totalPosts > 0 ? (totalComments / totalPosts).toFixed(1) : '0.0';
-  
+
   return {
     totalPosts,
     totalLikes,
