@@ -50,9 +50,19 @@ export const IDENTITY_LIST = [
     id: '100069119310988',
   },
   {
+    name: 'China Xinhua Sci-Tech',
+    code: 'XinhuaSciTech',
+    id: '100064572314602',
+  },
+  {
     name: '',
     code: 'ChinaGlobalTVNetwork',
     id: '100044504436603',
+  },
+  {
+    name: 'CGTNEurope',
+    code: 'cgtneuropeofficial',
+    id: '100064516643245',
   },
   {
     name: '',
@@ -68,6 +78,11 @@ export const IDENTITY_LIST = [
     name: '',
     code: 'peopledaily',
     id: '100075917005707',
+  },
+  {
+    name: '',
+    code: 'PeoplesDaily',
+    id: '100064839002599',
   },
   {
     name: '',
