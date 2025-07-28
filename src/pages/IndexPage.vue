@@ -544,9 +544,16 @@
                 color="secondary"
                 text-color="white"
                 icon="topic"
-                :label="`已选择主题: ${selectedTopic}`"
                 class="q-ml-sm"
-              />
+              >
+                <div>
+                  <div class="text-weight-bold">{{ getTopicBasicInfo(selectedTopic).name }}</div>
+                  <div class="text-caption">
+                    {{ getTopicBasicInfo(selectedTopic).keywordCount }} 个关键词:
+                    {{ getTopicBasicInfo(selectedTopic).keywords }}
+                  </div>
+                </div>
+              </q-chip>
             </h3>
           </div>
 
@@ -675,6 +682,22 @@
                 <q-icon name="topic" />
               </template>
               <template #hint> 只显示对当前数据集有效的主题 </template>
+
+              <!-- 自定义选项显示 -->
+              <template #option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section>
+                    <q-item-label>{{ getTopicBasicInfo(scope.opt.value).name }}</q-item-label>
+                    <q-item-label caption>
+                      <q-icon name="tag" size="xs" class="q-mr-xs" />
+                      {{ getTopicBasicInfo(scope.opt.value).keywordCount }} 个关键词:
+                      <span class="text-primary">{{
+                        getTopicBasicInfo(scope.opt.value).keywords
+                      }}</span>
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
             </q-select>
 
             <!-- 关键词关系选择器 -->
@@ -960,11 +983,42 @@ const currentIdentityData = computed(() => {
 const validTopicOptions = computed(() => {
   return savedTopics.value
     .filter((topic) => topic.isValid)
-    .map((topic) => ({
-      label: `${topic.name} (${topic.words.length} 个关键词)`,
-      value: topic.name, // 使用 topic.name 作为 value
-    }));
+    .map((topic) => {
+      // 限制显示的关键字数量，避免选项过长
+      const maxKeywords = 5;
+      const keywords = topic.words.slice(0, maxKeywords).join(', ');
+      const hasMore = topic.words.length > maxKeywords;
+      const keywordDisplay = hasMore ? `${keywords}...` : keywords;
+
+      return {
+        label: `${topic.name} (${topic.words.length} 个关键词: ${keywordDisplay})`,
+        value: topic.name, // 使用 topic.name 作为 value
+      };
+    });
 });
+
+// 获取主题基本信息的辅助函数
+const getTopicBasicInfo = (topicName: string) => {
+  const topic = savedTopics.value.find((t) => t.name === topicName);
+  if (!topic) {
+    return {
+      name: topicName,
+      keywordCount: 0,
+      keywords: '未找到主题',
+    };
+  }
+
+  const maxKeywords = 5;
+  const keywords = topic.words.slice(0, maxKeywords).join(', ');
+  const hasMore = topic.words.length > maxKeywords;
+  const keywordDisplay = hasMore ? `${keywords}...` : keywords;
+
+  return {
+    name: topic.name,
+    keywordCount: topic.words.length,
+    keywords: keywordDisplay,
+  };
+};
 
 // 根据主题筛选的结果
 const topicFilteredResults = computed(() => {
