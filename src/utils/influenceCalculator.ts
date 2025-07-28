@@ -323,15 +323,22 @@ const calculateSentimentMetrics = (
   if (Object.keys(postAgreementData).length > 0) {
     console.log('❤️ [认同度] 基于上传的认同度数据计算...');
 
-    // 获取该身份相关的认同度数据
+    // 获取该身份相关的认同度数据 - 只使用最新存档
     const relevantAgreementScores: number[] = [];
     postViewList.forEach((postView) => {
-      postView.archive.forEach((archive) => {
-        const agreementScore = postAgreementData[archive.id];
+      // 按时间排序存档数据，获取最新的存档
+      const sortedArchives = [...postView.archive].sort((a, b) => {
+        const timeA = a.capturedAt ? new Date(a.capturedAt).getTime() : 0;
+        const timeB = b.capturedAt ? new Date(b.capturedAt).getTime() : 0;
+        return timeB - timeA; // 降序排列，最新的在前面
+      });
+      const latestArchive = sortedArchives[0];
+      if (latestArchive) {
+        const agreementScore = postAgreementData[latestArchive.id];
         if (agreementScore !== undefined) {
           relevantAgreementScores.push(agreementScore);
         }
-      });
+      }
     });
 
     console.log(`❤️ [认同度] 找到 ${relevantAgreementScores.length} 个相关认同度数据点`);

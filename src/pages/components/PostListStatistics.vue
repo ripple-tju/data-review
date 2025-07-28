@@ -1772,12 +1772,8 @@ const latestPostArchiveList = computed(() => {
       const shareGrowthRate = latestArchive.share / 5;
       const commentGrowthRate = latestArchive.comment / 5;
 
-      //认同度暂时使用假数据 评论数高于30的，0.8向下浮动0.1，向上浮动0.2。评论数低于30的都为null
-      const endorsement = latestArchive?.comment
-        ? latestArchive.comment > 30
-          ? (0.8 + Math.random() * 0.4 - 0.2).toFixed(3)
-          : null
-        : null;
+      // 从上传的认同度数据中获取真实认同度，如果没有则为null
+      const endorsement = postAgreementData?.[latestArchive.id] ?? null;
 
       return {
         ...latestArchive,
@@ -1819,7 +1815,16 @@ const identityRankingList = computed(() => {
     ([authorId, postViewList]) => {
       // 从 idList 中查找身份的真实名称
       const identityView = idList.find((id) => id.identity.id === authorId);
-      const identityName = identityView?.archive?.[0]?.name || `身份-${authorId.slice(0, 8)}`;
+
+      // 获取身份的最新存档名称
+      let identityName = `身份-${authorId.slice(0, 8)}`;
+      if (identityView?.archive && identityView.archive.length > 0) {
+        // 按 capturedAt 时间降序排序，获取最新的存档
+        const sortedIdentityArchive = identityView.archive.sort(
+          (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+        );
+        identityName = sortedIdentityArchive[0]?.name || identityName;
+      }
 
       return {
         name: identityName,
@@ -1855,8 +1860,11 @@ const identityRankingList = computed(() => {
     sentimentScore: item.influence.sentiment.sentimentScore,
     contentVolume: item.influence.visibility.contentVolume,
     contentStability: item.influence.visibility.contentStability,
+    domainCoverage: item.influence.visibility.domainCoverage,
     shareGrowthCycle: item.influence.engagement.shareGrowthCycle,
     commentGrowthCycle: item.influence.engagement.commentGrowthCycle,
+    commentAlignment: item.influence.sentiment.commentAlignment,
+    alignmentTrend: item.influence.sentiment.alignmentTrend,
   }));
 
   const endTime = performance.now();
@@ -1920,7 +1928,7 @@ const identityColumns = computed(() => [
   {
     name: 'contentVolume',
     label: '内容总量',
-    field: (row: any) => row.influence?.visibility?.contentVolume || 0,
+    field: 'contentVolume',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1929,7 +1937,7 @@ const identityColumns = computed(() => [
   {
     name: 'contentStability',
     label: '稳定性',
-    field: (row: any) => row.influence?.visibility?.contentStability || 0,
+    field: 'contentStability',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1938,7 +1946,7 @@ const identityColumns = computed(() => [
   {
     name: 'domainCoverage',
     label: '领域覆盖',
-    field: (row: any) => row.influence?.visibility?.domainCoverage || 0,
+    field: 'domainCoverage',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1957,7 +1965,7 @@ const identityColumns = computed(() => [
   {
     name: 'shareVolume',
     label: '转发量',
-    field: (row: any) => row.influence?.engagement?.shareVolume || 0,
+    field: 'totalShares',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1966,7 +1974,7 @@ const identityColumns = computed(() => [
   {
     name: 'commentVolume',
     label: '评论量',
-    field: (row: any) => row.influence?.engagement?.commentVolume || 0,
+    field: 'totalComments',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1975,7 +1983,7 @@ const identityColumns = computed(() => [
   {
     name: 'likeVolume',
     label: '点赞量',
-    field: (row: any) => row.influence?.engagement?.likeVolume || 0,
+    field: 'totalLikes',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -1994,7 +2002,7 @@ const identityColumns = computed(() => [
   {
     name: 'commentAlignment',
     label: '同向性',
-    field: (row: any) => row.influence?.sentiment?.commentAlignment || 0,
+    field: 'commentAlignment',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
@@ -2003,7 +2011,7 @@ const identityColumns = computed(() => [
   {
     name: 'alignmentTrend',
     label: '变化趋势',
-    field: (row: any) => row.influence?.sentiment?.alignmentTrend || 0,
+    field: 'alignmentTrend',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
