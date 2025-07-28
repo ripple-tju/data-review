@@ -1,5 +1,59 @@
 <template>
   <div>
+    <!-- 推文统计概览 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">推文统计概览</div>
+      <div class="row q-gutter-md">
+        <q-card flat bordered class="col-2">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-primary q-mb-xs">{{ postStatsSummary.totalPosts }}</div>
+            <div class="text-body2 text-grey-7">主推文数</div>
+          </q-card-section>
+        </q-card>
+        
+        <q-card flat bordered class="col-2">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-red q-mb-xs">{{ postStatsSummary.totalLikes.toLocaleString() }}</div>
+            <div class="text-body2 text-grey-7">总喜欢数</div>
+          </q-card-section>
+        </q-card>
+        
+        <q-card flat bordered class="col-2">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-blue q-mb-xs">{{ postStatsSummary.totalShares.toLocaleString() }}</div>
+            <div class="text-body2 text-grey-7">总转发数</div>
+          </q-card-section>
+        </q-card>
+        
+        <q-card flat bordered class="col-2">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-orange q-mb-xs">{{ postStatsSummary.totalComments.toLocaleString() }}</div>
+            <div class="text-body2 text-grey-7">总评论数</div>
+          </q-card-section>
+        </q-card>
+        
+        <q-card flat bordered class="col-3">
+          <q-card-section class="text-center">
+            <div class="text-body1 text-grey-8 q-mb-xs">平均互动数</div>
+            <div class="row justify-around">
+              <div class="text-center">
+                <div class="text-body2 text-red">{{ postStatsSummary.avgLikes }}</div>
+                <div class="text-caption text-grey-6">喜欢</div>
+              </div>
+              <div class="text-center">
+                <div class="text-body2 text-blue">{{ postStatsSummary.avgShares }}</div>
+                <div class="text-caption text-grey-6">转发</div>
+              </div>
+              <div class="text-center">
+                <div class="text-body2 text-orange">{{ postStatsSummary.avgComments }}</div>
+                <div class="text-caption text-grey-6">评论</div>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
     <!-- 推文排行 -->
     <div class="q-mb-lg">
       <div class="text-h6 q-mb-md">推文排行</div>
@@ -1797,6 +1851,30 @@ const latestPostArchiveList = computed(() => {
     `🔄 [PostStatistics] latestPostArchiveList 计算完成，耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 条记录`,
   );
   return result;
+});
+
+// 推文统计汇总
+const postStatsSummary = computed(() => {
+  const posts = latestPostArchiveList.value;
+  const totalPosts = posts.length;
+  const totalLikes = posts.reduce((sum, post) => sum + (post.like || 0), 0);
+  const totalShares = posts.reduce((sum, post) => sum + (post.share || 0), 0);
+  const totalComments = posts.reduce((sum, post) => sum + (post.comment || 0), 0);
+  
+  // 计算平均值，保留一位小数
+  const avgLikes = totalPosts > 0 ? (totalLikes / totalPosts).toFixed(1) : '0.0';
+  const avgShares = totalPosts > 0 ? (totalShares / totalPosts).toFixed(1) : '0.0';
+  const avgComments = totalPosts > 0 ? (totalComments / totalPosts).toFixed(1) : '0.0';
+  
+  return {
+    totalPosts,
+    totalLikes,
+    totalShares,
+    totalComments,
+    avgLikes,
+    avgShares,
+    avgComments,
+  };
 });
 
 // 身份排行计算 - 使用新的影响力计算算法
