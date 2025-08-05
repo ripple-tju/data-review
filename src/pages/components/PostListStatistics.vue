@@ -585,6 +585,36 @@
       </div>
     </div>
 
+    <!-- 综合互动趋势图 -->
+    <div class="q-mb-lg">
+      <div class="text-h6 q-mb-md">综合互动趋势</div>
+
+      <AppKChart
+        data-chart="combined-trend"
+        title="综合互动趋势"
+        :option="combinedTrendOption"
+        :height="900"
+        :useImageMode="useImageMode"
+        @rendered="onChartRendered"
+      />
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-purple-1">
+          <div class="text-subtitle2 q-mb-sm">综合趋势批注</div>
+          <q-input
+            v-model="annotations.combinedTrend.content"
+            type="textarea"
+            label="在此输入关于综合趋势的分析..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：从综合趋势可以看出，三种互动指标的变化趋势基本一致，说明用户行为具有关联性..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
+    </div>
+
     <!-- 发文量统计 -->
     <div class="q-mb-lg">
       <div class="text-h6 q-mb-md">发文量统计</div>
@@ -1028,6 +1058,7 @@ const annotations = ref<{
   heatmap: AnnotationItem;
   scatter3d: AnnotationItem;
   wordCloud: AnnotationItem;
+  combinedTrend: AnnotationItem;
 }>({
   table: { content: '' },
   identityRanking: { content: '' },
@@ -1039,6 +1070,7 @@ const annotations = ref<{
   heatmap: { content: '' },
   scatter3d: { content: '' },
   wordCloud: { content: '' },
+  combinedTrend: { content: '' },
 });
 
 // 本地存储相关
@@ -1103,6 +1135,7 @@ const exportAnnotations = async () => {
       likesTrendAnnotation: annotations.value.like.content,
       sharesTrendAnnotation: annotations.value.share.content,
       commentsTrendAnnotation: annotations.value.comment.content,
+      combinedTrendAnnotation: annotations.value.combinedTrend.content,
       postCountAnnotation: annotations.value.postCount.content,
       scatterPlotAnnotation: annotations.value.scatter.content,
       heatmapAnnotation: annotations.value.heatmap.content,
@@ -1239,6 +1272,12 @@ const exportAnnotations = async () => {
         type: 'chart' as const,
         annotation: annotationData.commentsTrendAnnotation,
         chartSelector: '[data-chart="comment-trend"]',
+      },
+      {
+        title: '综合互动趋势',
+        type: 'chart' as const,
+        annotation: annotationData.combinedTrendAnnotation,
+        chartSelector: '[data-chart="combined-trend"]',
       },
       {
         title: '发文量统计',
@@ -1561,13 +1600,14 @@ const getAnnotationLabel = (key: string): string => {
     heatmap: '交互分布热力图',
     scatter3d: '3D交互分布图',
     wordCloud: '词云图',
+    combinedTrend: '综合互动趋势',
   };
   return labelMap[key] || key;
 };
 
 // 图表渲染完成计数器
 const renderedChartsCount = ref(0);
-const totalChartsCount = 7; // 当前组件中的图表总数
+const totalChartsCount = 8; // 当前组件中的图表总数（增加了综合趋势图）
 
 // 图表渲染完成的回调
 const onChartRendered = () => {
@@ -2707,6 +2747,173 @@ const commentOption = computed<EChartsOption>(() => {
         type: 'line',
         data: comments,
         smooth: true,
+        itemStyle: {
+          color: '#45b7d1',
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(69, 183, 209, 0.3)' },
+              { offset: 1, color: 'rgba(69, 183, 209, 0.1)' },
+            ],
+          },
+        },
+      },
+    ],
+  };
+});
+
+// 综合互动趋势图（垂直排列的三个子图）
+const combinedTrendOption = computed<EChartsOption>(() => {
+  const dates = totalStatsDivided.value.map((item) => item.date);
+  const likes = totalStatsDivided.value.map((item) => item.like);
+  const shares = totalStatsDivided.value.map((item) => item.share);
+  const comments = totalStatsDivided.value.map((item) => item.comment);
+
+  return {
+    title: {
+      text: '综合互动趋势',
+      left: 'center',
+      top: 10,
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'cross',
+        label: {
+          backgroundColor: '#6a7985',
+        },
+      },
+    },
+    grid: [
+      {
+        left: '10%',
+        right: '10%',
+        top: '10%',
+        height: '22%',
+      },
+      {
+        left: '10%',
+        right: '10%',
+        top: '40%',
+        height: '22%',
+      },
+      {
+        left: '10%',
+        right: '10%',
+        top: '70%',
+        height: '22%',
+      },
+    ],
+    xAxis: [
+      {
+        type: 'category',
+        data: dates,
+        gridIndex: 0,
+        axisLabel: { show: false },
+      },
+      {
+        type: 'category',
+        data: dates,
+        gridIndex: 1,
+        axisLabel: { show: false },
+      },
+      {
+        type: 'category',
+        data: dates,
+        gridIndex: 2,
+      },
+    ],
+    yAxis: [
+      {
+        type: 'value',
+        name: '点赞数',
+        gridIndex: 0,
+        nameTextStyle: {
+          color: '#ff6b6b',
+          fontWeight: 'bold',
+        },
+      },
+      {
+        type: 'value',
+        name: '分享数',
+        gridIndex: 1,
+        nameTextStyle: {
+          color: '#4ecdc4',
+          fontWeight: 'bold',
+        },
+      },
+      {
+        type: 'value',
+        name: '评论数',
+        gridIndex: 2,
+        nameTextStyle: {
+          color: '#45b7d1',
+          fontWeight: 'bold',
+        },
+      },
+    ],
+    series: [
+      {
+        name: '点赞',
+        type: 'line',
+        data: likes,
+        smooth: true,
+        xAxisIndex: 0,
+        yAxisIndex: 0,
+        itemStyle: {
+          color: '#ff6b6b',
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(255, 107, 107, 0.3)' },
+              { offset: 1, color: 'rgba(255, 107, 107, 0.1)' },
+            ],
+          },
+        },
+      },
+      {
+        name: '分享',
+        type: 'line',
+        data: shares,
+        smooth: true,
+        xAxisIndex: 1,
+        yAxisIndex: 1,
+        itemStyle: {
+          color: '#4ecdc4',
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(78, 205, 196, 0.3)' },
+              { offset: 1, color: 'rgba(78, 205, 196, 0.1)' },
+            ],
+          },
+        },
+      },
+      {
+        name: '评论',
+        type: 'line',
+        data: comments,
+        smooth: true,
+        xAxisIndex: 2,
+        yAxisIndex: 2,
         itemStyle: {
           color: '#45b7d1',
         },
