@@ -121,9 +121,17 @@ if (!process.argv[1] || import.meta.url !== pathToFileURL(process.argv[1]).href)
     reverseIndex,
   };
 
-  writeFileSync(resolve(__dirname, 'wordIndexCache.json'), JSON.stringify(outputData, null, 2));
+  // 从数据文件名中提取日期后缀 (如 .gen.0805.json)
+  const dateSuffix = dataJSONPath?.match(/(\.[^.]+\.\d{4}\.json)$/)?.[1] || '';
+  const baseOutputName = 'wordIndexCache';
+  const outputFileName = dateSuffix ? `${baseOutputName}${dateSuffix}` : `${baseOutputName}.json`;
 
-  console.log(`📁 Results saved to wordIndexCache.json`);
+  console.log(`🔍 日期后缀提取: "${dateSuffix}"`);
+  console.log(`📁 输出文件名: ${outputFileName}`);
+
+  writeFileSync(resolve(__dirname, outputFileName), JSON.stringify(outputData, null, 2));
+
+  console.log(`📁 Results saved to ${outputFileName}`);
   console.log(`   Cut word cache entries: ${cutWordCache.length}`);
   console.log(`   Reverse index entries: ${Object.keys(reverseIndex).length}`);
 }

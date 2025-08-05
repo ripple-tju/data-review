@@ -9,6 +9,7 @@ export type Type = z.infer<typeof Schema>;
 
 // 一级粗粒度分类类目数据
 export const Categories: Array<Type> = [
+  { id: '0', name: '无' },
   { id: '1', name: '国际' },
   { id: '2', name: '体育' },
   { id: '3', name: '娱乐' },
