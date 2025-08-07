@@ -425,6 +425,12 @@
             </q-select>
           </div>
 
+          <!-- 分类占比饼图 -->
+          <div class="q-mb-lg">
+            <div class="text-h6 q-mb-md">分类占比</div>
+            <AppKChart title="分类占比分布" :option="categoryDistributionOption" :height="400" />
+          </div>
+
           <!-- 只在当前标签页激活时渲染组件，避免WebGL上下文冲突 -->
           <AppPostListStatistics
             v-if="activeTab === 'overview'"
@@ -878,7 +884,9 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch, onUnmounted } from 'vue';
 import dayjs from 'dayjs';
+import type { EChartsOption } from 'echarts';
 import AppPostListStatistics from './components/PostListStatistics.vue';
+import AppKChart from './components/KChart.vue';
 import IdentitySelector from 'src/components/IdentitySelector.vue';
 import ReportGenerator from 'src/components/ReportGenerator.vue';
 import { Query, QueryInterface } from 'src/query';
@@ -1304,6 +1312,152 @@ const categoryOptions = computed(() => {
     label: `${category.name} (${category.id})`,
     value: category.id,
   }));
+});
+
+// 计算分类占比饼图数据
+const categoryDistributionOption = computed<EChartsOption>(() => {
+  // 如果没有分类数据或帖子数据，返回空饼图
+  if (
+    postCategoryMap.value.size === 0 ||
+    categoryData.value.length === 0 ||
+    allPostView.value.length === 0
+  ) {
+    return {
+      title: {
+        text: '分类占比分布',
+        left: 'center',
+        top: 20,
+      },
+      tooltip: {
+        trigger: 'item',
+        formatter: '{a} <br/>{b}: {c} ({d}%)',
+      },
+      legend: {
+        orient: 'vertical',
+        left: 'left',
+        top: 'middle',
+      },
+      series: [
+        {
+          name: '分类占比',
+          type: 'pie',
+          radius: '50%',
+          center: ['60%', '50%'],
+          data: [
+            {
+              value: 100,
+              name: '暂无分类数据',
+              itemStyle: {
+                color: '#e0e0e0',
+              },
+            },
+          ],
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)',
+            },
+          },
+        },
+      ],
+    };
+  }
+
+  // 统计各分类的帖子数量
+  const categoryStats = new Map<string, number>();
+
+  // 初始化所有分类的计数为0
+  categoryData.value.forEach((category) => {
+    categoryStats.set(category.id, 0);
+  });
+
+  // 统计各分类下的帖子数量
+  postCategoryMap.value.forEach((postIds, categoryId) => {
+    if (categoryStats.has(categoryId)) {
+      categoryStats.set(categoryId, postIds.length);
+    }
+  });
+
+  // 计算未分类的帖子数量
+  const categorizedPostIds = new Set<string>();
+  postCategoryMap.value.forEach((postIds) => {
+    postIds.forEach((postId) => categorizedPostIds.add(postId));
+  });
+  const uncategorizedCount = allPostView.value.length - categorizedPostIds.size;
+
+  // 准备饼图数据
+  const pieData = [];
+
+  // 添加各分类数据
+  categoryData.value.forEach((category) => {
+    const count = categoryStats.get(category.id) || 0;
+    if (count > 0) {
+      pieData.push({
+        value: count,
+        name: category.name,
+      });
+    }
+  });
+
+  // 添加未分类数据
+  if (uncategorizedCount > 0) {
+    pieData.push({
+      value: uncategorizedCount,
+      name: '未分类',
+      itemStyle: {
+        color: '#bdbdbd',
+      },
+    });
+  }
+
+  // 如果没有任何数据，显示提示
+  if (pieData.length === 0) {
+    pieData.push({
+      value: 100,
+      name: '无数据',
+      itemStyle: {
+        color: '#e0e0e0',
+      },
+    });
+  }
+
+  return {
+    title: {
+      text: '分类占比分布',
+      left: 'center',
+      top: 20,
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: '{a} <br/>{b}: {c} 个帖子 ({d}%)',
+    },
+    legend: {
+      orient: 'vertical',
+      left: 'left',
+      top: 'middle',
+    },
+    series: [
+      {
+        name: '分类占比',
+        type: 'pie',
+        radius: '50%',
+        center: ['60%', '50%'],
+        data: pieData,
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+        label: {
+          show: true,
+          formatter: '{b}: {d}%',
+        },
+      },
+    ],
+  };
 });
 
 // 计算按分类筛选后的帖子数据
