@@ -471,7 +471,7 @@
             <AppKChart
               title="综合分类分析"
               :option="combinedCategoryDistributionOption"
-              :height="800"
+              :height="1000"
             />
           </div>
 
@@ -1877,50 +1877,26 @@ const combinedCategoryDistributionOption = computed<EChartsOption>(() => {
     },
     tooltip: {
       trigger: 'item',
+      formatter: '{a}<br/>{b}: {c} ({d}%)',
     },
-    legend: [
-      {
-        orient: 'horizontal',
-        left: '10%',
-        top: '15%',
-        textStyle: { fontSize: 12 },
-      },
-      {
-        orient: 'horizontal',
-        right: '10%',
-        top: '15%',
-        textStyle: { fontSize: 12 },
-      },
-      {
-        orient: 'horizontal',
-        left: '10%',
-        top: '65%',
-        textStyle: { fontSize: 12 },
-      },
-      {
-        orient: 'horizontal',
-        right: '10%',
-        top: '65%',
-        textStyle: { fontSize: 12 },
-      },
-    ],
     series: [
       {
         name: '推文数量',
         type: 'pie',
-        radius: '35%',
-        center: ['25%', '35%'],
+        radius: ['20%', '35%'],
+        center: ['25%', '30%'],
         data: generatePieData(categoryPostStats, uncategorizedPostCount),
         label: {
           show: true,
           position: 'outside',
           formatter: '{b}\n{d}%',
           fontSize: 10,
+          color: '#333',
         },
         labelLine: {
           show: true,
-          length: 10,
-          length2: 5,
+          length: 8,
+          length2: 3,
         },
         emphasis: {
           itemStyle: {
@@ -1933,19 +1909,20 @@ const combinedCategoryDistributionOption = computed<EChartsOption>(() => {
       {
         name: '分享数量',
         type: 'pie',
-        radius: '35%',
-        center: ['75%', '35%'],
+        radius: ['20%', '35%'],
+        center: ['75%', '30%'],
         data: generatePieData(categoryShareStats, uncategorizedShareTotal),
         label: {
           show: true,
           position: 'outside',
           formatter: '{b}\n{d}%',
           fontSize: 10,
+          color: '#333',
         },
         labelLine: {
           show: true,
-          length: 10,
-          length2: 5,
+          length: 8,
+          length2: 3,
         },
         emphasis: {
           itemStyle: {
@@ -1958,19 +1935,20 @@ const combinedCategoryDistributionOption = computed<EChartsOption>(() => {
       {
         name: '评论数量',
         type: 'pie',
-        radius: '35%',
-        center: ['25%', '85%'],
+        radius: ['20%', '35%'],
+        center: ['25%', '70%'],
         data: generatePieData(categoryCommentStats, uncategorizedCommentTotal),
         label: {
           show: true,
           position: 'outside',
           formatter: '{b}\n{d}%',
           fontSize: 10,
+          color: '#333',
         },
         labelLine: {
           show: true,
-          length: 10,
-          length2: 5,
+          length: 8,
+          length2: 3,
         },
         emphasis: {
           itemStyle: {
@@ -1983,19 +1961,20 @@ const combinedCategoryDistributionOption = computed<EChartsOption>(() => {
       {
         name: '点赞数量',
         type: 'pie',
-        radius: '35%',
-        center: ['75%', '85%'],
+        radius: ['20%', '35%'],
+        center: ['75%', '70%'],
         data: generatePieData(categoryLikeStats, uncategorizedLikeTotal),
         label: {
           show: true,
           position: 'outside',
           formatter: '{b}\n{d}%',
           fontSize: 10,
+          color: '#333',
         },
         labelLine: {
           show: true,
-          length: 10,
-          length2: 5,
+          length: 8,
+          length2: 3,
         },
         emphasis: {
           itemStyle: {
@@ -2010,49 +1989,49 @@ const combinedCategoryDistributionOption = computed<EChartsOption>(() => {
       {
         type: 'text',
         left: '25%',
-        top: '22%',
+        top: '15%',
         style: {
           text: '推文数量',
           textAlign: 'center',
-          fontSize: 14,
+          fontSize: 16,
           fontWeight: 'bold',
-          fill: '#333',
+          fill: '#1976d2',
         },
       },
       {
         type: 'text',
         left: '75%',
-        top: '22%',
+        top: '15%',
         style: {
           text: '分享数量',
           textAlign: 'center',
-          fontSize: 14,
+          fontSize: 16,
           fontWeight: 'bold',
-          fill: '#333',
+          fill: '#388e3c',
         },
       },
       {
         type: 'text',
         left: '25%',
-        top: '72%',
+        top: '55%',
         style: {
           text: '评论数量',
           textAlign: 'center',
-          fontSize: 14,
+          fontSize: 16,
           fontWeight: 'bold',
-          fill: '#333',
+          fill: '#f57c00',
         },
       },
       {
         type: 'text',
         left: '75%',
-        top: '72%',
+        top: '55%',
         style: {
           text: '点赞数量',
           textAlign: 'center',
-          fontSize: 14,
+          fontSize: 16,
           fontWeight: 'bold',
-          fill: '#333',
+          fill: '#d32f2f',
         },
       },
     ],
