@@ -36,4 +36,5 @@ export const Categories: Array<Type> = [
   { id: '24', name: '历史' },
   { id: '25', name: '音乐' },
   { id: '26', name: '综合' },
+  { id: '27', name: '民生' },
 ];
