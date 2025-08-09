@@ -1228,15 +1228,19 @@
                   </div>
                   <div class="col-4">
                     <div class="bg-purple-1 q-pa-md rounded-borders text-center">
-                      <div class="text-caption text-grey-7">x = {{ logScalingDemo.testValue }} 时的得分</div>
-                      <div class="text-h6 text-purple">{{ 
-                        toPercentageScore(
-                          logarithmicScaling(logScalingDemo.testValue, {
-                            k: logScalingDemo.k,
-                            xmax: logScalingDemo.xmax
-                          })
-                        ).toFixed(1)
-                      }}%</div>
+                      <div class="text-caption text-grey-7">
+                        x = {{ logScalingDemo.testValue }} 时的得分
+                      </div>
+                      <div class="text-h6 text-purple">
+                        {{
+                          toPercentageScore(
+                            logarithmicScaling(logScalingDemo.testValue, {
+                              k: logScalingDemo.k,
+                              xmax: logScalingDemo.xmax,
+                            }),
+                          ).toFixed(1)
+                        }}%
+                      </div>
                       <div class="text-caption">函数输出结果</div>
                     </div>
                   </div>
@@ -1249,7 +1253,9 @@
           <div class="row q-gutter-sm q-mb-md">
             <div class="col-12">
               <div class="text-caption text-grey-7">
-                <div>• <strong>敏感区 (x &lt; k)</strong>：函数在此区域变化较快，适合突出小数值的差异</div>
+                <div>
+                  • <strong>敏感区 (x &lt; k)</strong>：函数在此区域变化较快，适合突出小数值的差异
+                </div>
                 <div>• <strong>过渡区 (x ≈ k)</strong>：函数变化速度逐渐减缓</div>
                 <div>• <strong>饱和区 (x &gt; k)</strong>：函数变化较慢，压缩大数值间的差异</div>
               </div>
@@ -1276,10 +1282,10 @@
                 <div>--- 线性归一化对比</div>
               </div>
               <div class="col-6">
-                <div><strong>函数特性说明</strong></div>
-                <div>• <strong>敏感区 (x &lt; k)：</strong>函数变化较快，突出小值差异</div>
-                <div>• <strong>饱和区 (x &gt; k)：</strong>函数变化较慢，压缩大值差异</div>
-                <div>• <strong>k值调节：</strong>控制敏感区与饱和区的分界点</div>
+                <div><strong>图表标记说明</strong></div>
+                <div>• <span style="color: #ff5722">k值线</span>：敏感区与饱和区分界点</div>
+                <div>• <span style="color: #4caf50">x_max线</span>：数据归一化上限</div>
+                <div>• <span style="color: #9c27b0">x值点</span>：当前测试值及其函数输出</div>
               </div>
             </div>
           </div>
@@ -1287,9 +1293,9 @@
           <div class="bg-grey-2 q-pa-md rounded-borders">
             <div class="text-subtitle2 q-mb-sm">应用场景</div>
             <div class="text-caption text-grey-8">
-              在影响力评估中，对数缩放函数能够：<br/>
-              1. 让点赞量从0到1000的变化比从5000到6000的变化更敏感<br/>
-              2. 避免极值对整体评分的过度影响<br/>
+              在影响力评估中，对数缩放函数能够：<br />
+              1. 让点赞量从0到1000的变化比从5000到6000的变化更敏感<br />
+              2. 避免极值对整体评分的过度影响<br />
               3. 更好地区分中小规模账户的表现差异
             </div>
           </div>
@@ -2195,14 +2201,14 @@ const logScalingChartOption = computed((): EChartsOption => {
 
   for (let x = 0; x <= maxX; x += step) {
     xData.push(x);
-    
+
     // 对数缩放值
     const scaledValue = logarithmicScaling(x, {
       k: logScalingDemo.value.k,
       xmax: logScalingDemo.value.xmax,
     });
     yDataLog.push(toPercentageScore(scaledValue));
-    
+
     // 线性缩放值 (用于对比)
     const linearValue = Math.min(x / logScalingDemo.value.xmax, 1);
     yDataLinear.push(linearValue * 100);
@@ -2284,7 +2290,62 @@ const logScalingChartOption = computed((): EChartsOption => {
                 fontSize: 10,
               },
             },
+            {
+              xAxis: logScalingDemo.value.testValue,
+              lineStyle: {
+                color: '#9c27b0',
+                type: 'dashed',
+                width: 2,
+              },
+              label: {
+                position: 'insideEndTop',
+                formatter: `x=${logScalingDemo.value.testValue}`,
+                color: '#9c27b0',
+                fontSize: 10,
+              },
+            },
           ],
+        },
+        markPoint: {
+          silent: true,
+          data: [
+            {
+              name: '测试点',
+              coord: [
+                logScalingDemo.value.testValue,
+                toPercentageScore(
+                  logarithmicScaling(logScalingDemo.value.testValue, {
+                    k: logScalingDemo.value.k,
+                    xmax: logScalingDemo.value.xmax,
+                  }),
+                ),
+              ],
+              symbol: 'circle',
+              symbolSize: 12,
+              itemStyle: {
+                color: '#9c27b0',
+                borderColor: '#ffffff',
+                borderWidth: 2,
+              },
+              label: {
+                show: true,
+                position: 'top',
+                formatter: `(${logScalingDemo.value.testValue}, ${toPercentageScore(
+                  logarithmicScaling(logScalingDemo.value.testValue, {
+                    k: logScalingDemo.value.k,
+                    xmax: logScalingDemo.value.xmax,
+                  }),
+                ).toFixed(1)})`,
+                color: '#9c27b0',
+                fontSize: 10,
+                backgroundColor: '#ffffff',
+                borderColor: '#9c27b0',
+                borderWidth: 1,
+                padding: [4, 6],
+                borderRadius: 4,
+              },
+            },
+          ] as any,
         },
       },
       {
