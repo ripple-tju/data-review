@@ -309,7 +309,7 @@
                 </div>
 
                 <div class="text-caption q-mb-xs text-weight-bold">内容发布主要领域覆盖率</div>
-                <div class="row q-gutter-xs">
+                <div class="row q-gutter-xs q-mb-sm">
                   <q-input
                     :model-value="
                       (influenceCoefficients.visibility.domainCoverage.weight * 100).toFixed(1)
@@ -344,6 +344,37 @@
                     dense
                     class="col"
                   />
+                </div>
+
+                <!-- 主要领域分类选择 -->
+                <div class="text-caption q-mb-xs text-weight-bold">主要领域分类配置</div>
+                <q-select
+                  v-model="influenceCoefficients.domainCoverage.mainCategoryIds"
+                  :options="categoryOptions"
+                  multiple
+                  emit-value
+                  map-options
+                  option-value="id"
+                  option-label="name"
+                  label="选择主要领域分类"
+                  filled
+                  dense
+                  class="q-mb-sm"
+                >
+                  <template v-slot:selected-item="{ opt }">
+                    <q-chip
+                      removable
+                      dense
+                      color="blue"
+                      text-color="white"
+                      :label="opt.name"
+                      @remove="removeMainCategory(opt.id)"
+                    />
+                  </template>
+                </q-select>
+                <div class="text-caption text-grey-6">
+                  当前已选择:
+                  {{ influenceCoefficients.domainCoverage.mainCategoryIds.length }} 个分类
                 </div>
               </q-card>
             </div>
@@ -768,24 +799,54 @@
                 <div v-else-if="col.name === 'contentVolume'" class="text-center">
                   <div>内容发布总量</div>
                   <div class="text-caption">
-                    权重:
+                    内部权重:
                     {{ (influenceCoefficients.visibility.contentVolume.weight * 100).toFixed(1) }}%
+                  </div>
+                  <div class="text-caption">
+                    最终权重:
+                    {{
+                      (
+                        influenceCoefficients.visibility.contentVolume.weight *
+                        influenceCoefficients.categoryWeights.visibility *
+                        100
+                      ).toFixed(1)
+                    }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'contentStability'" class="text-center">
                   <div>内容发布稳定性</div>
                   <div class="text-caption">
-                    权重:
+                    内部权重:
                     {{
                       (influenceCoefficients.visibility.contentStability.weight * 100).toFixed(1)
+                    }}%
+                  </div>
+                  <div class="text-caption">
+                    最终权重:
+                    {{
+                      (
+                        influenceCoefficients.visibility.contentStability.weight *
+                        influenceCoefficients.categoryWeights.visibility *
+                        100
+                      ).toFixed(1)
                     }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'domainCoverage'" class="text-center">
                   <div>内容发布主要领域覆盖率</div>
                   <div class="text-caption">
-                    权重:
+                    内部权重:
                     {{ (influenceCoefficients.visibility.domainCoverage.weight * 100).toFixed(1) }}%
+                  </div>
+                  <div class="text-caption">
+                    最终权重:
+                    {{
+                      (
+                        influenceCoefficients.visibility.domainCoverage.weight *
+                        influenceCoefficients.categoryWeights.visibility *
+                        100
+                      ).toFixed(1)
+                    }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'engagementScore'" class="text-center">
@@ -797,40 +858,90 @@
                 <div v-else-if="col.name === 'shareVolume'" class="text-center">
                   <div>推文转发总量</div>
                   <div class="text-caption">
-                    权重:
+                    内部权重:
                     {{ (influenceCoefficients.engagement.shareVolume.weight * 100).toFixed(1) }}%
+                  </div>
+                  <div class="text-caption">
+                    最终权重:
+                    {{
+                      (
+                        influenceCoefficients.engagement.shareVolume.weight *
+                        influenceCoefficients.categoryWeights.engagement *
+                        100
+                      ).toFixed(1)
+                    }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'shareGrowthCycle'" class="text-center">
                   <div>转发增长周期</div>
                   <div class="text-caption">
-                    权重:
+                    内部权重:
                     {{
                       (influenceCoefficients.engagement.shareGrowthCycle.weight * 100).toFixed(1)
+                    }}%
+                  </div>
+                  <div class="text-caption">
+                    最终权重:
+                    {{
+                      (
+                        influenceCoefficients.engagement.shareGrowthCycle.weight *
+                        influenceCoefficients.categoryWeights.engagement *
+                        100
+                      ).toFixed(1)
                     }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'commentVolume'" class="text-center">
                   <div>推文评论总量</div>
                   <div class="text-caption">
-                    权重:
+                    内部权重:
                     {{ (influenceCoefficients.engagement.commentVolume.weight * 100).toFixed(1) }}%
+                  </div>
+                  <div class="text-caption">
+                    最终权重:
+                    {{
+                      (
+                        influenceCoefficients.engagement.commentVolume.weight *
+                        influenceCoefficients.categoryWeights.engagement *
+                        100
+                      ).toFixed(1)
+                    }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'commentGrowthCycle'" class="text-center">
                   <div>评论增长周期</div>
                   <div class="text-caption">
-                    权重:
+                    内部权重:
                     {{
                       (influenceCoefficients.engagement.commentGrowthCycle.weight * 100).toFixed(1)
+                    }}%
+                  </div>
+                  <div class="text-caption">
+                    最终权重:
+                    {{
+                      (
+                        influenceCoefficients.engagement.commentGrowthCycle.weight *
+                        influenceCoefficients.categoryWeights.engagement *
+                        100
+                      ).toFixed(1)
                     }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'likeVolume'" class="text-center">
                   <div>点赞总量</div>
                   <div class="text-caption">
-                    权重:
+                    内部权重:
                     {{ (influenceCoefficients.sentiment.likeVolume.weight * 100).toFixed(1) }}%
+                  </div>
+                  <div class="text-caption">
+                    最终权重:
+                    {{
+                      (
+                        influenceCoefficients.sentiment.likeVolume.weight *
+                        influenceCoefficients.categoryWeights.sentiment *
+                        100
+                      ).toFixed(1)
+                    }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'sentimentScore'" class="text-center">
@@ -842,17 +953,37 @@
                 <div v-else-if="col.name === 'commentAlignment'" class="text-center">
                   <div>评论同向性</div>
                   <div class="text-caption">
-                    权重:
+                    内部权重:
                     {{
                       (influenceCoefficients.sentiment.commentAlignment.weight * 100).toFixed(1)
+                    }}%
+                  </div>
+                  <div class="text-caption">
+                    最终权重:
+                    {{
+                      (
+                        influenceCoefficients.sentiment.commentAlignment.weight *
+                        influenceCoefficients.categoryWeights.sentiment *
+                        100
+                      ).toFixed(1)
                     }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'alignmentTrend'" class="text-center">
                   <div>评论同向变化</div>
                   <div class="text-caption">
-                    权重:
+                    内部权重:
                     {{ (influenceCoefficients.sentiment.alignmentTrend.weight * 100).toFixed(1) }}%
+                  </div>
+                  <div class="text-caption">
+                    最终权重:
+                    {{
+                      (
+                        influenceCoefficients.sentiment.alignmentTrend.weight *
+                        influenceCoefficients.categoryWeights.sentiment *
+                        100
+                      ).toFixed(1)
+                    }}%
                   </div>
                 </div>
                 <div v-else>
@@ -1742,6 +1873,14 @@ const applyCoefficients = () => {
   });
   // 触发重新计算排行榜
   // identityRankingList 是一个 computed，会自动重新计算
+};
+
+// 移除主要领域分类
+const removeMainCategory = (categoryId: string) => {
+  const index = influenceCoefficients.value.domainCoverage.mainCategoryIds.indexOf(categoryId);
+  if (index > -1) {
+    influenceCoefficients.value.domainCoverage.mainCategoryIds.splice(index, 1);
+  }
 };
 
 // 批注数据结构
@@ -2692,6 +2831,7 @@ const identityRankingList = computed(() => {
     selectedDates || [], // 使用用户选择的日期
     7, // 如果没有选择日期，则分析最近7天的数据
     influenceCoefficients.value, // 使用用户设置的系数
+    postCategoryMap, // 传递帖子分类映射数据用于计算主要领域覆盖率
   );
 
   // 转换为组件所需的格式，保持向后兼容
@@ -2797,7 +2937,7 @@ const identityColumns = computed(() => [
     label: '内容发布总量',
     field: 'contentVolume',
     align: 'center' as const,
-    headerStyle: 'width: 110px;',
+    headerStyle: 'width: 110px; background-color: #e3f2fd;',
     sortable: true,
     format: (val: number, row: any) =>
       showRawValues.value
@@ -2809,7 +2949,7 @@ const identityColumns = computed(() => [
     label: '内容发布稳定性',
     field: 'contentStability',
     align: 'center' as const,
-    headerStyle: 'width: 110px;',
+    headerStyle: 'width: 110px; background-color: #e3f2fd;',
     sortable: true,
     format: (val: number, row: any) =>
       showRawValues.value
@@ -2821,7 +2961,7 @@ const identityColumns = computed(() => [
     label: '内容发布主要领域覆盖率',
     field: 'domainCoverage',
     align: 'center' as const,
-    headerStyle: 'width: 130px;',
+    headerStyle: 'width: 130px; background-color: #e3f2fd;',
     sortable: true,
     format: (val: number, row: any) =>
       showRawValues.value
@@ -2843,7 +2983,7 @@ const identityColumns = computed(() => [
     label: '推文转发总量',
     field: 'shareVolume',
     align: 'center' as const,
-    headerStyle: 'width: 120px;',
+    headerStyle: 'width: 120px; background-color: #fff3e0;',
     sortable: true,
     format: (val: number, row: any) =>
       showRawValues.value
@@ -2855,7 +2995,7 @@ const identityColumns = computed(() => [
     label: '转发增长周期',
     field: 'shareGrowthCycle',
     align: 'center' as const,
-    headerStyle: 'width: 120px;',
+    headerStyle: 'width: 120px; background-color: #fff3e0;',
     sortable: true,
     format: (val: number, row: any) =>
       showRawValues.value
@@ -2867,7 +3007,7 @@ const identityColumns = computed(() => [
     label: '推文评论总量',
     field: 'commentVolume',
     align: 'center' as const,
-    headerStyle: 'width: 120px;',
+    headerStyle: 'width: 120px; background-color: #fff3e0;',
     sortable: true,
     format: (val: number, row: any) =>
       showRawValues.value
@@ -2879,7 +3019,7 @@ const identityColumns = computed(() => [
     label: '评论增长周期',
     field: 'commentGrowthCycle',
     align: 'center' as const,
-    headerStyle: 'width: 120px;',
+    headerStyle: 'width: 120px; background-color: #fff3e0;',
     sortable: true,
     format: (val: number, row: any) =>
       showRawValues.value
@@ -2901,7 +3041,7 @@ const identityColumns = computed(() => [
     label: '点赞总量',
     field: 'likeVolume',
     align: 'center' as const,
-    headerStyle: 'width: 110px;',
+    headerStyle: 'width: 110px; background-color: #f3e5f5;',
     sortable: true,
     format: (val: number, row: any) =>
       showRawValues.value
@@ -2913,7 +3053,7 @@ const identityColumns = computed(() => [
     label: '评论同向性',
     field: 'commentAlignment',
     align: 'center' as const,
-    headerStyle: 'width: 100px;',
+    headerStyle: 'width: 100px; background-color: #f3e5f5;',
     sortable: true,
     format: (val: number, row: any) =>
       showRawValues.value
@@ -2925,7 +3065,7 @@ const identityColumns = computed(() => [
     label: '评论同向变化',
     field: 'alignmentTrend',
     align: 'center' as const,
-    headerStyle: 'width: 120px;',
+    headerStyle: 'width: 120px; background-color: #f3e5f5;',
     sortable: true,
     format: (val: number, row: any) =>
       showRawValues.value
@@ -2942,6 +3082,16 @@ const availableCategories = computed(() => {
   return categoryData.filter(
     (category) => postCategoryMap.has(category.id) && postCategoryMap.get(category.id)!.length > 0,
   );
+});
+
+// 主要领域分类选择器选项
+const categoryOptions = computed(() => {
+  if (!categoryData) return [];
+
+  return categoryData.map((category) => ({
+    id: category.id,
+    name: `${category.name || '未知'} (${category.id})`,
+  }));
 });
 
 // 分类同向度统计数据

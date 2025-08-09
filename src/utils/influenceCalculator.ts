@@ -344,12 +344,16 @@ const calculateVarianceStability = (dailyCounts: number[]): number => {
  * @param postViewList 帖子列表
  * @param categoryData 分类数据
  * @param timeRangeDays 时间范围
+ * @param postCategoryMap 帖子分类映射数据（分类ID -> 帖子ID列表）
+ * @param domainCoverageConfig 主要领域覆盖率配置
  * @returns 可见度指标（原始值，不标准化）
  */
 const calculateVisibilityMetrics = (
   postViewList: Array<Spec.PostView.Type>,
   categoryData: Array<Spec.Category.Type>,
   timeRangeDays: number,
+  postCategoryMap?: Map<string, Array<string>>,
+  domainCoverageConfig: DomainCoverageConfig = DEFAULT_DOMAIN_COVERAGE_CONFIG,
 ) => {
   console.log('👁️ [可见度计算] 开始计算可见度指标...');
 
@@ -366,9 +370,57 @@ const calculateVisibilityMetrics = (
   const contentStability = Math.sqrt(variance); // 标准差作为原始值
   console.log(`👁️ [可见度] 内容发布稳定性(标准差): ${contentStability}`);
 
-  // 3. 内容发布主要领域覆盖率 - 暂时设置为1（原始值）
-  const domainCoverage = 1;
-  console.log(`👁️ [可见度] 领域覆盖率: ${domainCoverage} (待实现)`);
+  // 3. 内容发布主要领域覆盖率 - 计算实际的覆盖率
+  let domainCoverage = 1; // 默认值
+
+  if (postCategoryMap && postCategoryMap.size > 0) {
+    // 获取所有帖子ID
+    const allPostIds = new Set(postViewList.map((postView) => postView.post.id));
+
+    // 过滤掉分类id为'0'的帖子
+    const validPostIds = new Set<string>();
+    allPostIds.forEach((postId) => {
+      // 检查该帖子是否属于任何分类（除了'0'）
+      let hasValidCategory = false;
+      postCategoryMap.forEach((postIds, categoryId) => {
+        if (categoryId !== '0' && postIds.includes(postId)) {
+          hasValidCategory = true;
+        }
+      });
+      if (hasValidCategory) {
+        validPostIds.add(postId);
+      }
+    });
+
+    if (validPostIds.size > 0) {
+      // 统计属于主要领域分类的帖子数量
+      const mainDomainPostIds = new Set<string>();
+      domainCoverageConfig.mainCategoryIds.forEach((categoryId) => {
+        const postsInCategory = postCategoryMap.get(categoryId);
+        if (postsInCategory) {
+          postsInCategory.forEach((postId) => {
+            if (validPostIds.has(postId)) {
+              mainDomainPostIds.add(postId);
+            }
+          });
+        }
+      });
+
+      // 计算覆盖率（主要领域帖子数 / 有效分类帖子总数）
+      domainCoverage = validPostIds.size > 0 ? mainDomainPostIds.size / validPostIds.size : 0;
+
+      console.log(`👁️ [可见度] 主要领域覆盖率计算详情:`);
+      console.log(`👁️   - 主要领域分类ID: [${domainCoverageConfig.mainCategoryIds.join(', ')}]`);
+      console.log(`👁️   - 总帖子数: ${allPostIds.size}`);
+      console.log(`👁️   - 有效分类帖子数(排除分类0): ${validPostIds.size}`);
+      console.log(`👁️   - 主要领域帖子数: ${mainDomainPostIds.size}`);
+      console.log(`👁️   - 领域覆盖率: ${(domainCoverage * 100).toFixed(1)}%`);
+    } else {
+      console.log(`👁️ [可见度] 没有有效分类的帖子，领域覆盖率设为默认值: ${domainCoverage}`);
+    }
+  } else {
+    console.log(`👁️ [可见度] 没有提供帖子分类数据，领域覆盖率设为默认值: ${domainCoverage}`);
+  }
 
   return {
     contentVolume,
@@ -648,6 +700,8 @@ const calculateSentimentScore = (metrics: {
  * @param categoryData 分类数据
  * @param selectedDates 用户选择的日期列表，如果提供则使用这些日期进行筛选，否则使用timeRangeDays
  * @param timeRangeDays 分析时间范围（天数），默认7天，仅在selectedDates为空时使用
+ * @param postCategoryMap 帖子分类映射数据（分类ID -> 帖子ID列表），用于计算主要领域覆盖率
+ * @param domainCoverageConfig 主要领域覆盖率配置
  * @returns 影响力评估结果（原始值）
  */
 export const calculateIdentityInfluence = (
@@ -657,6 +711,8 @@ export const calculateIdentityInfluence = (
   categoryData: Array<Spec.Category.Type> = [],
   selectedDates: string[] = [],
   timeRangeDays: number = 7,
+  postCategoryMap?: Map<string, Array<string>>,
+  domainCoverageConfig: DomainCoverageConfig = DEFAULT_DOMAIN_COVERAGE_CONFIG,
 ): InfluenceMetrics => {
   console.log(`📊 [影响力计算] 开始计算身份 "${identityName}" 的影响力...`);
   console.log(
@@ -704,7 +760,13 @@ export const calculateIdentityInfluence = (
   const actualTimeRangeDays = selectedDates.length > 0 ? selectedDates.length : timeRangeDays;
 
   // 1. 计算可见度指标（原始值）
-  const visibility = calculateVisibilityMetrics(filteredPosts, categoryData, actualTimeRangeDays);
+  const visibility = calculateVisibilityMetrics(
+    filteredPosts,
+    categoryData,
+    actualTimeRangeDays,
+    postCategoryMap,
+    domainCoverageConfig,
+  );
 
   // 2. 计算讨论度指标（原始值）
   const engagement = calculateEngagementMetricsForIdentity(filteredPosts, actualTimeRangeDays);
@@ -748,6 +810,13 @@ export interface InfluenceWeights {
 }
 
 /**
+ * 主要领域覆盖率配置接口
+ */
+export interface DomainCoverageConfig {
+  mainCategoryIds: string[]; // 主要领域分类ID列表
+}
+
+/**
  * 影响力系数配置接口 - 各小项计算参数
  */
 export interface InfluenceCoefficients {
@@ -779,6 +848,8 @@ export interface InfluenceCoefficients {
     commentAlignment: MetricConfig; // 同向性配置
     alignmentTrend: MetricConfig; // 变化趋势配置
   };
+  // 主要领域覆盖率配置
+  domainCoverage: DomainCoverageConfig;
 }
 
 /**
@@ -791,13 +862,20 @@ export const DEFAULT_INFLUENCE_WEIGHTS: InfluenceWeights = {
 };
 
 /**
+ * 默认主要领域覆盖率配置
+ */
+export const DEFAULT_DOMAIN_COVERAGE_CONFIG: DomainCoverageConfig = {
+  mainCategoryIds: ['1', '4', '5', '7', '10', '27'], // 国际、社会、财经、科技、教育、民生
+};
+
+/**
  * 默认影响力系数配置
  */
 export const DEFAULT_INFLUENCE_COEFFICIENTS: InfluenceCoefficients = {
   categoryWeights: {
-    visibility: 0.33, // 内容发布指标权重
-    engagement: 0.33, // 传播参与指标权重
-    sentiment: 0.34, // 情感认同指标权重
+    visibility: 0.3, // 可见度权重 30%
+    engagement: 0.3, // 传播参与指标权重 30%
+    sentiment: 0.4, // 情感认同指标权重 40%
   },
   categoryScaling: {
     visibility: { k: 1000, xmax: 110 }, // 内容发布指标对数缩放参数（k很大，0-100几乎线性，仅对>100进行轻微压缩）
@@ -805,21 +883,23 @@ export const DEFAULT_INFLUENCE_COEFFICIENTS: InfluenceCoefficients = {
     sentiment: { k: 1000, xmax: 110 }, // 情感认同指标对数缩放参数（k很大，0-100几乎线性，仅对>100进行轻微压缩）
   },
   visibility: {
-    contentVolume: { weight: 0.4, k: 100, xmax: 1200 }, // 内容总量配置 (最大值1034->1200)
-    contentStability: { weight: 0.3, k: 2, xmax: 25 }, // 稳定性配置（标准差最大21.79->25）
-    domainCoverage: { weight: 0.3, k: 1, xmax: 5 }, // 领域覆盖配置
+    contentVolume: { weight: 0.4, k: 100, xmax: 1200 }, // 内容总量配置 40%
+    contentStability: { weight: 0.4, k: 2, xmax: 25 }, // 稳定性配置 40%
+    domainCoverage: { weight: 0.2, k: 0.1, xmax: 1.0 }, // 领域覆盖配置 20%
   },
   engagement: {
-    shareVolume: { weight: 0.3, k: 1000, xmax: 30000 }, // 转发量配置 (最大值26608->30000)
-    shareGrowthCycle: { weight: 0.2, k: 1, xmax: 4 }, // 转发增长周期配置 (范围2.0-2.4->4)
-    commentVolume: { weight: 0.3, k: 2000, xmax: 60000 }, // 评论量配置 (最大值56732->60000)
-    commentGrowthCycle: { weight: 0.2, k: 1, xmax: 4 }, // 评论增长周期配置 (范围2.0-2.4->4)
+    shareVolume: { weight: 0.33, k: 1000, xmax: 30000 }, // 转发量配置 33%
+    shareGrowthCycle: { weight: 0.17, k: 1, xmax: 4 }, // 转发增长周期配置 17%
+    commentVolume: { weight: 0.33, k: 2000, xmax: 60000 }, // 评论量配置 33%
+    commentGrowthCycle: { weight: 0.17, k: 1, xmax: 4 }, // 评论增长周期配置 17%
   },
   sentiment: {
-    likeVolume: { weight: 0.5, k: 50000, xmax: 2500000 }, // 点赞量配置 (最大值1970270->2500000)
-    commentAlignment: { weight: 0.3, k: 0.2, xmax: 1 }, // 同向性配置 (范围0.6-0.9->0-1)
-    alignmentTrend: { weight: 0.2, k: 0.05, xmax: 1.0 }, // 变化趋势配置 (绝对值变化之和，预估最大值1.0)
+    likeVolume: { weight: 0.4, k: 50000, xmax: 2500000 }, // 点赞量配置 40%
+    commentAlignment: { weight: 0.4, k: 0.2, xmax: 1 }, // 同向性配置 40%
+    alignmentTrend: { weight: 0.2, k: 0.05, xmax: 1.0 }, // 变化趋势配置 20%
   },
+  // 主要领域覆盖率配置
+  domainCoverage: DEFAULT_DOMAIN_COVERAGE_CONFIG,
 };
 
 /**
@@ -1007,7 +1087,7 @@ export const calculateInfluenceWithCoefficients = (
  * @param selectedDates 用户选择的日期列表，如果提供则使用这些日期进行筛选，否则使用timeRangeDays
  * @param timeRangeDays 分析时间范围（天数），默认7天，仅在selectedDates为空时使用
  * @param coefficients 影响力系数配置
- * @param weights 影响力权重配置
+ * @param postCategoryMap 帖子分类映射数据（分类ID -> 帖子ID列表），用于计算主要领域覆盖率
  * @returns 影响力排行榜
  */
 export const calculateInfluenceRanking = (
@@ -1020,6 +1100,7 @@ export const calculateInfluenceRanking = (
   selectedDates: string[] = [],
   timeRangeDays: number = 7,
   coefficients: InfluenceCoefficients = DEFAULT_INFLUENCE_COEFFICIENTS,
+  postCategoryMap?: Map<string, Array<string>>,
 ): InfluenceRankingItem[] => {
   console.log('🏆 [影响力排名] 开始计算影响力排行榜...');
 
@@ -1032,6 +1113,8 @@ export const calculateInfluenceRanking = (
       categoryData,
       selectedDates,
       timeRangeDays,
+      postCategoryMap,
+      coefficients.domainCoverage,
     );
 
     // 然后使用系数计算最终得分
