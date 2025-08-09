@@ -2,26 +2,50 @@ import dayjs from 'dayjs';
 import type * as Spec from '../specification';
 
 /**
+ * 对数缩放函数
+ * k：调节敏感区与饱和区的分界阈值（例如 k=100 表示超过 100 后开始压缩差异）
+ * xmax：数据中的最大值（用于归一化到 [0,1] 区间）
+ * @param x 原值
+ * @param k 关注值
+ * @param xmax 最大值
+ * @returns 缩放后的值 (0-1)
+ */
+export const logarithmicScaling = (x: number, option?: { k: number; xmax: number }) => {
+  const { k = 200, xmax = 1000 } = option || {};
+  if (x <= 0) return 0;
+  return Math.log(1 + x / k) / Math.log(1 + xmax / k);
+};
+
+/**
+ * 将0-1的值转换为百分制显示
+ * @param normalizedValue 0-1之间的归一化值
+ * @returns 0-100的百分制分数
+ */
+export const toPercentageScore = (normalizedValue: number): number => {
+  return Math.round(normalizedValue * 100 * 100) / 100; // 保留两位小数
+};
+
+/**
  * 影响力评估结果接口
  */
 export interface InfluenceMetrics {
   visibility: {
-    contentVolume: number; // 内容发布总量 (10%)
-    contentStability: number; // 内容发布稳定性 (10%)
-    domainCoverage: number; // 内容发布主要领域覆盖率 (5%)
+    contentVolume: number; // 内容发布总量 - 账号在过去一周发布的内容总量
+    contentStability: number; // 内容发布稳定性 - 账号在过去一周内容发布量的方差
+    domainCoverage: number; // 内容发布主要领域覆盖率 - 一周内账号原创内容各分类的比重
     visibilityScore: number; // 可见度综合得分
   };
   engagement: {
-    shareVolume: number; // 推文转发总量 (10%)
-    shareGrowthCycle: number; // 转发增长周期 (5%)
-    commentVolume: number; // 推文评论总量 (10%)
-    commentGrowthCycle: number; // 评论增长周期 (5%)
-    likeVolume: number; // 点赞总量 (10%)
+    shareVolume: number; // 推文转发总量 - 账号在过去一周发布内容的转发总量
+    shareGrowthCycle: number; // 转发增长周期 - 推文转发量持续增长的平均周期
+    commentVolume: number; // 推文评论总量 - 账号在过去一周发布内容的评论总量
+    commentGrowthCycle: number; // 评论增长周期 - 推文评论量持续增长的平均周期
     engagementScore: number; // 讨论度综合得分
   };
   sentiment: {
-    commentAlignment: number; // 评论同向性 (10%)
-    alignmentTrend: number; // 评论同向变化 (5%)
+    likeVolume: number; // 点赞总量 - 账号在过去一周发布内容的点赞总量
+    commentAlignment: number; // 评论同向性 - 转发文本与推送文本的同向程度
+    alignmentTrend: number; // 评论同向变化 - 评论文本与推送文本同向程度的变化趋势
     sentimentScore: number; // 认同度综合得分
   };
   overallScore: number; // 综合影响力得分 (0-100)
@@ -280,15 +304,11 @@ const calculateEngagementMetricsForIdentity = (
   // 4. 评论增长周期（原始值，天数）
   const commentGrowthCycle = calculateAverageGrowthCycle(postViewList, 'comment');
 
-  // 5. 点赞总量（原始值）
-  const likeVolume = latestArchives.reduce((sum, archive) => sum + (archive?.like || 0), 0);
-
   console.log('💬 [讨论度] 统计结果:', {
     转发总量: shareVolume,
     转发增长周期: shareGrowthCycle,
     评论总量: commentVolume,
     评论增长周期: commentGrowthCycle,
-    点赞总量: likeVolume,
   });
 
   return {
@@ -296,7 +316,6 @@ const calculateEngagementMetricsForIdentity = (
     shareGrowthCycle,
     commentVolume,
     commentGrowthCycle,
-    likeVolume,
     engagementScore: 0, // 暂时设置为0，将通过系数计算
   };
 };
@@ -313,10 +332,25 @@ const calculateSentimentMetrics = (
 ) => {
   console.log('❤️ [认同度计算] 开始计算认同度指标...');
 
-  // 1. 评论同向性（原始值，0-1之间）
+  // 1. 点赞总量（原始值）- 账号在过去一周发布内容的点赞总量
+  const latestArchives = postViewList
+    .map((postView) => {
+      // 按时间排序存档数据，获取最新的存档
+      const sortedArchives = [...postView.archive].sort((a, b) => {
+        const timeA = a.capturedAt ? new Date(a.capturedAt).getTime() : 0;
+        const timeB = b.capturedAt ? new Date(b.capturedAt).getTime() : 0;
+        return timeB - timeA; // 降序排列，最新的在前面
+      });
+      return sortedArchives[0]; // 返回最新的存档
+    })
+    .filter((archive) => archive !== undefined);
+
+  const likeVolume = latestArchives.reduce((sum, archive) => sum + (archive?.like || 0), 0);
+
+  // 2. 评论同向性（原始值，0-1之间）- 转发文本与推送文本的同向程度
   let commentAlignment = 0.5; // 默认值
 
-  // 2. 评论同向变化（原始值，变化趋势指数）
+  // 3. 评论同向变化（原始值，变化趋势指数）- 评论文本与推送文本同向程度的变化趋势
   let alignmentTrend = 0.5; // 默认值
 
   // 如果有认同度数据，可以基于实际数据计算
@@ -370,11 +404,13 @@ const calculateSentimentMetrics = (
   }
 
   console.log('❤️ [认同度] 统计结果:', {
+    点赞总量: likeVolume,
     评论同向性: commentAlignment,
     同向变化趋势: alignmentTrend,
   });
 
   return {
+    likeVolume,
     commentAlignment,
     alignmentTrend,
     sentimentScore: 0, // 暂时设置为0，将通过系数计算
@@ -421,7 +457,6 @@ const calculateEngagementScore = (metrics: {
   shareGrowthCycle: number;
   commentVolume: number;
   commentGrowthCycle: number;
-  likeVolume: number;
 }): number => {
   // 根据您提供的权重计算综合得分
   const weights = {
@@ -429,13 +464,11 @@ const calculateEngagementScore = (metrics: {
     shareGrowthCycle: 0.05, // 转发增长周期 5% (周期越短得分越高)
     commentVolume: 0.1, // 评论总量 10%
     commentGrowthCycle: 0.05, // 评论增长周期 5% (周期越短得分越高)
-    likeVolume: 0.1, // 点赞总量 10%
   };
 
   // 标准化各个指标 (这里需要根据实际数据范围调整)
   const normalizedShares = Math.min(metrics.shareVolume / 1000, 1) * 100; // 假设1000为满分
   const normalizedComments = Math.min(metrics.commentVolume / 500, 1) * 100; // 假设500为满分
-  const normalizedLikes = Math.min(metrics.likeVolume / 5000, 1) * 100; // 假设5000为满分
 
   // 增长周期得分 - 周期越短得分越高
   const shareGrowthScore =
@@ -447,8 +480,7 @@ const calculateEngagementScore = (metrics: {
     normalizedShares * weights.shareVolume +
     shareGrowthScore * weights.shareGrowthCycle +
     normalizedComments * weights.commentVolume +
-    commentGrowthScore * weights.commentGrowthCycle +
-    normalizedLikes * weights.likeVolume;
+    commentGrowthScore * weights.commentGrowthCycle;
 
   return Math.round(score * 100) / 100; // 保留两位小数
 };
@@ -459,19 +491,25 @@ const calculateEngagementScore = (metrics: {
  * @returns 综合得分 (0-100)
  */
 const calculateSentimentScore = (metrics: {
+  likeVolume: number;
   commentAlignment: number;
   alignmentTrend: number;
 }): number => {
   // 根据权重计算综合得分
   const weights = {
+    likeVolume: 0.1, // 点赞总量 10%
     commentAlignment: 0.1, // 评论同向性 10%
     alignmentTrend: 0.05, // 同向变化趋势 5%
   };
 
-  // 暂时使用简单的得分计算，等待具体实现
+  // 标准化点赞量
+  const normalizedLikes = Math.min(metrics.likeVolume / 5000, 1) * 100; // 假设5000为满分
+
+  // 计算得分
   const score =
-    metrics.commentAlignment * (weights.commentAlignment / 0.15) * 100 +
-    metrics.alignmentTrend * (weights.alignmentTrend / 0.15) * 100;
+    normalizedLikes * weights.likeVolume +
+    metrics.commentAlignment * (weights.commentAlignment / 0.25) * 100 +
+    metrics.alignmentTrend * (weights.alignmentTrend / 0.25) * 100;
 
   return Math.round(score * 100) / 100;
 };
@@ -551,33 +589,42 @@ export const calculateIdentityInfluence = (
 };
 
 /**
- * 影响力权重配置接口 - 各大项占比
+ * 单个指标的配置接口
  */
-export interface InfluenceWeights {
-  visibility: number; // 可见度权重（0-1）
-  engagement: number; // 讨论度权重（0-1）
-  sentiment: number; // 认同度权重（0-1）
+export interface MetricConfig {
+  weight: number; // 权重 (0-1)
+  k: number; // 对数缩放敏感阈值
+  xmax: number; // 对数缩放最大值
 }
 
 /**
- * 影响力系数配置接口 - 各小项计算系数
+ * 影响力权重配置接口 - 各大项占比
+ */
+export interface InfluenceWeights {
+  visibility: MetricConfig; // 可见度权重和缩放参数
+  engagement: MetricConfig; // 讨论度权重和缩放参数
+  sentiment: MetricConfig; // 认同度权重和缩放参数
+}
+
+/**
+ * 影响力系数配置接口 - 各小项计算参数
  */
 export interface InfluenceCoefficients {
   visibility: {
-    contentVolume: number; // 内容总量系数
-    contentStability: number; // 稳定性系数
-    domainCoverage: number; // 领域覆盖系数
+    contentVolume: MetricConfig; // 内容总量配置
+    contentStability: MetricConfig; // 稳定性配置
+    domainCoverage: MetricConfig; // 领域覆盖配置
   };
   engagement: {
-    shareVolume: number; // 转发量系数
-    shareGrowthCycle: number; // 转发增长周期系数
-    commentVolume: number; // 评论量系数
-    commentGrowthCycle: number; // 评论增长周期系数
-    likeVolume: number; // 点赞量系数
+    shareVolume: MetricConfig; // 转发量配置
+    shareGrowthCycle: MetricConfig; // 转发增长周期配置
+    commentVolume: MetricConfig; // 评论量配置
+    commentGrowthCycle: MetricConfig; // 评论增长周期配置
   };
   sentiment: {
-    commentAlignment: number; // 同向性系数
-    alignmentTrend: number; // 变化趋势系数
+    likeVolume: MetricConfig; // 点赞量配置
+    commentAlignment: MetricConfig; // 同向性配置
+    alignmentTrend: MetricConfig; // 变化趋势配置
   };
 }
 
@@ -585,9 +632,9 @@ export interface InfluenceCoefficients {
  * 默认影响力权重配置
  */
 export const DEFAULT_INFLUENCE_WEIGHTS: InfluenceWeights = {
-  visibility: 0.2, // 可见度占比 20%
-  engagement: 0.7, // 讨论度占比 70%
-  sentiment: 0.1, // 认同度占比 10%
+  visibility: { weight: 0.33, k: 50, xmax: 100 }, // 可见度占比 33%
+  engagement: { weight: 0.33, k: 1000, xmax: 10000 }, // 讨论度占比 33%
+  sentiment: { weight: 0.34, k: 5000, xmax: 50000 }, // 认同度占比 34%
 };
 
 /**
@@ -595,74 +642,181 @@ export const DEFAULT_INFLUENCE_WEIGHTS: InfluenceWeights = {
  */
 export const DEFAULT_INFLUENCE_COEFFICIENTS: InfluenceCoefficients = {
   visibility: {
-    contentVolume: 1.0, // 内容总量系数
-    contentStability: -0.1, // 稳定性系数（负系数，因为标准差越小越好）
-    domainCoverage: 1.0, // 领域覆盖系数
+    contentVolume: { weight: 0.4, k: 10, xmax: 50 }, // 内容总量配置
+    contentStability: { weight: 0.3, k: 1, xmax: 5 }, // 稳定性配置（标准差）
+    domainCoverage: { weight: 0.3, k: 1, xmax: 5 }, // 领域覆盖配置
   },
   engagement: {
-    shareVolume: 0.01, // 转发量系数（从0.001调整到0.01，增加10倍权重）
-    shareGrowthCycle: 0.1, // 转发增长周期系数（正系数，因为周期越长说明热度持续时间越长）
-    commentVolume: 0.02, // 评论量系数（从0.002调整到0.02，增加10倍权重）
-    commentGrowthCycle: 0.1, // 评论增长周期系数（正系数，因为周期越长说明热度持续时间越长）
-    likeVolume: 0.002, // 点赞量系数（从0.0002调整到0.002，增加10倍权重）
+    shareVolume: { weight: 0.3, k: 100, xmax: 10000 }, // 转发量配置
+    shareGrowthCycle: { weight: 0.2, k: 3, xmax: 14 }, // 转发增长周期配置
+    commentVolume: { weight: 0.3, k: 50, xmax: 5000 }, // 评论量配置
+    commentGrowthCycle: { weight: 0.2, k: 3, xmax: 14 }, // 评论增长周期配置
   },
   sentiment: {
-    commentAlignment: 100.0, // 同向性系数
-    alignmentTrend: 50.0, // 变化趋势系数
+    likeVolume: { weight: 0.5, k: 1000, xmax: 100000 }, // 点赞量配置
+    commentAlignment: { weight: 0.3, k: 0.1, xmax: 1 }, // 同向性配置
+    alignmentTrend: { weight: 0.2, k: 0.1, xmax: 1 }, // 变化趋势配置
   },
 };
 
 /**
- * 使用系数和权重计算影响力得分
+ * 使用新的对数缩放和百分制计算影响力得分
  * @param metrics 原始影响力指标
  * @param coefficients 系数配置
  * @param weights 权重配置
- * @returns 计算后的影响力得分
+ * @returns 计算后的影响力得分（百分制）
  */
 export const calculateInfluenceWithCoefficients = (
   metrics: InfluenceMetrics,
   coefficients: InfluenceCoefficients,
   weights: InfluenceWeights = DEFAULT_INFLUENCE_WEIGHTS,
 ): InfluenceMetrics => {
-  // 计算可见度得分
-  const visibilityScore =
-    metrics.visibility.contentVolume * coefficients.visibility.contentVolume +
-    metrics.visibility.contentStability * coefficients.visibility.contentStability +
-    metrics.visibility.domainCoverage * coefficients.visibility.domainCoverage;
+  console.log('🧮 [新算法] 开始使用对数缩放计算影响力得分...');
 
-  // 计算讨论度得分
-  const engagementScore =
-    metrics.engagement.shareVolume * coefficients.engagement.shareVolume +
-    metrics.engagement.shareGrowthCycle * coefficients.engagement.shareGrowthCycle +
-    metrics.engagement.commentVolume * coefficients.engagement.commentVolume +
-    metrics.engagement.commentGrowthCycle * coefficients.engagement.commentGrowthCycle +
-    metrics.engagement.likeVolume * coefficients.engagement.likeVolume;
+  // ===== 计算可见度各小项得分 =====
+  const contentVolumeScaled = logarithmicScaling(metrics.visibility.contentVolume, {
+    k: coefficients.visibility.contentVolume.k,
+    xmax: coefficients.visibility.contentVolume.xmax,
+  });
+  const contentVolumeScore = toPercentageScore(contentVolumeScaled);
 
-  // 计算认同度得分
-  const sentimentScore =
-    metrics.sentiment.commentAlignment * coefficients.sentiment.commentAlignment +
-    metrics.sentiment.alignmentTrend * coefficients.sentiment.alignmentTrend;
+  // 稳定性：标准差越小越好，需要反转
+  const maxStability = coefficients.visibility.contentStability.xmax;
+  const stabilityNormalized = Math.max(
+    0,
+    (maxStability - metrics.visibility.contentStability) / maxStability,
+  );
+  const contentStabilityScaled = logarithmicScaling(
+    stabilityNormalized * coefficients.visibility.contentStability.xmax,
+    {
+      k: coefficients.visibility.contentStability.k,
+      xmax: coefficients.visibility.contentStability.xmax,
+    },
+  );
+  const contentStabilityScore = toPercentageScore(contentStabilityScaled);
 
-  // 计算综合得分（使用权重配置）
-  const overallScore =
-    visibilityScore * weights.visibility +
-    engagementScore * weights.engagement +
-    sentimentScore * weights.sentiment;
+  const domainCoverageScaled = logarithmicScaling(metrics.visibility.domainCoverage, {
+    k: coefficients.visibility.domainCoverage.k,
+    xmax: coefficients.visibility.domainCoverage.xmax,
+  });
+  const domainCoverageScore = toPercentageScore(domainCoverageScaled);
+
+  // ===== 计算可见度大项得分 =====
+  const visibilityWeightedSum =
+    contentVolumeScore * coefficients.visibility.contentVolume.weight +
+    contentStabilityScore * coefficients.visibility.contentStability.weight +
+    domainCoverageScore * coefficients.visibility.domainCoverage.weight;
+
+  const visibilityScaled = logarithmicScaling(visibilityWeightedSum, {
+    k: weights.visibility.k,
+    xmax: weights.visibility.xmax,
+  });
+  const visibilityScore = toPercentageScore(visibilityScaled);
+
+  // ===== 计算讨论度各小项得分 =====
+  const shareVolumeScaled = logarithmicScaling(metrics.engagement.shareVolume, {
+    k: coefficients.engagement.shareVolume.k,
+    xmax: coefficients.engagement.shareVolume.xmax,
+  });
+  const shareVolumeScore = toPercentageScore(shareVolumeScaled);
+
+  const shareGrowthCycleScaled = logarithmicScaling(metrics.engagement.shareGrowthCycle, {
+    k: coefficients.engagement.shareGrowthCycle.k,
+    xmax: coefficients.engagement.shareGrowthCycle.xmax,
+  });
+  const shareGrowthCycleScore = toPercentageScore(shareGrowthCycleScaled);
+
+  const commentVolumeScaled = logarithmicScaling(metrics.engagement.commentVolume, {
+    k: coefficients.engagement.commentVolume.k,
+    xmax: coefficients.engagement.commentVolume.xmax,
+  });
+  const commentVolumeScore = toPercentageScore(commentVolumeScaled);
+
+  const commentGrowthCycleScaled = logarithmicScaling(metrics.engagement.commentGrowthCycle, {
+    k: coefficients.engagement.commentGrowthCycle.k,
+    xmax: coefficients.engagement.commentGrowthCycle.xmax,
+  });
+  const commentGrowthCycleScore = toPercentageScore(commentGrowthCycleScaled);
+
+  // ===== 计算讨论度大项得分 =====
+  const engagementWeightedSum =
+    shareVolumeScore * coefficients.engagement.shareVolume.weight +
+    shareGrowthCycleScore * coefficients.engagement.shareGrowthCycle.weight +
+    commentVolumeScore * coefficients.engagement.commentVolume.weight +
+    commentGrowthCycleScore * coefficients.engagement.commentGrowthCycle.weight;
+
+  const engagementScaled = logarithmicScaling(engagementWeightedSum, {
+    k: weights.engagement.k,
+    xmax: weights.engagement.xmax,
+  });
+  const engagementScore = toPercentageScore(engagementScaled);
+
+  // ===== 计算认同度各小项得分 =====
+  const likeVolumeScaled = logarithmicScaling(metrics.sentiment.likeVolume, {
+    k: coefficients.sentiment.likeVolume.k,
+    xmax: coefficients.sentiment.likeVolume.xmax,
+  });
+  const likeVolumeScore = toPercentageScore(likeVolumeScaled);
+
+  const commentAlignmentScaled = logarithmicScaling(
+    Math.max(0, metrics.sentiment.commentAlignment), // 确保非负
+    {
+      k: coefficients.sentiment.commentAlignment.k,
+      xmax: coefficients.sentiment.commentAlignment.xmax,
+    },
+  );
+  const commentAlignmentScore = toPercentageScore(commentAlignmentScaled);
+
+  const alignmentTrendScaled = logarithmicScaling(
+    Math.max(0, metrics.sentiment.alignmentTrend + 1), // 偏移处理负值
+    {
+      k: coefficients.sentiment.alignmentTrend.k,
+      xmax: coefficients.sentiment.alignmentTrend.xmax,
+    },
+  );
+  const alignmentTrendScore = toPercentageScore(alignmentTrendScaled);
+
+  // ===== 计算认同度大项得分 =====
+  const sentimentWeightedSum =
+    likeVolumeScore * coefficients.sentiment.likeVolume.weight +
+    commentAlignmentScore * coefficients.sentiment.commentAlignment.weight +
+    alignmentTrendScore * coefficients.sentiment.alignmentTrend.weight;
+
+  const sentimentScaled = logarithmicScaling(sentimentWeightedSum, {
+    k: weights.sentiment.k,
+    xmax: weights.sentiment.xmax,
+  });
+  const sentimentScore = toPercentageScore(sentimentScaled);
+
+  // ===== 计算总体得分 =====
+  const overallWeightedSum =
+    visibilityScore * weights.visibility.weight +
+    engagementScore * weights.engagement.weight +
+    sentimentScore * weights.sentiment.weight;
+
+  const overallScore = Math.round(overallWeightedSum * 100) / 100;
+
+  console.log('🧮 [新算法] 计算完成:', {
+    可见度: visibilityScore,
+    讨论度: engagementScore,
+    认同度: sentimentScore,
+    总体得分: overallScore,
+  });
 
   return {
     visibility: {
       ...metrics.visibility,
-      visibilityScore: Math.round(visibilityScore * 100) / 100,
+      visibilityScore,
     },
     engagement: {
       ...metrics.engagement,
-      engagementScore: Math.round(engagementScore * 100) / 100,
+      engagementScore,
     },
     sentiment: {
       ...metrics.sentiment,
-      sentimentScore: Math.round(sentimentScore * 100) / 100,
+      sentimentScore,
     },
-    overallScore: Math.round(overallScore * 100) / 100,
+    overallScore,
   };
 };
 

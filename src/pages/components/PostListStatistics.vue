@@ -161,7 +161,7 @@
       >
         <q-card class="q-pa-sm bg-grey-1">
           <div class="text-subtitle2 q-mb-md text-center">
-            调整各项指标的线性系数来定制影响力计算
+            调整各项指标的权重和对数缩放参数来定制影响力计算
           </div>
 
           <div class="row">
@@ -173,49 +173,98 @@
                   可见度系数
                 </div>
 
-                <q-input
-                  v-model.number="influenceWeights.visibility"
-                  label="整体权重"
-                  type="number"
-                  step="0.1"
-                  outlined
-                  dense
-                  class="q-mb-xs"
-                />
+                <div class="text-caption q-mb-xs text-weight-bold">内容发布总量</div>
+                <div class="row q-gutter-xs q-mb-sm">
+                  <q-input
+                    v-model.number="influenceCoefficients.visibility.contentVolume.weight"
+                    label="权重"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.visibility.contentVolume.k"
+                    label="敏感度k"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.visibility.contentVolume.xmax"
+                    label="最大值"
+                    type="number"
+                    step="10"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                </div>
 
-                <q-input
-                  v-model.number="influenceCoefficients.visibility.contentVolume"
-                  label="内容发布总量"
-                  type="number"
-                  step="0.1"
-                  outlined
-                  dense
-                  class="q-mb-xs"
-                />
+                <div class="text-caption q-mb-xs text-weight-bold">内容稳定性</div>
+                <div class="row q-gutter-xs q-mb-sm">
+                  <q-input
+                    v-model.number="influenceCoefficients.visibility.contentStability.weight"
+                    label="权重"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.visibility.contentStability.k"
+                    label="敏感度k"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.visibility.contentStability.xmax"
+                    label="最大值"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                </div>
 
-                <q-input
-                  v-model.number="influenceCoefficients.visibility.contentStability"
-                  label="内容稳定性"
-                  type="number"
-                  step="0.01"
-                  outlined
-                  dense
-                  class="q-mb-xs"
-                />
-
-                <q-input
-                  v-model.number="influenceCoefficients.visibility.domainCoverage"
-                  label="领域覆盖率"
-                  type="number"
-                  step="0.1"
-                  outlined
-                  dense
-                />
-
-                <!-- 占位符，保持高度一致 -->
-                <div style="height: 56px" class="q-mb-xs"></div>
-                <div style="height: 56px" class="q-mb-xs"></div>
-                <div style="height: 56px"></div>
+                <div class="text-caption q-mb-xs text-weight-bold">领域覆盖率</div>
+                <div class="row q-gutter-xs">
+                  <q-input
+                    v-model.number="influenceCoefficients.visibility.domainCoverage.weight"
+                    label="权重"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.visibility.domainCoverage.k"
+                    label="敏感度k"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.visibility.domainCoverage.xmax"
+                    label="最大值"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                </div>
               </q-card>
             </div>
 
@@ -227,64 +276,129 @@
                   讨论度系数
                 </div>
 
-                <q-input
-                  v-model.number="influenceWeights.engagement"
-                  label="整体权重"
-                  type="number"
-                  step="0.1"
-                  outlined
-                  dense
-                  class="q-mb-xs"
-                />
+                <div class="text-caption q-mb-xs text-weight-bold">转发总量</div>
+                <div class="row q-gutter-xs q-mb-sm">
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.shareVolume.weight"
+                    label="权重"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.shareVolume.k"
+                    label="敏感度k"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.shareVolume.xmax"
+                    label="最大值"
+                    type="number"
+                    step="100"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                </div>
 
-                <q-input
-                  v-model.number="influenceCoefficients.engagement.shareVolume"
-                  label="转发总量"
-                  type="number"
-                  step="0.0001"
-                  outlined
-                  dense
-                  class="q-mb-xs"
-                />
+                <div class="text-caption q-mb-xs text-weight-bold">转发增长周期</div>
+                <div class="row q-gutter-xs q-mb-sm">
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.shareGrowthCycle.weight"
+                    label="权重"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.shareGrowthCycle.k"
+                    label="敏感度k"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.shareGrowthCycle.xmax"
+                    label="最大值"
+                    type="number"
+                    step="10"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                </div>
 
-                <q-input
-                  v-model.number="influenceCoefficients.engagement.shareGrowthCycle"
-                  label="转发增长周期"
-                  type="number"
-                  step="0.01"
-                  outlined
-                  dense
-                  class="q-mb-xs"
-                />
+                <div class="text-caption q-mb-xs text-weight-bold">评论总量</div>
+                <div class="row q-gutter-xs q-mb-sm">
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.commentVolume.weight"
+                    label="权重"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.commentVolume.k"
+                    label="敏感度k"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.commentVolume.xmax"
+                    label="最大值"
+                    type="number"
+                    step="100"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                </div>
 
-                <q-input
-                  v-model.number="influenceCoefficients.engagement.commentVolume"
-                  label="评论总量"
-                  type="number"
-                  step="0.0001"
-                  outlined
-                  dense
-                  class="q-mb-xs"
-                />
-
-                <q-input
-                  v-model.number="influenceCoefficients.engagement.commentGrowthCycle"
-                  label="评论增长周期"
-                  type="number"
-                  step="0.01"
-                  outlined
-                  dense
-                  class="q-mb-xs"
-                />
-
-                <q-input
-                  v-model.number="influenceCoefficients.engagement.likeVolume"
-                  label="点赞总量"
-                  type="number"
-                  step="0.00001"
-                  outlined
-                  dense
-                />
+                <div class="text-caption q-mb-xs text-weight-bold">评论增长周期</div>
+                <div class="row q-gutter-xs">
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.commentGrowthCycle.weight"
+                    label="权重"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.commentGrowthCycle.k"
+                    label="敏感度k"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.engagement.commentGrowthCycle.xmax"
+                    label="最大值"
+                    type="number"
+                    step="10"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                </div>
               </q-card>
             </div>
 
@@ -296,39 +410,98 @@
                   认同度系数
                 </div>
 
-                <q-input
-                  v-model.number="influenceWeights.sentiment"
-                  label="整体权重"
-                  type="number"
-                  step="0.1"
-                  outlined
-                  dense
-                  class="q-mb-xs"
-                />
+                <div class="text-caption q-mb-xs text-weight-bold">点赞总量</div>
+                <div class="row q-gutter-xs q-mb-sm">
+                  <q-input
+                    v-model.number="influenceCoefficients.sentiment.likeVolume.weight"
+                    label="权重"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.sentiment.likeVolume.k"
+                    label="敏感度k"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.sentiment.likeVolume.xmax"
+                    label="最大值"
+                    type="number"
+                    step="1000"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                </div>
 
-                <q-input
-                  v-model.number="influenceCoefficients.sentiment.commentAlignment"
-                  label="评论同向性"
-                  type="number"
-                  step="1"
-                  outlined
-                  dense
-                  class="q-mb-xs"
-                />
+                <div class="text-caption q-mb-xs text-weight-bold">评论同向性</div>
+                <div class="row q-gutter-xs q-mb-sm">
+                  <q-input
+                    v-model.number="influenceCoefficients.sentiment.commentAlignment.weight"
+                    label="权重"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.sentiment.commentAlignment.k"
+                    label="敏感度k"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.sentiment.commentAlignment.xmax"
+                    label="最大值"
+                    type="number"
+                    step="10"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                </div>
 
-                <q-input
-                  v-model.number="influenceCoefficients.sentiment.alignmentTrend"
-                  label="同向变化趋势"
-                  type="number"
-                  step="1"
-                  outlined
-                  dense
-                />
-
-                <!-- 占位符，保持高度一致 -->
-                <div style="height: 56px" class="q-mb-xs"></div>
-                <div style="height: 56px" class="q-mb-xs"></div>
-                <div style="height: 56px"></div>
+                <div class="text-caption q-mb-xs text-weight-bold">同向变化趋势</div>
+                <div class="row q-gutter-xs">
+                  <q-input
+                    v-model.number="influenceCoefficients.sentiment.alignmentTrend.weight"
+                    label="权重"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.sentiment.alignmentTrend.k"
+                    label="敏感度k"
+                    type="number"
+                    step="0.1"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                  <q-input
+                    v-model.number="influenceCoefficients.sentiment.alignmentTrend.xmax"
+                    label="最大值"
+                    type="number"
+                    step="10"
+                    outlined
+                    dense
+                    class="col"
+                  />
+                </div>
               </q-card>
             </div>
           </div>
@@ -340,143 +513,160 @@
         </q-card>
       </q-expansion-item>
 
-      <q-table
-        dense
-        flat
-        separator="cell"
-        :pagination="{
-          rowsPerPage: 15,
-        }"
-        :rows="identityRankingList"
-        :columns="identityColumns"
-        class="fixed-layout-table"
+      <!-- 横向滚动容器 -->
+      <div
+        class="q-table__container q-table--horizontal-separator q-table--cell-separator"
+        style="overflow-x: auto"
       >
-        <!-- 自定义表头 -->
-        <template #header="props">
-          <q-tr :props="props">
-            <q-th
-              v-for="col in props.cols"
-              :key="col.name"
-              :props="props"
-              :style="col.headerStyle"
-              class="text-center"
-            >
-              <div v-if="col.name === 'visibilityScore'" class="text-center">
-                <div>👁️ 可见度</div>
-                <div class="text-caption">{{ influenceWeights.visibility }}</div>
-              </div>
-              <div v-else-if="col.name === 'contentVolume'" class="text-center">
-                <div>内容总量</div>
-                <div class="text-caption">{{ influenceCoefficients.visibility.contentVolume }}</div>
-              </div>
-              <div v-else-if="col.name === 'contentStability'" class="text-center">
-                <div>稳定性</div>
-                <div class="text-caption">
-                  {{ influenceCoefficients.visibility.contentStability }}
+        <q-table
+          dense
+          flat
+          separator="cell"
+          :pagination="{
+            rowsPerPage: 15,
+          }"
+          :rows="identityRankingList"
+          :columns="identityColumns"
+          class="fixed-layout-table"
+          table-style="min-width: 1400px;"
+        >
+          <!-- 自定义表头 -->
+          <template #header="props">
+            <q-tr :props="props">
+              <q-th
+                v-for="col in props.cols"
+                :key="col.name"
+                :props="props"
+                :style="col.headerStyle"
+                class="text-center"
+              >
+                <div v-if="col.name === 'visibilityScore'" class="text-center">
+                  <div>👁️ 可见度</div>
+                  <div class="text-caption">综合权重</div>
                 </div>
-              </div>
-              <div v-else-if="col.name === 'domainCoverage'" class="text-center">
-                <div>领域覆盖</div>
-                <div class="text-caption">
-                  {{ influenceCoefficients.visibility.domainCoverage }}
+                <div v-else-if="col.name === 'contentVolume'" class="text-center">
+                  <div>内容总量</div>
+                  <div class="text-caption">
+                    权重: {{ influenceCoefficients.visibility.contentVolume.weight }}
+                  </div>
                 </div>
-              </div>
-              <div v-else-if="col.name === 'engagementScore'" class="text-center">
-                <div>💬 讨论度</div>
-                <div class="text-caption">{{ influenceWeights.engagement }}</div>
-              </div>
-              <div v-else-if="col.name === 'shareVolume'" class="text-center">
-                <div>转发量</div>
-                <div class="text-caption">{{ influenceCoefficients.engagement.shareVolume }}</div>
-              </div>
-              <div v-else-if="col.name === 'commentVolume'" class="text-center">
-                <div>评论量</div>
-                <div class="text-caption">{{ influenceCoefficients.engagement.commentVolume }}</div>
-              </div>
-              <div v-else-if="col.name === 'likeVolume'" class="text-center">
-                <div>点赞量</div>
-                <div class="text-caption">{{ influenceCoefficients.engagement.likeVolume }}</div>
-              </div>
-              <div v-else-if="col.name === 'sentimentScore'" class="text-center">
-                <div>❤️ 认同度</div>
-                <div class="text-caption">{{ influenceWeights.sentiment }}</div>
-              </div>
-              <div v-else-if="col.name === 'commentAlignment'" class="text-center">
-                <div>同向性</div>
-                <div class="text-caption">
-                  {{ influenceCoefficients.sentiment.commentAlignment }}
+                <div v-else-if="col.name === 'contentStability'" class="text-center">
+                  <div>稳定性</div>
+                  <div class="text-caption">
+                    权重: {{ influenceCoefficients.visibility.contentStability.weight }}
+                  </div>
                 </div>
-              </div>
-              <div v-else-if="col.name === 'alignmentTrend'" class="text-center">
-                <div>变化趋势</div>
-                <div class="text-caption">{{ influenceCoefficients.sentiment.alignmentTrend }}</div>
-              </div>
-              <div v-else>
-                {{ col.label }}
-              </div>
-            </q-th>
-          </q-tr>
-        </template>
+                <div v-else-if="col.name === 'domainCoverage'" class="text-center">
+                  <div>领域覆盖</div>
+                  <div class="text-caption">
+                    权重: {{ influenceCoefficients.visibility.domainCoverage.weight }}
+                  </div>
+                </div>
+                <div v-else-if="col.name === 'engagementScore'" class="text-center">
+                  <div>💬 讨论度</div>
+                  <div class="text-caption">综合权重</div>
+                </div>
+                <div v-else-if="col.name === 'shareVolume'" class="text-center">
+                  <div>转发量</div>
+                  <div class="text-caption">
+                    权重: {{ influenceCoefficients.engagement.shareVolume.weight }}
+                  </div>
+                </div>
+                <div v-else-if="col.name === 'commentVolume'" class="text-center">
+                  <div>评论量</div>
+                  <div class="text-caption">
+                    权重: {{ influenceCoefficients.engagement.commentVolume.weight }}
+                  </div>
+                </div>
+                <div v-else-if="col.name === 'likeVolume'" class="text-center">
+                  <div>点赞量</div>
+                  <div class="text-caption">
+                    权重: {{ influenceCoefficients.sentiment.likeVolume.weight }}
+                  </div>
+                </div>
+                <div v-else-if="col.name === 'sentimentScore'" class="text-center">
+                  <div>❤️ 认同度</div>
+                  <div class="text-caption">综合权重</div>
+                </div>
+                <div v-else-if="col.name === 'commentAlignment'" class="text-center">
+                  <div>同向性</div>
+                  <div class="text-caption">
+                    权重: {{ influenceCoefficients.sentiment.commentAlignment.weight }}
+                  </div>
+                </div>
+                <div v-else-if="col.name === 'alignmentTrend'" class="text-center">
+                  <div>变化趋势</div>
+                  <div class="text-caption">
+                    权重: {{ influenceCoefficients.sentiment.alignmentTrend.weight }}
+                  </div>
+                </div>
+                <div v-else>
+                  {{ col.label }}
+                </div>
+              </q-th>
+            </q-tr>
+          </template>
 
-        <template #body-cell-rank="props">
-          <q-td :props="props">
-            <q-badge
-              :color="props.row.rank <= 3 ? 'amber' : 'grey-6'"
-              :text-color="props.row.rank <= 3 ? 'black' : 'white'"
-              :label="props.row.rank"
-            />
-          </q-td>
-        </template>
-        <template #body-cell-authorName="props">
-          <q-td :props="props">
-            <div class="text-weight-medium">{{ props.row.authorName }}</div>
-          </q-td>
-        </template>
-        <template #body-cell-influenceScore="props">
-          <q-td :props="props">
-            <div class="text-weight-bold text-primary">
-              {{
-                typeof props.row.influenceScore === 'number'
-                  ? props.row.influenceScore.toFixed(2)
-                  : props.row.influenceScore
-              }}
-            </div>
-          </q-td>
-        </template>
-        <template #body-cell-visibilityScore="props">
-          <q-td :props="props">
-            <div class="text-center text-weight-bold text-blue">
-              {{
-                typeof props.row.visibilityScore === 'number'
-                  ? props.row.visibilityScore.toFixed(2)
-                  : '0.00'
-              }}
-            </div>
-          </q-td>
-        </template>
-        <template #body-cell-engagementScore="props">
-          <q-td :props="props">
-            <div class="text-center text-weight-bold text-orange">
-              {{
-                typeof props.row.engagementScore === 'number'
-                  ? props.row.engagementScore.toFixed(2)
-                  : '0.00'
-              }}
-            </div>
-          </q-td>
-        </template>
-        <template #body-cell-sentimentScore="props">
-          <q-td :props="props">
-            <div class="text-center text-weight-bold text-green">
-              {{
-                typeof props.row.sentimentScore === 'number'
-                  ? props.row.sentimentScore.toFixed(2)
-                  : '0.00'
-              }}
-            </div>
-          </q-td>
-        </template>
-      </q-table>
+          <template #body-cell-rank="props">
+            <q-td :props="props">
+              <q-badge
+                :color="props.row.rank <= 3 ? 'amber' : 'grey-6'"
+                :text-color="props.row.rank <= 3 ? 'black' : 'white'"
+                :label="props.row.rank"
+              />
+            </q-td>
+          </template>
+          <template #body-cell-authorName="props">
+            <q-td :props="props">
+              <div class="text-weight-medium">{{ props.row.authorName }}</div>
+            </q-td>
+          </template>
+          <template #body-cell-influenceScore="props">
+            <q-td :props="props">
+              <div class="text-weight-bold text-primary">
+                {{
+                  typeof props.row.influenceScore === 'number'
+                    ? props.row.influenceScore.toFixed(2)
+                    : props.row.influenceScore
+                }}
+              </div>
+            </q-td>
+          </template>
+          <template #body-cell-visibilityScore="props">
+            <q-td :props="props">
+              <div class="text-center text-weight-bold text-blue">
+                {{
+                  typeof props.row.visibilityScore === 'number'
+                    ? props.row.visibilityScore.toFixed(2)
+                    : '0.00'
+                }}
+              </div>
+            </q-td>
+          </template>
+          <template #body-cell-engagementScore="props">
+            <q-td :props="props">
+              <div class="text-center text-weight-bold text-orange">
+                {{
+                  typeof props.row.engagementScore === 'number'
+                    ? props.row.engagementScore.toFixed(2)
+                    : '0.00'
+                }}
+              </div>
+            </q-td>
+          </template>
+          <template #body-cell-sentimentScore="props">
+            <q-td :props="props">
+              <div class="text-center text-weight-bold text-green">
+                {{
+                  typeof props.row.sentimentScore === 'number'
+                    ? props.row.sentimentScore.toFixed(2)
+                    : '0.00'
+                }}
+              </div>
+            </q-td>
+          </template>
+        </q-table>
+      </div>
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-indigo-1">
@@ -499,85 +689,92 @@
     <div class="q-mb-lg" v-if="categoryAgreementStats.length > 0">
       <div class="text-h6 q-mb-md">分类同向度统计</div>
 
-      <q-table
-        dense
-        flat
-        separator="cell"
-        :pagination="{
-          rowsPerPage: 15,
-        }"
-        :rows="categoryAgreementStats"
-        :columns="categoryAgreementColumns"
-        class="fixed-layout-table"
+      <!-- 横向滚动容器 -->
+      <div
+        class="q-table__container q-table--horizontal-separator q-table--cell-separator"
+        style="overflow-x: auto"
       >
-        <!-- 自定义表头 -->
-        <template #header="props">
-          <q-tr :props="props">
-            <q-th
-              v-for="col in props.cols"
-              :key="col.name"
-              :props="props"
-              :style="col.headerStyle"
-              class="text-center"
-            >
-              {{ col.label }}
-            </q-th>
-          </q-tr>
-        </template>
-
-        <!-- 身份名称列 -->
-        <template #body-cell-authorName="props">
-          <q-td :props="props">
-            <div class="text-weight-medium">{{ props.row.authorName }}</div>
-          </q-td>
-        </template>
-
-        <!-- 动态分类列 -->
-        <template
-          v-for="category in availableCategories"
-          :key="`body-cell-category-${category.id}`"
-          #[`body-cell-category-${category.id}`]="props"
+        <q-table
+          dense
+          flat
+          separator="cell"
+          :pagination="{
+            rowsPerPage: 15,
+          }"
+          :rows="categoryAgreementStats"
+          :columns="categoryAgreementColumns"
+          class="fixed-layout-table"
+          table-style="min-width: 800px;"
         >
-          <q-td :props="props" class="text-center">
-            <div
-              class="text-weight-bold"
-              :class="{
-                'text-positive': props.row[`category-${category.id}`] >= 0.7,
-                'text-warning':
-                  props.row[`category-${category.id}`] >= 0.4 &&
-                  props.row[`category-${category.id}`] < 0.7,
-                'text-negative':
-                  props.row[`category-${category.id}`] < 0.4 &&
-                  props.row[`category-${category.id}`] !== null,
-                'text-grey': props.row[`category-${category.id}`] === null,
-              }"
-            >
-              {{
-                props.row[`category-${category.id}`] !== null
-                  ? props.row[`category-${category.id}`].toFixed(3)
-                  : 'N/A'
-              }}
-            </div>
-          </q-td>
-        </template>
+          <!-- 自定义表头 -->
+          <template #header="props">
+            <q-tr :props="props">
+              <q-th
+                v-for="col in props.cols"
+                :key="col.name"
+                :props="props"
+                :style="col.headerStyle"
+                class="text-center"
+              >
+                {{ col.label }}
+              </q-th>
+            </q-tr>
+          </template>
 
-        <!-- 平均同向度列 -->
-        <template #body-cell-averageAgreement="props">
-          <q-td :props="props" class="text-center">
-            <div
-              class="text-weight-bold text-primary"
-              :class="{
-                'text-positive': props.row.averageAgreement >= 0.7,
-                'text-warning':
-                  props.row.averageAgreement >= 0.4 && props.row.averageAgreement < 0.7,
-                'text-negative': props.row.averageAgreement < 0.4,
-              }"
-            >
-              {{ props.row.averageAgreement.toFixed(3) }}
-            </div>
-          </q-td>
-        </template>
-      </q-table>
+          <!-- 身份名称列 -->
+          <template #body-cell-authorName="props">
+            <q-td :props="props">
+              <div class="text-weight-medium">{{ props.row.authorName }}</div>
+            </q-td>
+          </template>
+
+          <!-- 动态分类列 -->
+          <template
+            v-for="category in availableCategories"
+            :key="`body-cell-category-${category.id}`"
+            #[`body-cell-category-${category.id}`]="props"
+          >
+            <q-td :props="props" class="text-center">
+              <div
+                class="text-weight-bold"
+                :class="{
+                  'text-positive': props.row[`category-${category.id}`] >= 0.7,
+                  'text-warning':
+                    props.row[`category-${category.id}`] >= 0.4 &&
+                    props.row[`category-${category.id}`] < 0.7,
+                  'text-negative':
+                    props.row[`category-${category.id}`] < 0.4 &&
+                    props.row[`category-${category.id}`] !== null,
+                  'text-grey': props.row[`category-${category.id}`] === null,
+                }"
+              >
+                {{
+                  props.row[`category-${category.id}`] !== null
+                    ? props.row[`category-${category.id}`].toFixed(3)
+                    : 'N/A'
+                }}
+              </div>
+            </q-td>
+          </template>
+
+          <!-- 平均同向度列 -->
+          <template #body-cell-averageAgreement="props">
+            <q-td :props="props" class="text-center">
+              <div
+                class="text-weight-bold text-primary"
+                :class="{
+                  'text-positive': props.row.averageAgreement >= 0.7,
+                  'text-warning':
+                    props.row.averageAgreement >= 0.4 && props.row.averageAgreement < 0.7,
+                  'text-negative': props.row.averageAgreement < 0.4,
+                }"
+              >
+                {{ props.row.averageAgreement.toFixed(3) }}
+              </div>
+            </q-td>
+          </template>
+        </q-table>
+      </div>
 
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-cyan-1">
@@ -1226,13 +1423,8 @@ import autoTable from 'jspdf-autotable';
 import {
   calculateInfluenceRanking,
   DEFAULT_INFLUENCE_COEFFICIENTS,
-  DEFAULT_INFLUENCE_WEIGHTS,
 } from 'src/utils/influenceCalculator';
-import type {
-  InfluenceRankingItem,
-  InfluenceCoefficients,
-  InfluenceWeights,
-} from 'src/utils/influenceCalculator';
+import type { InfluenceRankingItem, InfluenceCoefficients } from 'src/utils/influenceCalculator';
 
 const {
   query,
@@ -1272,15 +1464,13 @@ const $q = useQuasar();
 
 // 影响力系数相关
 const influenceCoefficients = ref<InfluenceCoefficients>({ ...DEFAULT_INFLUENCE_COEFFICIENTS });
-const influenceWeights = ref<InfluenceWeights>({ ...DEFAULT_INFLUENCE_WEIGHTS });
 
 // 重置系数为默认值
 const resetCoefficients = () => {
   influenceCoefficients.value = { ...DEFAULT_INFLUENCE_COEFFICIENTS };
-  influenceWeights.value = { ...DEFAULT_INFLUENCE_WEIGHTS };
   $q.notify({
     type: 'positive',
-    message: '已重置为默认系数和权重',
+    message: '已重置为默认系数',
     position: 'top',
   });
 };
@@ -2244,7 +2434,6 @@ const identityRankingList = computed(() => {
     selectedDates || [], // 使用用户选择的日期
     7, // 如果没有选择日期，则分析最近7天的数据
     influenceCoefficients.value, // 使用用户设置的系数
-    influenceWeights.value, // 使用用户设置的权重
   );
 
   // 转换为组件所需的格式，保持向后兼容
@@ -2254,7 +2443,7 @@ const identityRankingList = computed(() => {
       identityGroupsArray.find((g) => g.name === item.name)?.postViewList[0]?.post.author || '',
     authorName: item.name,
     postCount: identityGroupsArray.find((g) => g.name === item.name)?.postViewList.length || 0,
-    totalLikes: item.influence.engagement.likeVolume,
+    totalLikes: item.influence.sentiment.likeVolume,
     totalShares: item.influence.engagement.shareVolume,
     totalComments: item.influence.engagement.commentVolume,
     influenceScore: item.influence.overallScore,
@@ -4525,6 +4714,71 @@ const wordCloudOption = computed(() => {
 .fixed-layout-table {
   table {
     table-layout: fixed;
+  }
+}
+
+// 横向滚动表格优化样式
+.q-table__container {
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+
+  // 为表格头部添加粘性定位以确保在滚动时保持可见
+  .q-table__top {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: white;
+  }
+}
+
+// 表格列宽度优化
+.q-table th,
+.q-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  // 为第一列（身份名称）添加粘性定位
+  &:first-child {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 2;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// 响应式设计 - 在较小屏幕上提供更好的滚动体验
+@media (max-width: 1200px) {
+  .q-table__container[style*='overflow-x: auto'] {
+    // 添加滚动提示
+    &::before {
+      content: '👈 左右滑动查看更多列';
+      position: absolute;
+      top: -30px;
+      right: 0;
+      font-size: 12px;
+      color: #666;
+      background: #f5f5f5;
+      padding: 4px 8px;
+      border-radius: 4px;
+      z-index: 3;
+    }
   }
 }
 </style>
