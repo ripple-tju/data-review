@@ -495,6 +495,107 @@
       </div>
     </div>
 
+    <!-- 分类同向度统计 -->
+    <div class="q-mb-lg" v-if="categoryAgreementStats.length > 0">
+      <div class="text-h6 q-mb-md">分类同向度统计</div>
+
+      <q-table
+        dense
+        flat
+        separator="cell"
+        :pagination="{
+          rowsPerPage: 15,
+        }"
+        :rows="categoryAgreementStats"
+        :columns="categoryAgreementColumns"
+        class="fixed-layout-table"
+      >
+        <!-- 自定义表头 -->
+        <template #header="props">
+          <q-tr :props="props">
+            <q-th
+              v-for="col in props.cols"
+              :key="col.name"
+              :props="props"
+              :style="col.headerStyle"
+              class="text-center"
+            >
+              {{ col.label }}
+            </q-th>
+          </q-tr>
+        </template>
+
+        <!-- 身份名称列 -->
+        <template #body-cell-authorName="props">
+          <q-td :props="props">
+            <div class="text-weight-medium">{{ props.row.authorName }}</div>
+          </q-td>
+        </template>
+
+        <!-- 动态分类列 -->
+        <template
+          v-for="category in availableCategories"
+          :key="`body-cell-category-${category.id}`"
+          #[`body-cell-category-${category.id}`]="props"
+        >
+          <q-td :props="props" class="text-center">
+            <div
+              class="text-weight-bold"
+              :class="{
+                'text-positive': props.row[`category-${category.id}`] >= 0.7,
+                'text-warning':
+                  props.row[`category-${category.id}`] >= 0.4 &&
+                  props.row[`category-${category.id}`] < 0.7,
+                'text-negative':
+                  props.row[`category-${category.id}`] < 0.4 &&
+                  props.row[`category-${category.id}`] !== null,
+                'text-grey': props.row[`category-${category.id}`] === null,
+              }"
+            >
+              {{
+                props.row[`category-${category.id}`] !== null
+                  ? props.row[`category-${category.id}`].toFixed(3)
+                  : 'N/A'
+              }}
+            </div>
+          </q-td>
+        </template>
+
+        <!-- 平均同向度列 -->
+        <template #body-cell-averageAgreement="props">
+          <q-td :props="props" class="text-center">
+            <div
+              class="text-weight-bold text-primary"
+              :class="{
+                'text-positive': props.row.averageAgreement >= 0.7,
+                'text-warning':
+                  props.row.averageAgreement >= 0.4 && props.row.averageAgreement < 0.7,
+                'text-negative': props.row.averageAgreement < 0.4,
+              }"
+            >
+              {{ props.row.averageAgreement.toFixed(3) }}
+            </div>
+          </q-td>
+        </template>
+      </q-table>
+
+      <div class="q-mt-md">
+        <q-card class="q-pa-md bg-cyan-1">
+          <div class="text-subtitle2 q-mb-sm">分类同向度统计批注</div>
+          <q-input
+            v-model="annotations.categoryAgreement.content"
+            type="textarea"
+            label="在此输入关于分类同向度统计的分析..."
+            outlined
+            rows="3"
+            autogrow
+            placeholder="例如：某些账号在特定分类下的同向度较高，表明其观点立场相对一致..."
+            @update:model-value="saveAnnotationsToStorage"
+          />
+        </q-card>
+      </div>
+    </div>
+
     <!-- 点赞趋势图 -->
     <div class="q-mb-lg">
       <div class="text-h6 q-mb-md">点赞趋势</div>
@@ -1203,6 +1304,7 @@ interface AnnotationItem {
 const annotations = ref<{
   table: AnnotationItem;
   identityRanking: AnnotationItem;
+  categoryAgreement: AnnotationItem;
   like: AnnotationItem;
   share: AnnotationItem;
   comment: AnnotationItem;
@@ -1220,6 +1322,7 @@ const annotations = ref<{
 }>({
   table: { content: '' },
   identityRanking: { content: '' },
+  categoryAgreement: { content: '' },
   like: { content: '' },
   share: { content: '' },
   comment: { content: '' },
@@ -1755,6 +1858,7 @@ const getAnnotationLabel = (key: string): string => {
   const labelMap: Record<string, string> = {
     table: '推文排行',
     identityRanking: '身份影响力排行',
+    categoryAgreement: '分类同向度统计',
     like: '点赞趋势',
     share: '分享趋势',
     comment: '评论趋势',
@@ -2318,6 +2422,181 @@ const identityColumns = computed(() => [
     format: (val: number) => val.toFixed(3),
   },
 ]);
+
+// 分类同向度统计
+// 获取有数据的分类列表
+const availableCategories = computed(() => {
+  if (!categoryData || !postCategoryMap) return [];
+
+  return categoryData.filter(
+    (category) => postCategoryMap.has(category.id) && postCategoryMap.get(category.id)!.length > 0,
+  );
+});
+
+// 分类同向度统计数据
+const categoryAgreementStats = computed(() => {
+  if (
+    !postAgreementData ||
+    !postCategoryMap ||
+    !categoryData ||
+    availableCategories.value.length === 0
+  ) {
+    return [];
+  }
+
+  console.log('🔄 [分类同向度] 开始计算分类同向度统计...');
+
+  // 按身份分组统计
+  const identityGroups = new Map<
+    string,
+    {
+      authorName: string;
+      categoryAgreements: Map<string, number[]>;
+    }
+  >();
+
+  // 数据处理统计
+  let totalPosts = 0;
+  let validAgreementCount = 0;
+  let filteredCount = 0;
+
+  // 初始化身份分组
+  postViewList.forEach((postView) => {
+    const authorId = postView.post.author;
+    if (!identityGroups.has(authorId)) {
+      // 获取作者名称
+      const identity = idList.find((id) => id.identity.id === authorId);
+      let authorName = 'Unknown';
+      if (identity && identity.archive && identity.archive.length > 0) {
+        const sortedArchive = identity.archive.sort(
+          (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+        );
+        authorName = sortedArchive[0]?.name || 'Unknown';
+      }
+
+      identityGroups.set(authorId, {
+        authorName,
+        categoryAgreements: new Map(),
+      });
+    }
+  });
+
+  // 收集每个身份在各分类下的同向度数据
+  postCategoryMap.forEach((postIds, categoryId) => {
+    postIds.forEach((postId) => {
+      // 找到对应的 postView
+      const postView = postViewList.find((p) => p.post.id === postId);
+      if (!postView) return;
+
+      totalPosts++;
+      const authorId = postView.post.author;
+      const identity = identityGroups.get(authorId);
+      if (!identity) return;
+
+      // 🔥 [修改] 使用最新存档的同向度数据（按capturedAt排序）
+      const sortedArchives = postView.archive.sort(
+        (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+      );
+
+      if (sortedArchives.length > 0) {
+        const latestArchive = sortedArchives[0];
+        if (latestArchive) {
+          const agreementValue = postAgreementData[latestArchive.id];
+
+          if (typeof agreementValue === 'number') {
+            if (agreementValue === -1) {
+              // 🔥 [修改] 过滤掉同向度为-1的数据
+              filteredCount++;
+            } else {
+              // 只保留有效的同向度值
+              validAgreementCount++;
+              if (!identity.categoryAgreements.has(categoryId)) {
+                identity.categoryAgreements.set(categoryId, []);
+              }
+              identity.categoryAgreements.get(categoryId)!.push(agreementValue);
+            }
+          }
+        }
+      }
+    });
+  }); // 计算每个身份在各分类下的平均同向度
+  const result = Array.from(identityGroups.entries())
+    .map(([authorId, identity]) => {
+      const row: any = {
+        authorId,
+        authorName: identity.authorName,
+        averageAgreement: 0,
+      };
+
+      let totalAgreement = 0;
+      let totalCategories = 0;
+
+      // 为每个分类计算平均同向度
+      availableCategories.value.forEach((category) => {
+        const agreements = identity.categoryAgreements.get(category.id);
+        if (agreements && agreements.length > 0) {
+          const average = agreements.reduce((sum, val) => sum + val, 0) / agreements.length;
+          row[`category-${category.id}`] = average;
+          totalAgreement += average;
+          totalCategories++;
+        } else {
+          row[`category-${category.id}`] = null;
+        }
+      });
+
+      // 计算总体平均同向度（只考虑有数据的分类）
+      row.averageAgreement = totalCategories > 0 ? totalAgreement / totalCategories : 0;
+
+      return row;
+    })
+    .filter((row) => row.averageAgreement > 0); // 只保留有同向度数据的身份
+
+  console.log(
+    `🔄 [分类同向度] 计算完成，共 ${result.length} 个身份，${availableCategories.value.length} 个分类`,
+  );
+  console.log(
+    `📊 [分类同向度] 数据统计: 总帖子${totalPosts}个，有效同向度${validAgreementCount}个，过滤-1数据${filteredCount}个`,
+  );
+  return result;
+});
+
+// 分类同向度统计表格列定义
+const categoryAgreementColumns = computed(() => {
+  const baseColumns = [
+    {
+      name: 'authorName',
+      label: '身份',
+      field: 'authorName',
+      align: 'left' as const,
+      headerStyle: 'width: 120px; font-weight: bold;',
+    },
+  ];
+
+  // 动态添加分类列
+  const categoryColumns = availableCategories.value.map((category) => ({
+    name: `category-${category.id}`,
+    label: category.name || `分类${category.id}`,
+    field: `category-${category.id}`,
+    align: 'center' as const,
+    headerStyle: 'width: 100px; font-weight: bold;',
+    sortable: true,
+    format: (val: number | null) => (val !== null ? val.toFixed(3) : 'N/A'),
+  }));
+
+  const endColumns = [
+    {
+      name: 'averageAgreement',
+      label: '平均同向度',
+      field: 'averageAgreement',
+      align: 'center' as const,
+      headerStyle: 'width: 120px; font-weight: bold; background-color: #f5f5f5;',
+      sortable: true,
+      format: (val: number) => val.toFixed(3),
+    },
+  ];
+
+  return [...baseColumns, ...categoryColumns, ...endColumns];
+});
 
 const latestPostArchiveCutWordList = computed(() => {
   const startTime = performance.now();
