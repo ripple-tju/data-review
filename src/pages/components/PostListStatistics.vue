@@ -152,6 +152,20 @@
     <div class="q-mb-lg" v-if="identityRankingList.length > 1">
       <div class="text-h6 q-mb-md">身份影响力排行</div>
 
+      <!-- 显示选项控制 -->
+      <div class="row items-center q-mb-md">
+        <q-toggle
+          v-model="showRawValues"
+          color="primary"
+          label="显示原始值"
+          left-label
+          class="q-mr-md"
+        />
+        <div class="text-caption text-grey">
+          {{ showRawValues ? '当前显示得分（原始值）格式' : '当前仅显示计算得分' }}
+        </div>
+      </div>
+
       <!-- 影响力系数调节面板 -->
       <q-expansion-item
         icon="tune"
@@ -1706,6 +1720,9 @@ const $q = useQuasar();
 // 影响力系数相关
 const influenceCoefficients = ref<InfluenceCoefficients>({ ...DEFAULT_INFLUENCE_COEFFICIENTS });
 
+// 控制是否显示原始值的开关
+const showRawValues = ref(false);
+
 // 重置系数为默认值
 const resetCoefficients = () => {
   influenceCoefficients.value = { ...DEFAULT_INFLUENCE_COEFFICIENTS };
@@ -2782,7 +2799,10 @@ const identityColumns = computed(() => [
     align: 'center' as const,
     headerStyle: 'width: 110px;',
     sortable: true,
-    format: (val: number, row: any) => `${row.contentVolumeScore.toFixed(0)}(${val.toFixed(0)})`,
+    format: (val: number, row: any) =>
+      showRawValues.value
+        ? `${row.contentVolumeScore.toFixed(0)}(${val.toFixed(0)})`
+        : row.contentVolumeScore.toFixed(0),
   },
   {
     name: 'contentStability',
@@ -2791,7 +2811,10 @@ const identityColumns = computed(() => [
     align: 'center' as const,
     headerStyle: 'width: 110px;',
     sortable: true,
-    format: (val: number, row: any) => `${row.contentStabilityScore.toFixed(1)}(${val.toFixed(2)})`,
+    format: (val: number, row: any) =>
+      showRawValues.value
+        ? `${row.contentStabilityScore.toFixed(1)}(${val.toFixed(2)})`
+        : row.contentStabilityScore.toFixed(1),
   },
   {
     name: 'domainCoverage',
@@ -2800,7 +2823,10 @@ const identityColumns = computed(() => [
     align: 'center' as const,
     headerStyle: 'width: 130px;',
     sortable: true,
-    format: (val: number, row: any) => `${row.domainCoverageScore.toFixed(1)}(${val.toFixed(2)})`,
+    format: (val: number, row: any) =>
+      showRawValues.value
+        ? `${row.domainCoverageScore.toFixed(1)}(${val.toFixed(2)})`
+        : row.domainCoverageScore.toFixed(1),
   },
   // 讨论度大项
   {
@@ -2819,7 +2845,10 @@ const identityColumns = computed(() => [
     align: 'center' as const,
     headerStyle: 'width: 120px;',
     sortable: true,
-    format: (val: number, row: any) => `${row.shareVolumeScore.toFixed(0)}(${val.toFixed(0)})`,
+    format: (val: number, row: any) =>
+      showRawValues.value
+        ? `${row.shareVolumeScore.toFixed(0)}(${val.toFixed(0)})`
+        : row.shareVolumeScore.toFixed(0),
   },
   {
     name: 'shareGrowthCycle',
@@ -2828,7 +2857,10 @@ const identityColumns = computed(() => [
     align: 'center' as const,
     headerStyle: 'width: 120px;',
     sortable: true,
-    format: (val: number, row: any) => `${row.shareGrowthCycleScore.toFixed(1)}(${val.toFixed(1)})`,
+    format: (val: number, row: any) =>
+      showRawValues.value
+        ? `${row.shareGrowthCycleScore.toFixed(1)}(${val.toFixed(1)})`
+        : row.shareGrowthCycleScore.toFixed(1),
   },
   {
     name: 'commentVolume',
@@ -2837,7 +2869,10 @@ const identityColumns = computed(() => [
     align: 'center' as const,
     headerStyle: 'width: 120px;',
     sortable: true,
-    format: (val: number, row: any) => `${row.commentVolumeScore.toFixed(0)}(${val.toFixed(0)})`,
+    format: (val: number, row: any) =>
+      showRawValues.value
+        ? `${row.commentVolumeScore.toFixed(0)}(${val.toFixed(0)})`
+        : row.commentVolumeScore.toFixed(0),
   },
   {
     name: 'commentGrowthCycle',
@@ -2847,7 +2882,9 @@ const identityColumns = computed(() => [
     headerStyle: 'width: 120px;',
     sortable: true,
     format: (val: number, row: any) =>
-      `${row.commentGrowthCycleScore.toFixed(1)}(${val.toFixed(1)})`,
+      showRawValues.value
+        ? `${row.commentGrowthCycleScore.toFixed(1)}(${val.toFixed(1)})`
+        : row.commentGrowthCycleScore.toFixed(1),
   },
   // 认同度大项
   {
@@ -2866,7 +2903,10 @@ const identityColumns = computed(() => [
     align: 'center' as const,
     headerStyle: 'width: 110px;',
     sortable: true,
-    format: (val: number, row: any) => `${row.likeVolumeScore.toFixed(0)}(${val.toFixed(0)})`,
+    format: (val: number, row: any) =>
+      showRawValues.value
+        ? `${row.likeVolumeScore.toFixed(0)}(${val.toFixed(0)})`
+        : row.likeVolumeScore.toFixed(0),
   },
   {
     name: 'commentAlignment',
@@ -2875,7 +2915,10 @@ const identityColumns = computed(() => [
     align: 'center' as const,
     headerStyle: 'width: 100px;',
     sortable: true,
-    format: (val: number, row: any) => `${row.commentAlignmentScore.toFixed(1)}(${val.toFixed(3)})`,
+    format: (val: number, row: any) =>
+      showRawValues.value
+        ? `${row.commentAlignmentScore.toFixed(1)}(${val.toFixed(3)})`
+        : row.commentAlignmentScore.toFixed(1),
   },
   {
     name: 'alignmentTrend',
@@ -2884,7 +2927,10 @@ const identityColumns = computed(() => [
     align: 'center' as const,
     headerStyle: 'width: 120px;',
     sortable: true,
-    format: (val: number, row: any) => `${row.alignmentTrendScore.toFixed(1)}(${val.toFixed(3)})`,
+    format: (val: number, row: any) =>
+      showRawValues.value
+        ? `${row.alignmentTrendScore.toFixed(1)}(${val.toFixed(3)})`
+        : row.alignmentTrendScore.toFixed(1),
   },
 ]);
 

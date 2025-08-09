@@ -929,8 +929,15 @@ export const calculateInfluenceWithCoefficients = (
   );
   const commentAlignmentScore = toPercentageScore(commentAlignmentScaled);
 
+  // 变化趋势反转处理：变化越大（越不稳定）得分越低
+  const maxAlignmentTrend = coefficients.sentiment.alignmentTrend.xmax;
+  const alignmentTrendReversed = Math.max(
+    0,
+    maxAlignmentTrend - Math.min(metrics.sentiment.alignmentTrend, maxAlignmentTrend),
+  );
+
   const alignmentTrendScaled = logarithmicScaling(
-    metrics.sentiment.alignmentTrend, // 直接使用原值，因为新的计算方式不会产生负值
+    alignmentTrendReversed, // 使用反转后的值：变化大→反转后小→得分低
     {
       k: coefficients.sentiment.alignmentTrend.k,
       xmax: coefficients.sentiment.alignmentTrend.xmax,
