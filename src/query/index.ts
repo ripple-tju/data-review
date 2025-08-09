@@ -133,7 +133,7 @@ export const Query = (
     // 创建日期到存档的映射
     const archivesByDate = new Map<string, PostArchive.Type>();
     for (const archive of archives) {
-      const archiveDate = new Date(archive.createdAt).toISOString().split('T')[0];
+      const archiveDate = new Date(archive.capturedAt).toISOString().split('T')[0];
       if (archiveDate && !archivesByDate.has(archiveDate)) {
         archivesByDate.set(archiveDate, archive);
       }
@@ -175,8 +175,8 @@ export const Query = (
           // 找距离当前日期最近的存档
           const currentDate = new Date(expectedDate);
           foundArchive = archives.reduce((closest, archive) => {
-            const archiveDate = new Date(archive.createdAt);
-            const closestDate = new Date(closest.createdAt);
+            const archiveDate = new Date(archive.capturedAt);
+            const closestDate = new Date(closest.capturedAt);
             return Math.abs(archiveDate.getTime() - currentDate.getTime()) <
               Math.abs(closestDate.getTime() - currentDate.getTime())
               ? archive
@@ -189,7 +189,7 @@ export const Query = (
           const supplementedArchive: PostArchive.Type = {
             ...foundArchive,
             id: `${foundArchive.id}_补全_${expectedDate}`, // 生成新的ID以避免冲突
-            createdAt: new Date(`${expectedDate}T00:00:00.000Z`), // 设置为目标日期
+            capturedAt: new Date(`${expectedDate}T00:00:00.000Z`), // 设置为目标日期的采集时间
           };
           supplementedArchives.push(supplementedArchive);
         }

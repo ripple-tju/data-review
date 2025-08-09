@@ -2758,7 +2758,7 @@ const identityColumns = computed(() => [
     label: '评论同向性',
     field: 'commentAlignment',
     align: 'center' as const,
-    headerStyle: 'width: 110px;',
+    headerStyle: 'width: 100px;',
     sortable: true,
     format: (val: number, row: any) => `${row.commentAlignmentScore.toFixed(1)}(${val.toFixed(3)})`,
   },
