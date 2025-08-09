@@ -765,6 +765,159 @@
       </div>
     </div>
 
+    <!-- 分类占比分析 -->
+    <div class="q-mb-lg" v-if="postCategoryMap && categoryData && postCategoryMap.size > 0">
+      <!-- 分类占比 - 推文数量 -->
+      <div class="q-mb-lg">
+        <div class="text-h6 q-mb-md">分类占比 - 推文数量</div>
+
+        <AppKChart
+          data-chart="category-post-distribution"
+          title="分类推文数量分布"
+          :option="categoryDistributionOption"
+          :height="400"
+          :useImageMode="useImageMode"
+          @rendered="onChartRendered"
+        />
+
+        <div class="q-mt-md">
+          <q-card class="q-pa-md bg-blue-1">
+            <div class="text-subtitle2 q-mb-sm">分类推文数量分布批注</div>
+            <q-input
+              v-model="annotations.categoryPost.content"
+              type="textarea"
+              label="在此输入关于分类推文数量分布的分析..."
+              outlined
+              rows="3"
+              autogrow
+              placeholder="例如：某些分类的推文数量明显较多，可能与该领域的活跃度相关..."
+              @update:model-value="saveAnnotationsToStorage"
+            />
+          </q-card>
+        </div>
+      </div>
+
+      <!-- 分类占比 - 分享数量 -->
+      <div class="q-mb-lg">
+        <div class="text-h6 q-mb-md">分类占比 - 分享数量</div>
+
+        <AppKChart
+          data-chart="category-share-distribution"
+          title="分类分享数量分布"
+          :option="categoryShareDistributionOption"
+          :height="400"
+          :useImageMode="useImageMode"
+          @rendered="onChartRendered"
+        />
+
+        <div class="q-mt-md">
+          <q-card class="q-pa-md bg-teal-1">
+            <div class="text-subtitle2 q-mb-sm">分类分享数量分布批注</div>
+            <q-input
+              v-model="annotations.categoryShare.content"
+              type="textarea"
+              label="在此输入关于分类分享数量分布的分析..."
+              outlined
+              rows="3"
+              autogrow
+              placeholder="例如：分享数分布反映了不同类型内容的传播能力..."
+              @update:model-value="saveAnnotationsToStorage"
+            />
+          </q-card>
+        </div>
+      </div>
+
+      <!-- 分类占比 - 评论数量 -->
+      <div class="q-mb-lg">
+        <div class="text-h6 q-mb-md">分类占比 - 评论数量</div>
+
+        <AppKChart
+          data-chart="category-comment-distribution"
+          title="分类评论数量分布"
+          :option="categoryCommentDistributionOption"
+          :height="400"
+          :useImageMode="useImageMode"
+          @rendered="onChartRendered"
+        />
+
+        <div class="q-mt-md">
+          <q-card class="q-pa-md bg-orange-1">
+            <div class="text-subtitle2 q-mb-sm">分类评论数量分布批注</div>
+            <q-input
+              v-model="annotations.categoryComment.content"
+              type="textarea"
+              label="在此输入关于分类评论数量分布的分析..."
+              outlined
+              rows="3"
+              autogrow
+              placeholder="例如：评论数分布显示了不同类型内容的讨论热度..."
+              @update:model-value="saveAnnotationsToStorage"
+            />
+          </q-card>
+        </div>
+      </div>
+
+      <!-- 分类占比 - 点赞数量 -->
+      <div class="q-mb-lg">
+        <div class="text-h6 q-mb-md">分类占比 - 点赞数量</div>
+
+        <AppKChart
+          data-chart="category-like-distribution"
+          title="分类点赞数量分布"
+          :option="categoryLikeDistributionOption"
+          :height="400"
+          :useImageMode="useImageMode"
+          @rendered="onChartRendered"
+        />
+
+        <div class="q-mt-md">
+          <q-card class="q-pa-md bg-red-1">
+            <div class="text-subtitle2 q-mb-sm">分类点赞数量分布批注</div>
+            <q-input
+              v-model="annotations.categoryLike.content"
+              type="textarea"
+              label="在此输入关于分类点赞数量分布的分析..."
+              outlined
+              rows="3"
+              autogrow
+              placeholder="例如：点赞数分布体现了不同类型内容的受欢迎程度..."
+              @update:model-value="saveAnnotationsToStorage"
+            />
+          </q-card>
+        </div>
+      </div>
+
+      <!-- 综合分类分析 -->
+      <div class="q-mb-lg">
+        <div class="text-h6 q-mb-md">综合分类分析</div>
+
+        <AppKChart
+          data-chart="combined-category-distribution"
+          title="综合分类分析"
+          :option="combinedCategoryDistributionOption"
+          :height="1000"
+          :useImageMode="useImageMode"
+          @rendered="onChartRendered"
+        />
+
+        <div class="q-mt-md">
+          <q-card class="q-pa-md bg-purple-1">
+            <div class="text-subtitle2 q-mb-sm">综合分类分析批注</div>
+            <q-input
+              v-model="annotations.combinedCategory.content"
+              type="textarea"
+              label="在此输入关于综合分类分析的分析..."
+              outlined
+              rows="3"
+              autogrow
+              placeholder="例如：从综合分析可以看出各分类在不同指标上的表现差异..."
+              @update:model-value="saveAnnotationsToStorage"
+            />
+          </q-card>
+        </div>
+      </div>
+    </div>
+
     <!-- 批注汇总 -->
     <div class="q-mt-xl">
       <q-card class="q-pa-lg bg-grey-1">
@@ -1059,6 +1212,11 @@ const annotations = ref<{
   scatter3d: AnnotationItem;
   wordCloud: AnnotationItem;
   combinedTrend: AnnotationItem;
+  categoryPost: AnnotationItem;
+  categoryShare: AnnotationItem;
+  categoryComment: AnnotationItem;
+  categoryLike: AnnotationItem;
+  combinedCategory: AnnotationItem;
 }>({
   table: { content: '' },
   identityRanking: { content: '' },
@@ -1071,6 +1229,11 @@ const annotations = ref<{
   scatter3d: { content: '' },
   wordCloud: { content: '' },
   combinedTrend: { content: '' },
+  categoryPost: { content: '' },
+  categoryShare: { content: '' },
+  categoryComment: { content: '' },
+  categoryLike: { content: '' },
+  combinedCategory: { content: '' },
 });
 
 // 本地存储相关
@@ -1601,13 +1764,18 @@ const getAnnotationLabel = (key: string): string => {
     scatter3d: '3D交互分布图',
     wordCloud: '词云图',
     combinedTrend: '综合互动趋势',
+    categoryPost: '分类推文数量分布',
+    categoryShare: '分类分享数量分布',
+    categoryComment: '分类评论数量分布',
+    categoryLike: '分类点赞数量分布',
+    combinedCategory: '综合分类分析',
   };
   return labelMap[key] || key;
 };
 
 // 图表渲染完成计数器
 const renderedChartsCount = ref(0);
-const totalChartsCount = 8; // 当前组件中的图表总数（增加了综合趋势图）
+const totalChartsCount = 13; // 当前组件中的图表总数（包括分类相关图表）
 
 // 图表渲染完成的回调
 const onChartRendered = () => {
@@ -3322,6 +3490,687 @@ const scatter3DOption = computed(() => {
           itemStyle: {
             opacity: 1,
           },
+        },
+      },
+    ],
+  };
+});
+
+// 分类占比饼图相关计算
+
+// 通用的分类饼图生成函数
+const generateCategoryPieChart = (
+  title: string,
+  metricName: string,
+  getMetricValue: (post: Spec.PostView.Type) => number,
+  formatter: string = '{a} <br/>{b}: {c} ({d}%)',
+): EChartsOption => {
+  // 如果没有分类数据或帖子数据，返回空饼图
+  if (
+    !postCategoryMap ||
+    !categoryData ||
+    postCategoryMap.size === 0 ||
+    categoryData.length === 0 ||
+    postViewList.length === 0
+  ) {
+    return {
+      title: {
+        text: title,
+        left: 'center',
+        top: 20,
+      },
+      tooltip: {
+        trigger: 'item',
+        formatter,
+      },
+      legend: {
+        orient: 'vertical',
+        left: 'left',
+        top: 'middle',
+      },
+      series: [
+        {
+          name: metricName,
+          type: 'pie',
+          radius: '50%',
+          center: ['60%', '50%'],
+          data: [
+            {
+              value: 100,
+              name: '暂无分类数据',
+              itemStyle: {
+                color: '#e0e0e0',
+              },
+            },
+          ],
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)',
+            },
+          },
+        },
+      ],
+    };
+  }
+
+  // 创建帖子ID到帖子对象的映射
+  const postMap = new Map<string, Spec.PostView.Type>();
+  postViewList.forEach((post) => {
+    postMap.set(post.post.id, post);
+  });
+
+  // 统计各分类的指标总数
+  const categoryStats = new Map<string, number>();
+
+  // 初始化所有分类的计数为0
+  categoryData.forEach((category) => {
+    categoryStats.set(category.id, 0);
+  });
+
+  // 统计各分类下的指标总数
+  postCategoryMap.forEach((postIds, categoryId) => {
+    if (categoryStats.has(categoryId)) {
+      const totalMetric = postIds.reduce((sum, postId) => {
+        const post = postMap.get(postId);
+        return sum + (post ? getMetricValue(post) : 0);
+      }, 0);
+      categoryStats.set(categoryId, totalMetric);
+    }
+  });
+
+  // 计算未分类的指标总数
+  const categorizedPostIds = new Set<string>();
+  postCategoryMap.forEach((postIds) => {
+    postIds.forEach((postId) => categorizedPostIds.add(postId));
+  });
+
+  const uncategorizedTotal = postViewList
+    .filter((post) => !categorizedPostIds.has(post.post.id))
+    .reduce((sum, post) => sum + getMetricValue(post), 0);
+
+  // 准备饼图数据
+  const pieData = [];
+
+  // 添加各分类数据
+  categoryData.forEach((category) => {
+    const total = categoryStats.get(category.id) || 0;
+    if (total > 0) {
+      pieData.push({
+        value: total,
+        name: category.name,
+      });
+    }
+  });
+
+  // 添加未分类数据
+  if (uncategorizedTotal > 0) {
+    pieData.push({
+      value: uncategorizedTotal,
+      name: '未分类',
+      itemStyle: {
+        color: '#bdbdbd',
+      },
+    });
+  }
+
+  // 如果没有任何数据，显示提示
+  if (pieData.length === 0) {
+    pieData.push({
+      value: 100,
+      name: '无数据',
+      itemStyle: {
+        color: '#e0e0e0',
+      },
+    });
+  }
+
+  return {
+    title: {
+      text: title,
+      left: 'center',
+      top: 20,
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter,
+    },
+    legend: {
+      orient: 'vertical',
+      left: 'left',
+      top: 'middle',
+    },
+    series: [
+      {
+        name: metricName,
+        type: 'pie',
+        radius: '50%',
+        center: ['60%', '50%'],
+        data: pieData,
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+        label: {
+          show: true,
+          formatter: '{b}: {d}%',
+        },
+      },
+    ],
+  };
+};
+
+// 计算分类占比饼图数据
+const categoryDistributionOption = computed<EChartsOption>(() => {
+  // 如果没有分类数据或帖子数据，返回空饼图
+  if (
+    !postCategoryMap ||
+    !categoryData ||
+    postCategoryMap.size === 0 ||
+    categoryData.length === 0 ||
+    postViewList.length === 0
+  ) {
+    return {
+      title: {
+        text: '分类推文数量分布',
+        left: 'center',
+        top: 20,
+      },
+      tooltip: {
+        trigger: 'item',
+        formatter: '{a} <br/>{b}: {c} ({d}%)',
+      },
+      legend: {
+        orient: 'vertical',
+        left: 'left',
+        top: 'middle',
+      },
+      series: [
+        {
+          name: '分类占比',
+          type: 'pie',
+          radius: '50%',
+          center: ['60%', '50%'],
+          data: [
+            {
+              value: 100,
+              name: '暂无分类数据',
+              itemStyle: {
+                color: '#e0e0e0',
+              },
+            },
+          ],
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)',
+            },
+          },
+        },
+      ],
+    };
+  }
+
+  // 统计各分类的帖子数量
+  const categoryStats = new Map<string, number>();
+
+  // 初始化所有分类的计数为0
+  categoryData.forEach((category) => {
+    categoryStats.set(category.id, 0);
+  });
+
+  // 统计各分类下的帖子数量
+  postCategoryMap.forEach((postIds, categoryId) => {
+    if (categoryStats.has(categoryId)) {
+      categoryStats.set(categoryId, postIds.length);
+    }
+  });
+
+  // 计算未分类的帖子数量
+  const categorizedPostIds = new Set<string>();
+  postCategoryMap.forEach((postIds) => {
+    postIds.forEach((postId) => categorizedPostIds.add(postId));
+  });
+  const uncategorizedCount = postViewList.length - categorizedPostIds.size;
+
+  // 准备饼图数据
+  const pieData = [];
+
+  // 添加各分类数据
+  categoryData.forEach((category) => {
+    const count = categoryStats.get(category.id) || 0;
+    if (count > 0) {
+      pieData.push({
+        value: count,
+        name: category.name,
+      });
+    }
+  });
+
+  // 添加未分类数据
+  if (uncategorizedCount > 0) {
+    pieData.push({
+      value: uncategorizedCount,
+      name: '未分类',
+      itemStyle: {
+        color: '#bdbdbd',
+      },
+    });
+  }
+
+  // 如果没有任何数据，显示提示
+  if (pieData.length === 0) {
+    pieData.push({
+      value: 100,
+      name: '无数据',
+      itemStyle: {
+        color: '#e0e0e0',
+      },
+    });
+  }
+
+  return {
+    title: {
+      text: '分类推文数量分布',
+      left: 'center',
+      top: 20,
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: '{a} <br/>{b}: {c} 个帖子 ({d}%)',
+    },
+    legend: {
+      orient: 'vertical',
+      left: 'left',
+      top: 'middle',
+    },
+    series: [
+      {
+        name: '分类占比',
+        type: 'pie',
+        radius: '50%',
+        center: ['60%', '50%'],
+        data: pieData,
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+        label: {
+          show: true,
+          formatter: '{b}: {d}%',
+        },
+      },
+    ],
+  };
+});
+
+// 分类分享数量分布饼图
+const categoryShareDistributionOption = computed<EChartsOption>(() => {
+  return generateCategoryPieChart(
+    '分类分享数量分布',
+    '分享分布',
+    (post) => {
+      const latestArchive = post.archive.sort(
+        (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+      )[0];
+      return latestArchive?.share || 0;
+    },
+    '{a} <br/>{b}: {c} 次分享 ({d}%)',
+  );
+});
+
+// 分类评论数量分布饼图
+const categoryCommentDistributionOption = computed<EChartsOption>(() => {
+  return generateCategoryPieChart(
+    '分类评论数量分布',
+    '评论分布',
+    (post) => {
+      const latestArchive = post.archive.sort(
+        (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+      )[0];
+      return latestArchive?.comment || 0;
+    },
+    '{a} <br/>{b}: {c} 条评论 ({d}%)',
+  );
+});
+
+// 分类点赞数量分布饼图
+const categoryLikeDistributionOption = computed<EChartsOption>(() => {
+  return generateCategoryPieChart(
+    '分类点赞数量分布',
+    '点赞分布',
+    (post) => {
+      const latestArchive = post.archive.sort(
+        (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+      )[0];
+      return latestArchive?.like || 0;
+    },
+    '{a} <br/>{b}: {c} 次点赞 ({d}%)',
+  );
+});
+
+// 综合分类分析饼图（2x2布局）
+const combinedCategoryDistributionOption = computed<EChartsOption>(() => {
+  // 如果没有分类数据或帖子数据，返回空图表
+  if (
+    !postCategoryMap ||
+    !categoryData ||
+    postCategoryMap.size === 0 ||
+    categoryData.length === 0 ||
+    postViewList.length === 0
+  ) {
+    return {
+      title: {
+        text: '综合分类分析',
+        left: 'center',
+        top: 20,
+      },
+      graphic: {
+        type: 'text',
+        left: 'center',
+        top: 'middle',
+        style: {
+          text: '暂无分类数据',
+          fontSize: 16,
+          fill: '#999',
+        },
+      },
+    };
+  }
+
+  // 创建帖子ID到帖子对象的映射
+  const postMap = new Map<string, Spec.PostView.Type>();
+  postViewList.forEach((post) => {
+    postMap.set(post.post.id, post);
+  });
+
+  // 统计各分类的各项指标
+  const categoryPostStats = new Map<string, number>();
+  const categoryShareStats = new Map<string, number>();
+  const categoryCommentStats = new Map<string, number>();
+  const categoryLikeStats = new Map<string, number>();
+
+  // 初始化所有分类的计数为0
+  categoryData.forEach((category) => {
+    categoryPostStats.set(category.id, 0);
+    categoryShareStats.set(category.id, 0);
+    categoryCommentStats.set(category.id, 0);
+    categoryLikeStats.set(category.id, 0);
+  });
+
+  // 统计各分类的数据
+  postCategoryMap.forEach((postIds, categoryId) => {
+    if (categoryPostStats.has(categoryId)) {
+      categoryPostStats.set(categoryId, postIds.length);
+
+      const shareTotal = postIds.reduce((sum, postId) => {
+        const post = postMap.get(postId);
+        if (post) {
+          const latestArchive = post.archive.sort(
+            (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+          )[0];
+          return sum + (latestArchive?.share || 0);
+        }
+        return sum;
+      }, 0);
+      categoryShareStats.set(categoryId, shareTotal);
+
+      const commentTotal = postIds.reduce((sum, postId) => {
+        const post = postMap.get(postId);
+        if (post) {
+          const latestArchive = post.archive.sort(
+            (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+          )[0];
+          return sum + (latestArchive?.comment || 0);
+        }
+        return sum;
+      }, 0);
+      categoryCommentStats.set(categoryId, commentTotal);
+
+      const likeTotal = postIds.reduce((sum, postId) => {
+        const post = postMap.get(postId);
+        if (post) {
+          const latestArchive = post.archive.sort(
+            (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+          )[0];
+          return sum + (latestArchive?.like || 0);
+        }
+        return sum;
+      }, 0);
+      categoryLikeStats.set(categoryId, likeTotal);
+    }
+  });
+
+  // 计算未分类的数据
+  const categorizedPostIds = new Set<string>();
+  postCategoryMap.forEach((postIds) => {
+    postIds.forEach((postId) => categorizedPostIds.add(postId));
+  });
+
+  const uncategorizedPosts = postViewList.filter((post) => !categorizedPostIds.has(post.post.id));
+  const uncategorizedPostCount = uncategorizedPosts.length;
+  const uncategorizedShareTotal = uncategorizedPosts.reduce((sum, post) => {
+    const latestArchive = post.archive.sort(
+      (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+    )[0];
+    return sum + (latestArchive?.share || 0);
+  }, 0);
+  const uncategorizedCommentTotal = uncategorizedPosts.reduce((sum, post) => {
+    const latestArchive = post.archive.sort(
+      (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+    )[0];
+    return sum + (latestArchive?.comment || 0);
+  }, 0);
+  const uncategorizedLikeTotal = uncategorizedPosts.reduce((sum, post) => {
+    const latestArchive = post.archive.sort(
+      (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
+    )[0];
+    return sum + (latestArchive?.like || 0);
+  }, 0);
+
+  // 生成各个饼图的数据
+  const generatePieData = (statsMap: Map<string, number>, uncategorizedValue: number) => {
+    const pieData = [];
+
+    categoryData.forEach((category) => {
+      const value = statsMap.get(category.id) || 0;
+      if (value > 0) {
+        pieData.push({
+          value,
+          name: category.name,
+        });
+      }
+    });
+
+    if (uncategorizedValue > 0) {
+      pieData.push({
+        value: uncategorizedValue,
+        name: '未分类',
+        itemStyle: {
+          color: '#bdbdbd',
+        },
+      });
+    }
+
+    if (pieData.length === 0) {
+      pieData.push({
+        value: 100,
+        name: '无数据',
+        itemStyle: {
+          color: '#e0e0e0',
+        },
+      });
+    }
+
+    return pieData;
+  };
+
+  return {
+    tooltip: {
+      trigger: 'item',
+      formatter: '{a}<br/>{b}: {c} ({d}%)',
+    },
+    series: [
+      {
+        name: '推文数量分布',
+        type: 'pie',
+        radius: '35%',
+        center: ['25%', '30%'],
+        data: generatePieData(categoryPostStats, uncategorizedPostCount),
+        label: {
+          show: true,
+          position: 'outside',
+          formatter: '{b}\n{d}%',
+          fontSize: 9,
+          color: '#333',
+        },
+        labelLine: {
+          show: true,
+          length: 6,
+          length2: 2,
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+      },
+      {
+        name: '分享数量分布',
+        type: 'pie',
+        radius: '35%',
+        center: ['75%', '30%'],
+        data: generatePieData(categoryShareStats, uncategorizedShareTotal),
+        label: {
+          show: true,
+          position: 'outside',
+          formatter: '{b}\n{d}%',
+          fontSize: 9,
+          color: '#333',
+        },
+        labelLine: {
+          show: true,
+          length: 6,
+          length2: 2,
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+      },
+      {
+        name: '评论数量分布',
+        type: 'pie',
+        radius: '35%',
+        center: ['25%', '75%'],
+        data: generatePieData(categoryCommentStats, uncategorizedCommentTotal),
+        label: {
+          show: true,
+          position: 'outside',
+          formatter: '{b}\n{d}%',
+          fontSize: 9,
+          color: '#333',
+        },
+        labelLine: {
+          show: true,
+          length: 6,
+          length2: 2,
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+      },
+      {
+        name: '点赞数量分布',
+        type: 'pie',
+        radius: '35%',
+        center: ['75%', '75%'],
+        data: generatePieData(categoryLikeStats, uncategorizedLikeTotal),
+        label: {
+          show: true,
+          position: 'outside',
+          formatter: '{b}\n{d}%',
+          fontSize: 9,
+          color: '#333',
+        },
+        labelLine: {
+          show: true,
+          length: 6,
+          length2: 2,
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+      },
+    ],
+    graphic: [
+      {
+        type: 'text',
+        left: '25%',
+        top: '8%',
+        style: {
+          text: '推文数量占比',
+          textAlign: 'center',
+          fontSize: 16,
+          fontWeight: 'bold',
+          fill: '#1976d2',
+        },
+      },
+      {
+        type: 'text',
+        left: '75%',
+        top: '8%',
+        style: {
+          text: '分享数量占比',
+          textAlign: 'center',
+          fontSize: 16,
+          fontWeight: 'bold',
+          fill: '#388e3c',
+        },
+      },
+      {
+        type: 'text',
+        left: '25%',
+        top: '53%',
+        style: {
+          text: '评论数量占比',
+          textAlign: 'center',
+          fontSize: 16,
+          fontWeight: 'bold',
+          fill: '#f57c00',
+        },
+      },
+      {
+        type: 'text',
+        left: '75%',
+        top: '53%',
+        style: {
+          text: '点赞数量占比',
+          textAlign: 'center',
+          fontSize: 16,
+          fontWeight: 'bold',
+          fill: '#d32f2f',
         },
       },
     ],
