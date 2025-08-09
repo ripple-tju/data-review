@@ -572,10 +572,22 @@
                     权重: {{ influenceCoefficients.engagement.shareVolume.weight }}
                   </div>
                 </div>
+                <div v-else-if="col.name === 'shareGrowthCycle'" class="text-center">
+                  <div>转发增长周期</div>
+                  <div class="text-caption">
+                    权重: {{ influenceCoefficients.engagement.shareGrowthCycle.weight }}
+                  </div>
+                </div>
                 <div v-else-if="col.name === 'commentVolume'" class="text-center">
                   <div>评论量</div>
                   <div class="text-caption">
                     权重: {{ influenceCoefficients.engagement.commentVolume.weight }}
+                  </div>
+                </div>
+                <div v-else-if="col.name === 'commentGrowthCycle'" class="text-center">
+                  <div>评论增长周期</div>
+                  <div class="text-caption">
+                    权重: {{ influenceCoefficients.engagement.commentGrowthCycle.weight }}
                   </div>
                 </div>
                 <div v-else-if="col.name === 'likeVolume'" class="text-center">
@@ -2451,11 +2463,17 @@ const identityRankingList = computed(() => {
     visibilityScore: item.influence.visibility.visibilityScore,
     engagementScore: item.influence.engagement.engagementScore,
     sentimentScore: item.influence.sentiment.sentimentScore,
+    // 可见度指标
     contentVolume: item.influence.visibility.contentVolume,
     contentStability: item.influence.visibility.contentStability,
     domainCoverage: item.influence.visibility.domainCoverage,
+    // 讨论度指标
+    shareVolume: item.influence.engagement.shareVolume,
     shareGrowthCycle: item.influence.engagement.shareGrowthCycle,
+    commentVolume: item.influence.engagement.commentVolume,
     commentGrowthCycle: item.influence.engagement.commentGrowthCycle,
+    // 认同度指标
+    likeVolume: item.influence.sentiment.likeVolume,
     commentAlignment: item.influence.sentiment.commentAlignment,
     alignmentTrend: item.influence.sentiment.alignmentTrend,
   }));
@@ -2558,29 +2576,38 @@ const identityColumns = computed(() => [
   {
     name: 'shareVolume',
     label: '转发量',
-    field: 'totalShares',
+    field: 'shareVolume',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
     format: (val: number) => val.toFixed(0),
+  },
+  {
+    name: 'shareGrowthCycle',
+    label: '转发增长周期',
+    field: 'shareGrowthCycle',
+    align: 'center' as const,
+    headerStyle: 'width: 100px;',
+    sortable: true,
+    format: (val: number) => val.toFixed(1),
   },
   {
     name: 'commentVolume',
     label: '评论量',
-    field: 'totalComments',
+    field: 'commentVolume',
     align: 'center' as const,
     headerStyle: 'width: 90px;',
     sortable: true,
     format: (val: number) => val.toFixed(0),
   },
   {
-    name: 'likeVolume',
-    label: '点赞量',
-    field: 'totalLikes',
+    name: 'commentGrowthCycle',
+    label: '评论增长周期',
+    field: 'commentGrowthCycle',
     align: 'center' as const,
-    headerStyle: 'width: 90px;',
+    headerStyle: 'width: 100px;',
     sortable: true,
-    format: (val: number) => val.toFixed(0),
+    format: (val: number) => val.toFixed(1),
   },
   // 认同度大项
   {
@@ -2591,6 +2618,15 @@ const identityColumns = computed(() => [
     headerStyle: 'width: 100px; font-weight: bold; background-color: #f3e5f5;',
     sortable: true,
     format: (val: number) => val.toFixed(2),
+  },
+  {
+    name: 'likeVolume',
+    label: '点赞量',
+    field: 'likeVolume',
+    align: 'center' as const,
+    headerStyle: 'width: 90px;',
+    sortable: true,
+    format: (val: number) => val.toFixed(0),
   },
   {
     name: 'commentAlignment',
