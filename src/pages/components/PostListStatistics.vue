@@ -165,14 +165,52 @@
           </div>
 
           <div class="row">
-            <!-- 可见度系数 -->
+            <!-- 可见度 -->
             <div class="col-4">
               <q-card flat bordered class="q-pa-sm q-mr-xs">
                 <div class="text-subtitle2 q-mb-sm text-blue text-center">
                   <q-icon name="visibility" class="q-mr-xs" />
-                  可见度系数
+                  可见度
                 </div>
 
+                <!-- 大项参数设置 -->
+                <div class="q-mb-md">
+                  <div class="text-caption q-mb-xs text-weight-bold text-blue">
+                    可见度权重和对数缩放参数
+                  </div>
+                  <div class="row q-gutter-xs q-mb-sm">
+                    <q-input
+                      v-model.number="influenceCoefficients.categoryWeights.visibility"
+                      label="可见度权重"
+                      type="number"
+                      step="0.1"
+                      outlined
+                      dense
+                      class="col"
+                    />
+                    <q-input
+                      v-model.number="influenceCoefficients.categoryScaling.visibility.k"
+                      label="敏感度k"
+                      type="number"
+                      step="10"
+                      outlined
+                      dense
+                      class="col"
+                    />
+                    <q-input
+                      v-model.number="influenceCoefficients.categoryScaling.visibility.xmax"
+                      label="最大值"
+                      type="number"
+                      step="10"
+                      outlined
+                      dense
+                      class="col"
+                    />
+                  </div>
+                  <q-separator class="q-mb-sm" />
+                </div>
+
+                <!-- 小项参数设置 -->
                 <div class="text-caption q-mb-xs text-weight-bold">内容发布总量</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
@@ -204,7 +242,7 @@
                   />
                 </div>
 
-                <div class="text-caption q-mb-xs text-weight-bold">内容稳定性</div>
+                <div class="text-caption q-mb-xs text-weight-bold">内容发布稳定性</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
                     v-model.number="influenceCoefficients.visibility.contentStability.weight"
@@ -235,7 +273,7 @@
                   />
                 </div>
 
-                <div class="text-caption q-mb-xs text-weight-bold">领域覆盖率</div>
+                <div class="text-caption q-mb-xs text-weight-bold">内容发布主要领域覆盖率</div>
                 <div class="row q-gutter-xs">
                   <q-input
                     v-model.number="influenceCoefficients.visibility.domainCoverage.weight"
@@ -268,15 +306,53 @@
               </q-card>
             </div>
 
-            <!-- 讨论度系数 -->
+            <!-- 讨论度 -->
             <div class="col-4">
               <q-card flat bordered class="q-pa-sm q-mx-xs">
                 <div class="text-subtitle2 q-mb-sm text-orange text-center">
                   <q-icon name="forum" class="q-mr-xs" />
-                  讨论度系数
+                  讨论度
                 </div>
 
-                <div class="text-caption q-mb-xs text-weight-bold">转发总量</div>
+                <!-- 大项参数设置 -->
+                <div class="q-mb-md">
+                  <div class="text-caption q-mb-xs text-weight-bold text-orange">
+                    讨论度权重和对数缩放参数
+                  </div>
+                  <div class="row q-gutter-xs q-mb-sm">
+                    <q-input
+                      v-model.number="influenceCoefficients.categoryWeights.engagement"
+                      label="讨论度权重"
+                      type="number"
+                      step="0.1"
+                      outlined
+                      dense
+                      class="col"
+                    />
+                    <q-input
+                      v-model.number="influenceCoefficients.categoryScaling.engagement.k"
+                      label="敏感度k"
+                      type="number"
+                      step="10"
+                      outlined
+                      dense
+                      class="col"
+                    />
+                    <q-input
+                      v-model.number="influenceCoefficients.categoryScaling.engagement.xmax"
+                      label="最大值"
+                      type="number"
+                      step="10"
+                      outlined
+                      dense
+                      class="col"
+                    />
+                  </div>
+                  <q-separator class="q-mb-sm" />
+                </div>
+
+                <!-- 小项参数设置 -->
+                <div class="text-caption q-mb-xs text-weight-bold">推文转发总量</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
                     v-model.number="influenceCoefficients.engagement.shareVolume.weight"
@@ -338,7 +414,7 @@
                   />
                 </div>
 
-                <div class="text-caption q-mb-xs text-weight-bold">评论总量</div>
+                <div class="text-caption q-mb-xs text-weight-bold">推文评论总量</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
                     v-model.number="influenceCoefficients.engagement.commentVolume.weight"
@@ -402,14 +478,52 @@
               </q-card>
             </div>
 
-            <!-- 认同度系数 -->
+            <!-- 认同度 -->
             <div class="col-4">
               <q-card flat bordered class="q-pa-sm q-ml-xs">
                 <div class="text-subtitle2 q-mb-sm text-pink text-center">
                   <q-icon name="favorite" class="q-mr-xs" />
-                  认同度系数
+                  认同度
                 </div>
 
+                <!-- 大项参数设置 -->
+                <div class="q-mb-md">
+                  <div class="text-caption q-mb-xs text-weight-bold text-pink">
+                    认同度权重和对数缩放参数
+                  </div>
+                  <div class="row q-gutter-xs q-mb-sm">
+                    <q-input
+                      v-model.number="influenceCoefficients.categoryWeights.sentiment"
+                      label="认同度权重"
+                      type="number"
+                      step="0.1"
+                      outlined
+                      dense
+                      class="col"
+                    />
+                    <q-input
+                      v-model.number="influenceCoefficients.categoryScaling.sentiment.k"
+                      label="敏感度k"
+                      type="number"
+                      step="10"
+                      outlined
+                      dense
+                      class="col"
+                    />
+                    <q-input
+                      v-model.number="influenceCoefficients.categoryScaling.sentiment.xmax"
+                      label="最大值"
+                      type="number"
+                      step="10"
+                      outlined
+                      dense
+                      class="col"
+                    />
+                  </div>
+                  <q-separator class="q-mb-sm" />
+                </div>
+
+                <!-- 小项参数设置 -->
                 <div class="text-caption q-mb-xs text-weight-bold">点赞总量</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
@@ -472,7 +586,7 @@
                   />
                 </div>
 
-                <div class="text-caption q-mb-xs text-weight-bold">同向变化趋势</div>
+                <div class="text-caption q-mb-xs text-weight-bold">评论同向变化</div>
                 <div class="row q-gutter-xs">
                   <q-input
                     v-model.number="influenceCoefficients.sentiment.alignmentTrend.weight"
@@ -528,7 +642,7 @@
           :rows="identityRankingList"
           :columns="identityColumns"
           class="fixed-layout-table"
-          table-style="min-width: 1400px;"
+          table-style="min-width: 1800px;"
         >
           <!-- 自定义表头 -->
           <template #header="props">
@@ -2465,17 +2579,27 @@ const identityRankingList = computed(() => {
     sentimentScore: item.influence.sentiment.sentimentScore,
     // 可见度指标
     contentVolume: item.influence.visibility.contentVolume,
+    contentVolumeScore: item.influence.visibility.contentVolumeScore,
     contentStability: item.influence.visibility.contentStability,
+    contentStabilityScore: item.influence.visibility.contentStabilityScore,
     domainCoverage: item.influence.visibility.domainCoverage,
+    domainCoverageScore: item.influence.visibility.domainCoverageScore,
     // 讨论度指标
     shareVolume: item.influence.engagement.shareVolume,
+    shareVolumeScore: item.influence.engagement.shareVolumeScore,
     shareGrowthCycle: item.influence.engagement.shareGrowthCycle,
+    shareGrowthCycleScore: item.influence.engagement.shareGrowthCycleScore,
     commentVolume: item.influence.engagement.commentVolume,
+    commentVolumeScore: item.influence.engagement.commentVolumeScore,
     commentGrowthCycle: item.influence.engagement.commentGrowthCycle,
+    commentGrowthCycleScore: item.influence.engagement.commentGrowthCycleScore,
     // 认同度指标
     likeVolume: item.influence.sentiment.likeVolume,
+    likeVolumeScore: item.influence.sentiment.likeVolumeScore,
     commentAlignment: item.influence.sentiment.commentAlignment,
+    commentAlignmentScore: item.influence.sentiment.commentAlignmentScore,
     alignmentTrend: item.influence.sentiment.alignmentTrend,
+    alignmentTrendScore: item.influence.sentiment.alignmentTrendScore,
   }));
 
   const endTime = performance.now();
@@ -2538,30 +2662,30 @@ const identityColumns = computed(() => [
   },
   {
     name: 'contentVolume',
-    label: '内容总量',
+    label: '内容发布总量',
     field: 'contentVolume',
     align: 'center' as const,
-    headerStyle: 'width: 90px;',
+    headerStyle: 'width: 110px;',
     sortable: true,
-    format: (val: number) => val.toFixed(0),
+    format: (val: number, row: any) => `${row.contentVolumeScore.toFixed(0)}(${val.toFixed(0)})`,
   },
   {
     name: 'contentStability',
-    label: '稳定性',
+    label: '内容发布稳定性',
     field: 'contentStability',
     align: 'center' as const,
-    headerStyle: 'width: 90px;',
+    headerStyle: 'width: 110px;',
     sortable: true,
-    format: (val: number) => val.toFixed(2),
+    format: (val: number, row: any) => `${row.contentStabilityScore.toFixed(1)}(${val.toFixed(2)})`,
   },
   {
     name: 'domainCoverage',
-    label: '领域覆盖',
+    label: '内容发布主要领域覆盖率',
     field: 'domainCoverage',
     align: 'center' as const,
-    headerStyle: 'width: 90px;',
+    headerStyle: 'width: 130px;',
     sortable: true,
-    format: (val: number) => val.toFixed(2),
+    format: (val: number, row: any) => `${row.domainCoverageScore.toFixed(1)}(${val.toFixed(2)})`,
   },
   // 讨论度大项
   {
@@ -2575,39 +2699,40 @@ const identityColumns = computed(() => [
   },
   {
     name: 'shareVolume',
-    label: '转发量',
+    label: '推文转发总量',
     field: 'shareVolume',
     align: 'center' as const,
-    headerStyle: 'width: 90px;',
+    headerStyle: 'width: 120px;',
     sortable: true,
-    format: (val: number) => val.toFixed(0),
+    format: (val: number, row: any) => `${row.shareVolumeScore.toFixed(0)}(${val.toFixed(0)})`,
   },
   {
     name: 'shareGrowthCycle',
     label: '转发增长周期',
     field: 'shareGrowthCycle',
     align: 'center' as const,
-    headerStyle: 'width: 100px;',
+    headerStyle: 'width: 120px;',
     sortable: true,
-    format: (val: number) => val.toFixed(1),
+    format: (val: number, row: any) => `${row.shareGrowthCycleScore.toFixed(1)}(${val.toFixed(1)})`,
   },
   {
     name: 'commentVolume',
-    label: '评论量',
+    label: '推文评论总量',
     field: 'commentVolume',
     align: 'center' as const,
-    headerStyle: 'width: 90px;',
+    headerStyle: 'width: 120px;',
     sortable: true,
-    format: (val: number) => val.toFixed(0),
+    format: (val: number, row: any) => `${row.commentVolumeScore.toFixed(0)}(${val.toFixed(0)})`,
   },
   {
     name: 'commentGrowthCycle',
     label: '评论增长周期',
     field: 'commentGrowthCycle',
     align: 'center' as const,
-    headerStyle: 'width: 100px;',
+    headerStyle: 'width: 120px;',
     sortable: true,
-    format: (val: number) => val.toFixed(1),
+    format: (val: number, row: any) =>
+      `${row.commentGrowthCycleScore.toFixed(1)}(${val.toFixed(1)})`,
   },
   // 认同度大项
   {
@@ -2621,30 +2746,30 @@ const identityColumns = computed(() => [
   },
   {
     name: 'likeVolume',
-    label: '点赞量',
+    label: '点赞总量',
     field: 'likeVolume',
     align: 'center' as const,
-    headerStyle: 'width: 90px;',
+    headerStyle: 'width: 110px;',
     sortable: true,
-    format: (val: number) => val.toFixed(0),
+    format: (val: number, row: any) => `${row.likeVolumeScore.toFixed(0)}(${val.toFixed(0)})`,
   },
   {
     name: 'commentAlignment',
-    label: '同向性',
+    label: '评论同向性',
     field: 'commentAlignment',
     align: 'center' as const,
-    headerStyle: 'width: 90px;',
+    headerStyle: 'width: 110px;',
     sortable: true,
-    format: (val: number) => val.toFixed(3),
+    format: (val: number, row: any) => `${row.commentAlignmentScore.toFixed(1)}(${val.toFixed(3)})`,
   },
   {
     name: 'alignmentTrend',
-    label: '变化趋势',
+    label: '评论同向变化',
     field: 'alignmentTrend',
     align: 'center' as const,
-    headerStyle: 'width: 90px;',
+    headerStyle: 'width: 120px;',
     sortable: true,
-    format: (val: number) => val.toFixed(3),
+    format: (val: number, row: any) => `${row.alignmentTrendScore.toFixed(1)}(${val.toFixed(3)})`,
   },
 ]);
 

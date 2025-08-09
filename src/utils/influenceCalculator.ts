@@ -30,23 +30,36 @@ export const toPercentageScore = (normalizedValue: number): number => {
  */
 export interface InfluenceMetrics {
   visibility: {
-    contentVolume: number; // 内容发布总量 - 账号在过去一周发布的内容总量
-    contentStability: number; // 内容发布稳定性 - 账号在过去一周内容发布量的方差
-    domainCoverage: number; // 内容发布主要领域覆盖率 - 一周内账号原创内容各分类的比重
+    contentVolume: number; // 内容发布总量原始值
+    contentStability: number; // 内容发布稳定性原始值
+    domainCoverage: number; // 内容发布主要领域覆盖率原始值
     visibilityScore: number; // 可见度综合得分
+    // 处理后的分值
+    contentVolumeScore: number; // 内容发布总量分值 (0-100)
+    contentStabilityScore: number; // 内容发布稳定性分值 (0-100)
+    domainCoverageScore: number; // 领域覆盖率分值 (0-100)
   };
   engagement: {
-    shareVolume: number; // 推文转发总量 - 账号在过去一周发布内容的转发总量
-    shareGrowthCycle: number; // 转发增长周期 - 推文转发量持续增长的平均周期
-    commentVolume: number; // 推文评论总量 - 账号在过去一周发布内容的评论总量
-    commentGrowthCycle: number; // 评论增长周期 - 推文评论量持续增长的平均周期
+    shareVolume: number; // 推文转发总量原始值
+    shareGrowthCycle: number; // 转发增长周期原始值
+    commentVolume: number; // 推文评论总量原始值
+    commentGrowthCycle: number; // 评论增长周期原始值
     engagementScore: number; // 讨论度综合得分
+    // 处理后的分值
+    shareVolumeScore: number; // 转发量分值 (0-100)
+    shareGrowthCycleScore: number; // 转发增长周期分值 (0-100)
+    commentVolumeScore: number; // 评论量分值 (0-100)
+    commentGrowthCycleScore: number; // 评论增长周期分值 (0-100)
   };
   sentiment: {
-    likeVolume: number; // 点赞总量 - 账号在过去一周发布内容的点赞总量
-    commentAlignment: number; // 评论同向性 - 转发文本与推送文本的同向程度
-    alignmentTrend: number; // 评论同向变化 - 评论文本与推送文本同向程度的变化趋势
+    likeVolume: number; // 点赞总量原始值
+    commentAlignment: number; // 评论同向性原始值
+    alignmentTrend: number; // 评论同向变化原始值
     sentimentScore: number; // 认同度综合得分
+    // 处理后的分值
+    likeVolumeScore: number; // 点赞量分值 (0-100)
+    commentAlignmentScore: number; // 同向性分值 (0-100)
+    alignmentTrendScore: number; // 变化趋势分值 (0-100)
   };
   overallScore: number; // 综合影响力得分 (0-100)
 }
@@ -260,6 +273,10 @@ const calculateVisibilityMetrics = (
     contentStability,
     domainCoverage,
     visibilityScore: 0, // 暂时设置为0，将通过系数计算
+    // 分值字段，暂时设为0，将在系数计算中填充
+    contentVolumeScore: 0,
+    contentStabilityScore: 0,
+    domainCoverageScore: 0,
   };
 };
 
@@ -317,6 +334,11 @@ const calculateEngagementMetricsForIdentity = (
     commentVolume,
     commentGrowthCycle,
     engagementScore: 0, // 暂时设置为0，将通过系数计算
+    // 分值字段，暂时设为0，将在系数计算中填充
+    shareVolumeScore: 0,
+    shareGrowthCycleScore: 0,
+    commentVolumeScore: 0,
+    commentGrowthCycleScore: 0,
   };
 };
 
@@ -414,6 +436,10 @@ const calculateSentimentMetrics = (
     commentAlignment,
     alignmentTrend,
     sentimentScore: 0, // 暂时设置为0，将通过系数计算
+    // 分值字段，暂时设为0，将在系数计算中填充
+    likeVolumeScore: 0,
+    commentAlignmentScore: 0,
+    alignmentTrendScore: 0,
   };
 };
 
@@ -610,6 +636,18 @@ export interface InfluenceWeights {
  * 影响力系数配置接口 - 各小项计算参数
  */
 export interface InfluenceCoefficients {
+  // 三大类别权重
+  categoryWeights: {
+    visibility: number; // 内容发布指标权重
+    engagement: number; // 传播参与指标权重
+    sentiment: number; // 情感认同指标权重
+  };
+  // 大项对数缩放参数
+  categoryScaling: {
+    visibility: { k: number; xmax: number }; // 内容发布指标对数缩放参数
+    engagement: { k: number; xmax: number }; // 传播参与指标对数缩放参数
+    sentiment: { k: number; xmax: number }; // 情感认同指标对数缩放参数
+  };
   visibility: {
     contentVolume: MetricConfig; // 内容总量配置
     contentStability: MetricConfig; // 稳定性配置
@@ -641,6 +679,16 @@ export const DEFAULT_INFLUENCE_WEIGHTS: InfluenceWeights = {
  * 默认影响力系数配置
  */
 export const DEFAULT_INFLUENCE_COEFFICIENTS: InfluenceCoefficients = {
+  categoryWeights: {
+    visibility: 0.33, // 内容发布指标权重
+    engagement: 0.33, // 传播参与指标权重
+    sentiment: 0.34, // 情感认同指标权重
+  },
+  categoryScaling: {
+    visibility: { k: 1000, xmax: 110 }, // 内容发布指标对数缩放参数（k很大，0-100几乎线性，仅对>100进行轻微压缩）
+    engagement: { k: 1000, xmax: 110 }, // 传播参与指标对数缩放参数（k很大，0-100几乎线性，仅对>100进行轻微压缩）
+    sentiment: { k: 1000, xmax: 110 }, // 情感认同指标对数缩放参数（k很大，0-100几乎线性，仅对>100进行轻微压缩）
+  },
   visibility: {
     contentVolume: { weight: 0.4, k: 10, xmax: 50 }, // 内容总量配置
     contentStability: { weight: 0.3, k: 1, xmax: 5 }, // 稳定性配置（标准差）
@@ -655,7 +703,7 @@ export const DEFAULT_INFLUENCE_COEFFICIENTS: InfluenceCoefficients = {
   sentiment: {
     likeVolume: { weight: 0.5, k: 1000, xmax: 100000 }, // 点赞量配置
     commentAlignment: { weight: 0.3, k: 0.1, xmax: 1 }, // 同向性配置
-    alignmentTrend: { weight: 0.2, k: 0.1, xmax: 1 }, // 变化趋势配置
+    alignmentTrend: { weight: 0.2, k: 0.5, xmax: 3 }, // 变化趋势配置
   },
 };
 
@@ -669,7 +717,6 @@ export const DEFAULT_INFLUENCE_COEFFICIENTS: InfluenceCoefficients = {
 export const calculateInfluenceWithCoefficients = (
   metrics: InfluenceMetrics,
   coefficients: InfluenceCoefficients,
-  weights: InfluenceWeights = DEFAULT_INFLUENCE_WEIGHTS,
 ): InfluenceMetrics => {
   console.log('🧮 [新算法] 开始使用对数缩放计算影响力得分...');
 
@@ -708,8 +755,8 @@ export const calculateInfluenceWithCoefficients = (
     domainCoverageScore * coefficients.visibility.domainCoverage.weight;
 
   const visibilityScaled = logarithmicScaling(visibilityWeightedSum, {
-    k: weights.visibility.k,
-    xmax: weights.visibility.xmax,
+    k: coefficients.categoryScaling.visibility.k,
+    xmax: coefficients.categoryScaling.visibility.xmax,
   });
   const visibilityScore = toPercentageScore(visibilityScaled);
 
@@ -746,8 +793,8 @@ export const calculateInfluenceWithCoefficients = (
     commentGrowthCycleScore * coefficients.engagement.commentGrowthCycle.weight;
 
   const engagementScaled = logarithmicScaling(engagementWeightedSum, {
-    k: weights.engagement.k,
-    xmax: weights.engagement.xmax,
+    k: coefficients.categoryScaling.engagement.k,
+    xmax: coefficients.categoryScaling.engagement.xmax,
   });
   const engagementScore = toPercentageScore(engagementScaled);
 
@@ -783,16 +830,16 @@ export const calculateInfluenceWithCoefficients = (
     alignmentTrendScore * coefficients.sentiment.alignmentTrend.weight;
 
   const sentimentScaled = logarithmicScaling(sentimentWeightedSum, {
-    k: weights.sentiment.k,
-    xmax: weights.sentiment.xmax,
+    k: coefficients.categoryScaling.sentiment.k,
+    xmax: coefficients.categoryScaling.sentiment.xmax,
   });
   const sentimentScore = toPercentageScore(sentimentScaled);
 
   // ===== 计算总体得分 =====
   const overallWeightedSum =
-    visibilityScore * weights.visibility.weight +
-    engagementScore * weights.engagement.weight +
-    sentimentScore * weights.sentiment.weight;
+    visibilityScore * coefficients.categoryWeights.visibility +
+    engagementScore * coefficients.categoryWeights.engagement +
+    sentimentScore * coefficients.categoryWeights.sentiment;
 
   const overallScore = Math.round(overallWeightedSum * 100) / 100;
 
@@ -807,14 +854,24 @@ export const calculateInfluenceWithCoefficients = (
     visibility: {
       ...metrics.visibility,
       visibilityScore,
+      contentVolumeScore,
+      contentStabilityScore,
+      domainCoverageScore,
     },
     engagement: {
       ...metrics.engagement,
       engagementScore,
+      shareVolumeScore,
+      shareGrowthCycleScore,
+      commentVolumeScore,
+      commentGrowthCycleScore,
     },
     sentiment: {
       ...metrics.sentiment,
       sentimentScore,
+      likeVolumeScore,
+      commentAlignmentScore,
+      alignmentTrendScore,
     },
     overallScore,
   };
@@ -841,7 +898,6 @@ export const calculateInfluenceRanking = (
   selectedDates: string[] = [],
   timeRangeDays: number = 7,
   coefficients: InfluenceCoefficients = DEFAULT_INFLUENCE_COEFFICIENTS,
-  weights: InfluenceWeights = DEFAULT_INFLUENCE_WEIGHTS,
 ): InfluenceRankingItem[] => {
   console.log('🏆 [影响力排名] 开始计算影响力排行榜...');
 
@@ -856,8 +912,8 @@ export const calculateInfluenceRanking = (
       timeRangeDays,
     );
 
-    // 然后使用系数和权重计算最终得分
-    const influence = calculateInfluenceWithCoefficients(rawInfluence, coefficients, weights);
+    // 然后使用系数计算最终得分
+    const influence = calculateInfluenceWithCoefficients(rawInfluence, coefficients);
 
     return {
       name: group.name,
