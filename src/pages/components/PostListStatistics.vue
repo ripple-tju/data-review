@@ -1054,6 +1054,248 @@
         </q-table>
       </div>
 
+      <!-- 影响力计算模型说明 -->
+      <div class="q-mt-lg">
+        <q-card class="q-pa-lg bg-grey-1">
+          <div class="text-h6 q-mb-md">
+            <q-icon name="calculate" class="q-mr-sm" />
+            影响力计算模型说明
+          </div>
+
+          <div class="q-mb-lg">
+            <div class="text-subtitle1 q-mb-sm text-weight-bold">计算公式</div>
+            <div class="q-mb-md">
+              <div class="text-body1 q-mb-sm">
+                <strong>综合影响力 = 可见度 × 30% + 讨论度 × 30% + 认同度 × 40%</strong>
+              </div>
+              <div class="text-caption text-grey-7">
+                每个大项经过内部加权计算后，再使用对数缩放函数归一化到0-100分值
+              </div>
+            </div>
+
+            <div class="q-mb-lg">
+              <div class="text-subtitle2 q-mb-sm text-blue text-weight-bold">可见度 (30%)</div>
+              <div class="q-ml-md">
+                <div class="q-mb-sm">
+                  • <strong>内容发布总量 (40%)</strong>：账号在选定时间范围内发布的内容总量
+                </div>
+                <div class="q-mb-sm">
+                  •
+                  <strong>内容发布稳定性 (40%)</strong
+                  >：发布量的标准差，值越小表示发布越稳定，得分越高
+                </div>
+                <div class="q-mb-sm">
+                  • <strong>内容发布主要领域覆盖率 (20%)</strong>：在主要领域分类中的内容占比
+                </div>
+              </div>
+            </div>
+
+            <div class="q-mb-lg">
+              <div class="text-subtitle2 q-mb-sm text-orange text-weight-bold">讨论度 (30%)</div>
+              <div class="q-ml-md">
+                <div class="q-mb-sm">
+                  • <strong>推文转发总量 (33%)</strong>：账号发布内容的转发总量
+                </div>
+                <div class="q-mb-sm">
+                  • <strong>转发增长周期 (17%)</strong>：转发量持续增长的平均周期，周期越长得分越高
+                </div>
+                <div class="q-mb-sm">
+                  • <strong>推文评论总量 (33%)</strong>：账号发布内容的评论总量
+                </div>
+                <div class="q-mb-sm">
+                  • <strong>评论增长周期 (17%)</strong>：评论量持续增长的平均周期，周期越长得分越高
+                </div>
+              </div>
+            </div>
+
+            <div class="q-mb-lg">
+              <div class="text-subtitle2 q-mb-sm text-pink text-weight-bold">认同度 (40%)</div>
+              <div class="q-ml-md">
+                <div class="q-mb-sm">• <strong>点赞总量 (40%)</strong>：账号发布内容的点赞总量</div>
+                <div class="q-mb-sm">
+                  •
+                  <strong>评论同向性 (40%)</strong
+                  >：评论文本与推文文本的同向程度，基于上传的同向度数据计算
+                </div>
+                <div class="q-mb-sm">
+                  •
+                  <strong>评论同向变化 (20%)</strong
+                  >：同向程度的变化趋势，变化越小（越稳定）得分越高
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="q-mb-lg">
+            <div class="text-subtitle1 q-mb-sm text-weight-bold">对数缩放函数</div>
+            <div class="q-mb-md">
+              <div class="text-body1 q-mb-sm">所有指标均使用对数缩放函数进行归一化处理：</div>
+              <div class="bg-white q-pa-md rounded-borders q-mb-sm">
+                <div class="text-code">f(x) = log(1 + x/k) / log(1 + x_max/k) × 100</div>
+              </div>
+              <div class="text-caption text-grey-7">
+                其中：x为原始值，k为敏感阈值参数，x_max为最大值参数。该函数可以压缩大数值的差异，突出小数值的变化。
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="text-subtitle1 q-mb-sm text-weight-bold">计算步骤</div>
+            <div class="q-ml-md">
+              <div class="q-mb-sm">1. 收集各项原始数据（内容量、互动数等）</div>
+              <div class="q-mb-sm">2. 对每个小项使用对数缩放函数归一化为0-100分值</div>
+              <div class="q-mb-sm">3. 在大项内部按权重加权求和</div>
+              <div class="q-mb-sm">4. 对大项得分再次使用对数缩放函数归一化</div>
+              <div class="q-mb-sm">5. 按大项权重计算综合影响力得分</div>
+            </div>
+          </div>
+        </q-card>
+      </div>
+
+      <!-- 对数缩放函数可视化 -->
+      <div class="q-mt-lg">
+        <q-card class="q-pa-lg bg-blue-1">
+          <div class="text-h6 q-mb-md">
+            <q-icon name="functions" class="q-mr-sm" />
+            对数缩放函数可视化
+          </div>
+
+          <div class="q-mb-md">
+            <div class="text-body1 q-mb-sm">调整参数查看对数缩放函数的行为特性：</div>
+          </div>
+
+          <div class="row q-gutter-md q-mb-md">
+            <div class="col-4">
+              <q-input
+                v-model.number="logScalingDemo.k"
+                label="敏感阈值 k"
+                type="number"
+                step="10"
+                min="1"
+                outlined
+                dense
+                hint="控制敏感区与饱和区的分界点"
+                @update:model-value="updateLogScalingChart"
+              />
+            </div>
+            <div class="col-4">
+              <q-input
+                v-model.number="logScalingDemo.xmax"
+                label="最大值 x_max"
+                type="number"
+                step="100"
+                min="10"
+                outlined
+                dense
+                hint="用于归一化的最大值"
+                @update:model-value="updateLogScalingChart"
+              />
+            </div>
+            <div class="col-4">
+              <q-input
+                v-model.number="logScalingDemo.testValue"
+                label="测试输入值 x"
+                type="number"
+                step="1"
+                min="0"
+                outlined
+                dense
+                hint="输入一个值查看对应的函数输出"
+                @update:model-value="updateLogScalingChart"
+              />
+            </div>
+          </div>
+
+          <!-- 实时函数值显示区域 -->
+          <div class="row q-gutter-md q-mb-md">
+            <div class="col-12">
+              <div class="bg-white q-pa-md rounded-borders">
+                <div class="text-subtitle2 q-mb-sm">函数计算结果</div>
+                <div class="row">
+                  <div class="col-4">
+                    <div class="bg-blue-1 q-pa-md rounded-borders text-center">
+                      <div class="text-caption text-grey-7">敏感阈值</div>
+                      <div class="text-h6 text-blue">{{ logScalingDemo.k }}</div>
+                      <div class="text-caption">控制敏感区与饱和区分界</div>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="bg-green-1 q-pa-md rounded-borders text-center">
+                      <div class="text-caption text-grey-7">最大值上限</div>
+                      <div class="text-h6 text-green">{{ logScalingDemo.xmax }}</div>
+                      <div class="text-caption">数据归一化上限</div>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="bg-purple-1 q-pa-md rounded-borders text-center">
+                      <div class="text-caption text-grey-7">x = {{ logScalingDemo.testValue }} 时的得分</div>
+                      <div class="text-h6 text-purple">{{ 
+                        toPercentageScore(
+                          logarithmicScaling(logScalingDemo.testValue, {
+                            k: logScalingDemo.k,
+                            xmax: logScalingDemo.xmax
+                          })
+                        ).toFixed(1)
+                      }}%</div>
+                      <div class="text-caption">函数输出结果</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 函数特性说明 -->
+          <div class="row q-gutter-sm q-mb-md">
+            <div class="col-12">
+              <div class="text-caption text-grey-7">
+                <div>• <strong>敏感区 (x &lt; k)</strong>：函数在此区域变化较快，适合突出小数值的差异</div>
+                <div>• <strong>过渡区 (x ≈ k)</strong>：函数变化速度逐渐减缓</div>
+                <div>• <strong>饱和区 (x &gt; k)</strong>：函数变化较慢，压缩大数值间的差异</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 函数图表 -->
+          <div class="q-mb-md">
+            <AppKChart
+              data-chart="log-scaling-demo"
+              title="对数缩放函数曲线"
+              :option="logScalingChartOption"
+              :height="300"
+              :useImageMode="useImageMode"
+              @rendered="onChartRendered"
+            />
+          </div>
+
+          <div class="text-caption text-grey-7 q-mb-md">
+            <div class="row">
+              <div class="col-6">
+                <div><strong>函数曲线对比</strong></div>
+                <div>— 对数缩放函数一化</div>
+                <div>--- 线性归一化对比</div>
+              </div>
+              <div class="col-6">
+                <div><strong>函数特性说明</strong></div>
+                <div>• <strong>敏感区 (x &lt; k)：</strong>函数变化较快，突出小值差异</div>
+                <div>• <strong>饱和区 (x &gt; k)：</strong>函数变化较慢，压缩大值差异</div>
+                <div>• <strong>k值调节：</strong>控制敏感区与饱和区的分界点</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-grey-2 q-pa-md rounded-borders">
+            <div class="text-subtitle2 q-mb-sm">应用场景</div>
+            <div class="text-caption text-grey-8">
+              在影响力评估中，对数缩放函数能够：<br/>
+              1. 让点赞量从0到1000的变化比从5000到6000的变化更敏感<br/>
+              2. 避免极值对整体评分的过度影响<br/>
+              3. 更好地区分中小规模账户的表现差异
+            </div>
+          </div>
+        </q-card>
+      </div>
+
       <div class="q-mt-md">
         <q-card class="q-pa-md bg-indigo-1">
           <div class="text-subtitle2 q-mb-sm">身份影响力排行批注</div>
@@ -1809,6 +2051,8 @@ import autoTable from 'jspdf-autotable';
 import {
   calculateInfluenceRanking,
   DEFAULT_INFLUENCE_COEFFICIENTS,
+  logarithmicScaling,
+  toPercentageScore,
 } from 'src/utils/influenceCalculator';
 import type { InfluenceRankingItem, InfluenceCoefficients } from 'src/utils/influenceCalculator';
 
@@ -1924,6 +2168,149 @@ const annotations = ref<{
   categoryComment: { content: '' },
   categoryLike: { content: '' },
   combinedCategory: { content: '' },
+});
+
+// 对数缩放演示相关
+const logScalingDemo = ref({
+  k: 100,
+  xmax: 1000,
+  testValue: 200,
+});
+
+// 更新对数缩放图表
+const updateLogScalingChart = () => {
+  // 强制更新图表，通过修改响应式数据触发重新计算
+  logScalingDemo.value = { ...logScalingDemo.value };
+};
+
+// 对数缩放演示图表配置
+const logScalingChartOption = computed((): EChartsOption => {
+  const xData: number[] = [];
+  const yDataLog: number[] = [];
+  const yDataLinear: number[] = [];
+
+  // 生成数据点，从0到xmax的1.5倍
+  const maxX = logScalingDemo.value.xmax * 1.5;
+  const step = maxX / 100;
+
+  for (let x = 0; x <= maxX; x += step) {
+    xData.push(x);
+    
+    // 对数缩放值
+    const scaledValue = logarithmicScaling(x, {
+      k: logScalingDemo.value.k,
+      xmax: logScalingDemo.value.xmax,
+    });
+    yDataLog.push(toPercentageScore(scaledValue));
+    
+    // 线性缩放值 (用于对比)
+    const linearValue = Math.min(x / logScalingDemo.value.xmax, 1);
+    yDataLinear.push(linearValue * 100);
+  }
+
+  return {
+    backgroundColor: 'transparent',
+    grid: {
+      left: '10%',
+      right: '5%',
+      top: '15%',
+      bottom: '15%',
+    },
+    legend: {
+      data: ['对数缩放函数', '线性归一化对比'],
+      top: '5%',
+      left: 'center',
+    },
+    xAxis: {
+      type: 'value',
+      name: '原始数值',
+      nameLocation: 'middle',
+      nameGap: 30,
+      axisLabel: {
+        fontSize: 11,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      name: '缩放后得分',
+      nameLocation: 'middle',
+      nameGap: 40,
+      min: 0,
+      max: 100,
+      axisLabel: {
+        fontSize: 11,
+        formatter: '{value}',
+      },
+    },
+    series: [
+      {
+        name: '对数缩放函数',
+        type: 'line',
+        data: xData.map((x, index) => [x, yDataLog[index]]),
+        smooth: true,
+        lineStyle: {
+          color: '#1976d2',
+          width: 3,
+        },
+        symbol: 'none',
+        markLine: {
+          silent: true,
+          data: [
+            {
+              xAxis: logScalingDemo.value.k,
+              lineStyle: {
+                color: '#ff5722',
+                type: 'dashed',
+                width: 2,
+              },
+              label: {
+                position: 'insideEndTop',
+                formatter: `k=${logScalingDemo.value.k}`,
+                color: '#ff5722',
+                fontSize: 10,
+              },
+            },
+            {
+              xAxis: logScalingDemo.value.xmax,
+              lineStyle: {
+                color: '#4caf50',
+                type: 'dashed',
+                width: 2,
+              },
+              label: {
+                position: 'insideEndTop',
+                formatter: `x_max=${logScalingDemo.value.xmax}`,
+                color: '#4caf50',
+                fontSize: 10,
+              },
+            },
+          ],
+        },
+      },
+      {
+        name: '线性归一化对比',
+        type: 'line',
+        data: xData.map((x, index) => [x, yDataLinear[index]]),
+        smooth: false,
+        lineStyle: {
+          color: '#9e9e9e',
+          width: 2,
+          type: 'dashed',
+        },
+        symbol: 'none',
+      },
+    ],
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any) => {
+        let result = `原始值: ${params[0].data[0].toFixed(1)}<br/>`;
+        params.forEach((param: any) => {
+          result += `${param.seriesName}: ${param.data[1].toFixed(2)}<br/>`;
+        });
+        return result;
+      },
+    },
+  };
 });
 
 // 本地存储相关

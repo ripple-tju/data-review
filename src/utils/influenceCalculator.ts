@@ -639,20 +639,23 @@ const calculateEngagementScore = (metrics: {
   // 根据您提供的权重计算综合得分
   const weights = {
     shareVolume: 0.1, // 转发总量 10%
-    shareGrowthCycle: 0.05, // 转发增长周期 5% (周期越短得分越高)
+    shareGrowthCycle: 0.05, // 转发增长周期 5% (周期越长得分越高)
     commentVolume: 0.1, // 评论总量 10%
-    commentGrowthCycle: 0.05, // 评论增长周期 5% (周期越短得分越高)
+    commentGrowthCycle: 0.05, // 评论增长周期 5% (周期越长得分越高)
   };
 
   // 标准化各个指标 (这里需要根据实际数据范围调整)
   const normalizedShares = Math.min(metrics.shareVolume / 1000, 1) * 100; // 假设1000为满分
   const normalizedComments = Math.min(metrics.commentVolume / 500, 1) * 100; // 假设500为满分
 
-  // 增长周期得分 - 周期越短得分越高
+  // 增长周期得分 - 周期越长得分越高
+  // 使用对数函数来处理，避免线性惩罚过于严厉
   const shareGrowthScore =
-    metrics.shareGrowthCycle > 0 ? Math.max(0, 100 - metrics.shareGrowthCycle * 10) : 0;
+    metrics.shareGrowthCycle > 0 ? Math.min(100, Math.log(1 + metrics.shareGrowthCycle) * 30) : 0;
   const commentGrowthScore =
-    metrics.commentGrowthCycle > 0 ? Math.max(0, 100 - metrics.commentGrowthCycle * 10) : 0;
+    metrics.commentGrowthCycle > 0
+      ? Math.min(100, Math.log(1 + metrics.commentGrowthCycle) * 30)
+      : 0;
 
   const score =
     normalizedShares * weights.shareVolume +
