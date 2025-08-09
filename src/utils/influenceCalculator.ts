@@ -472,30 +472,21 @@ const calculateSentimentMetrics = (
   const likeVolume = latestArchives.reduce((sum, archive) => sum + (archive?.like || 0), 0);
 
   // 2. 评论同向性（原始值，0-1之间）- 转发文本与推送文本的同向程度
-  let commentAlignment = 0.5; // 默认值
+  let commentAlignment = 0;
 
   // 3. 评论同向变化（原始值，变化趋势指数）- 评论文本与推送文本同向程度的变化趋势
-  let alignmentTrend = 0.5; // 默认值
+  let alignmentTrend = 0;
 
-  // 如果有认同度数据，可以基于实际数据计算
+  // 如果有认同度数据，基于实际数据计算
   if (Object.keys(postAgreementData).length > 0) {
     console.log('❤️ [认同度] 基于上传的认同度数据计算...');
 
-    // 获取该身份相关的认同度数据 - 只使用最新存档
+    // 获取该身份相关的认同度数据 - 直接使用帖子ID
     const relevantAgreementScores: number[] = [];
     postViewList.forEach((postView) => {
-      // 按时间排序存档数据，获取最新的存档
-      const sortedArchives = [...postView.archive].sort((a, b) => {
-        const timeA = a.capturedAt ? new Date(a.capturedAt).getTime() : 0;
-        const timeB = b.capturedAt ? new Date(b.capturedAt).getTime() : 0;
-        return timeB - timeA; // 降序排列，最新的在前面
-      });
-      const latestArchive = sortedArchives[0];
-      if (latestArchive) {
-        const agreementScore = postAgreementData[latestArchive.id];
-        if (agreementScore !== undefined) {
-          relevantAgreementScores.push(agreementScore);
-        }
+      const agreementScore = postAgreementData[postView.post.id];
+      if (agreementScore !== undefined && agreementScore !== -1) {
+        relevantAgreementScores.push(agreementScore);
       }
     });
 
@@ -509,22 +500,29 @@ const calculateSentimentMetrics = (
 
       // 计算变化趋势（如果有多个数据点）
       if (relevantAgreementScores.length > 1) {
-        const firstHalf = relevantAgreementScores.slice(
-          0,
-          Math.floor(relevantAgreementScores.length / 2),
-        );
-        const secondHalf = relevantAgreementScores.slice(
-          Math.floor(relevantAgreementScores.length / 2),
-        );
-        const firstAvg = firstHalf.reduce((sum, score) => sum + score, 0) / firstHalf.length;
-        const secondAvg = secondHalf.reduce((sum, score) => sum + score, 0) / secondHalf.length;
-        alignmentTrend = secondAvg - firstAvg; // 变化量
+        // 新的计算方式：计算每日变化的绝对值的平均值
+        let totalVariation = 0;
+        let validChanges = 0;
+        for (let i = 1; i < relevantAgreementScores.length; i++) {
+          const currentScore = relevantAgreementScores[i];
+          const previousScore = relevantAgreementScores[i - 1];
+          if (currentScore !== undefined && previousScore !== undefined) {
+            const dailyChange = Math.abs(currentScore - previousScore);
+            totalVariation += dailyChange;
+            validChanges++;
+          }
+        }
+        alignmentTrend = validChanges > 0 ? totalVariation / validChanges : 0; // 变化剧烈程度的平均值
       }
 
       console.log(
         `❤️ [认同度] 平均认同度: ${commentAlignment.toFixed(3)}, 变化趋势: ${alignmentTrend.toFixed(3)}`,
       );
+    } else {
+      console.log('❤️ [认同度] 未找到有效的认同度数据，使用默认值0');
     }
+  } else {
+    console.log('❤️ [认同度] 无认同度数据，使用默认值0');
   }
 
   console.log('❤️ [认同度] 统计结果:', {
@@ -687,23 +685,13 @@ export const calculateIdentityInfluence = (
 
   console.log(`📊 [影响力计算] 筛选后帖子数量: ${recentPosts.length}`);
 
-  // 过滤掉最新存档中同向度为-1的帖子数据
+  // 过滤掉同向度为-1的帖子数据
   const filteredPosts = recentPosts.filter((postView) => {
-    // 获取最新存档
-    const sortedArchives = [...postView.archive].sort((a, b) => {
-      const timeA = a.capturedAt ? new Date(a.capturedAt).getTime() : 0;
-      const timeB = b.capturedAt ? new Date(b.capturedAt).getTime() : 0;
-      return timeB - timeA; // 降序排列，最新的在前面
-    });
-    const latestArchive = sortedArchives[0];
-
-    if (latestArchive) {
-      const agreementScore = postAgreementData[latestArchive.id];
-      // 过滤掉同向度为-1的数据
-      if (agreementScore === -1) {
-        console.log(`📊 [影响力计算] 过滤同向度为-1的帖子: ${postView.post.id}`);
-        return false;
-      }
+    const agreementScore = postAgreementData[postView.post.id];
+    // 过滤掉同向度为-1的数据
+    if (agreementScore === -1) {
+      console.log(`📊 [影响力计算] 过滤同向度为-1的帖子: ${postView.post.id}`);
+      return false;
     }
     return true;
   });
@@ -817,20 +805,20 @@ export const DEFAULT_INFLUENCE_COEFFICIENTS: InfluenceCoefficients = {
     sentiment: { k: 1000, xmax: 110 }, // 情感认同指标对数缩放参数（k很大，0-100几乎线性，仅对>100进行轻微压缩）
   },
   visibility: {
-    contentVolume: { weight: 0.4, k: 10, xmax: 50 }, // 内容总量配置
-    contentStability: { weight: 0.3, k: 1, xmax: 5 }, // 稳定性配置（标准差）
+    contentVolume: { weight: 0.4, k: 100, xmax: 1200 }, // 内容总量配置 (最大值1034->1200)
+    contentStability: { weight: 0.3, k: 2, xmax: 25 }, // 稳定性配置（标准差最大21.79->25）
     domainCoverage: { weight: 0.3, k: 1, xmax: 5 }, // 领域覆盖配置
   },
   engagement: {
-    shareVolume: { weight: 0.3, k: 100, xmax: 10000 }, // 转发量配置
-    shareGrowthCycle: { weight: 0.2, k: 3, xmax: 14 }, // 转发增长周期配置
-    commentVolume: { weight: 0.3, k: 50, xmax: 5000 }, // 评论量配置
-    commentGrowthCycle: { weight: 0.2, k: 3, xmax: 14 }, // 评论增长周期配置
+    shareVolume: { weight: 0.3, k: 1000, xmax: 30000 }, // 转发量配置 (最大值26608->30000)
+    shareGrowthCycle: { weight: 0.2, k: 1, xmax: 4 }, // 转发增长周期配置 (范围2.0-2.4->4)
+    commentVolume: { weight: 0.3, k: 2000, xmax: 60000 }, // 评论量配置 (最大值56732->60000)
+    commentGrowthCycle: { weight: 0.2, k: 1, xmax: 4 }, // 评论增长周期配置 (范围2.0-2.4->4)
   },
   sentiment: {
-    likeVolume: { weight: 0.5, k: 1000, xmax: 100000 }, // 点赞量配置
-    commentAlignment: { weight: 0.3, k: 0.1, xmax: 1 }, // 同向性配置
-    alignmentTrend: { weight: 0.2, k: 0.5, xmax: 3 }, // 变化趋势配置
+    likeVolume: { weight: 0.5, k: 50000, xmax: 2500000 }, // 点赞量配置 (最大值1970270->2500000)
+    commentAlignment: { weight: 0.3, k: 0.2, xmax: 1 }, // 同向性配置 (范围0.6-0.9->0-1)
+    alignmentTrend: { weight: 0.2, k: 0.05, xmax: 1.0 }, // 变化趋势配置 (绝对值变化之和，预估最大值1.0)
   },
 };
 
@@ -942,7 +930,7 @@ export const calculateInfluenceWithCoefficients = (
   const commentAlignmentScore = toPercentageScore(commentAlignmentScaled);
 
   const alignmentTrendScaled = logarithmicScaling(
-    Math.max(0, metrics.sentiment.alignmentTrend + 1), // 偏移处理负值
+    metrics.sentiment.alignmentTrend, // 直接使用原值，因为新的计算方式不会产生负值
     {
       k: coefficients.sentiment.alignmentTrend.k,
       xmax: coefficients.sentiment.alignmentTrend.xmax,

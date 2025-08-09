@@ -180,10 +180,17 @@
                   </div>
                   <div class="row q-gutter-xs q-mb-sm">
                     <q-input
-                      v-model.number="influenceCoefficients.categoryWeights.visibility"
-                      label="可见度权重"
+                      :model-value="
+                        (influenceCoefficients.categoryWeights.visibility * 100).toFixed(1)
+                      "
+                      @update:model-value="
+                        (val) =>
+                          (influenceCoefficients.categoryWeights.visibility =
+                            parseFloat(String(val || '0')) / 100)
+                      "
+                      label="可见度权重(%)"
                       type="number"
-                      step="0.1"
+                      step="1"
                       outlined
                       dense
                       class="col"
@@ -214,10 +221,17 @@
                 <div class="text-caption q-mb-xs text-weight-bold">内容发布总量</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
-                    v-model.number="influenceCoefficients.visibility.contentVolume.weight"
-                    label="权重"
+                    :model-value="
+                      (influenceCoefficients.visibility.contentVolume.weight * 100).toFixed(1)
+                    "
+                    @update:model-value="
+                      (val) =>
+                        (influenceCoefficients.visibility.contentVolume.weight =
+                          parseFloat(String(val || '0')) / 100)
+                    "
+                    label="权重(%)"
                     type="number"
-                    step="0.1"
+                    step="1"
                     outlined
                     dense
                     class="col"
@@ -245,10 +259,17 @@
                 <div class="text-caption q-mb-xs text-weight-bold">内容发布稳定性</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
-                    v-model.number="influenceCoefficients.visibility.contentStability.weight"
-                    label="权重"
+                    :model-value="
+                      (influenceCoefficients.visibility.contentStability.weight * 100).toFixed(1)
+                    "
+                    @update:model-value="
+                      (val) =>
+                        (influenceCoefficients.visibility.contentStability.weight =
+                          parseFloat(String(val || '0')) / 100)
+                    "
+                    label="权重(%)"
                     type="number"
-                    step="0.1"
+                    step="1"
                     outlined
                     dense
                     class="col"
@@ -276,10 +297,17 @@
                 <div class="text-caption q-mb-xs text-weight-bold">内容发布主要领域覆盖率</div>
                 <div class="row q-gutter-xs">
                   <q-input
-                    v-model.number="influenceCoefficients.visibility.domainCoverage.weight"
-                    label="权重"
+                    :model-value="
+                      (influenceCoefficients.visibility.domainCoverage.weight * 100).toFixed(1)
+                    "
+                    @update:model-value="
+                      (val) =>
+                        (influenceCoefficients.visibility.domainCoverage.weight =
+                          parseFloat(String(val || '0')) / 100)
+                    "
+                    label="权重(%)"
                     type="number"
-                    step="0.1"
+                    step="1"
                     outlined
                     dense
                     class="col"
@@ -321,10 +349,17 @@
                   </div>
                   <div class="row q-gutter-xs q-mb-sm">
                     <q-input
-                      v-model.number="influenceCoefficients.categoryWeights.engagement"
-                      label="讨论度权重"
+                      :model-value="
+                        (influenceCoefficients.categoryWeights.engagement * 100).toFixed(1)
+                      "
+                      @update:model-value="
+                        (val) =>
+                          (influenceCoefficients.categoryWeights.engagement =
+                            parseFloat(String(val || '0')) / 100)
+                      "
+                      label="讨论度权重(%)"
                       type="number"
-                      step="0.1"
+                      step="1"
                       outlined
                       dense
                       class="col"
@@ -355,10 +390,17 @@
                 <div class="text-caption q-mb-xs text-weight-bold">推文转发总量</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
-                    v-model.number="influenceCoefficients.engagement.shareVolume.weight"
-                    label="权重"
+                    :model-value="
+                      (influenceCoefficients.engagement.shareVolume.weight * 100).toFixed(1)
+                    "
+                    @update:model-value="
+                      (val) =>
+                        (influenceCoefficients.engagement.shareVolume.weight =
+                          parseFloat(String(val || '0')) / 100)
+                    "
+                    label="权重(%)"
                     type="number"
-                    step="0.1"
+                    step="1"
                     outlined
                     dense
                     class="col"
@@ -386,10 +428,17 @@
                 <div class="text-caption q-mb-xs text-weight-bold">转发增长周期</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
-                    v-model.number="influenceCoefficients.engagement.shareGrowthCycle.weight"
-                    label="权重"
+                    :model-value="
+                      (influenceCoefficients.engagement.shareGrowthCycle.weight * 100).toFixed(1)
+                    "
+                    @update:model-value="
+                      (val) =>
+                        (influenceCoefficients.engagement.shareGrowthCycle.weight =
+                          parseFloat(String(val || '0')) / 100)
+                    "
+                    label="权重(%)"
                     type="number"
-                    step="0.1"
+                    step="1"
                     outlined
                     dense
                     class="col"
@@ -417,10 +466,17 @@
                 <div class="text-caption q-mb-xs text-weight-bold">推文评论总量</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
-                    v-model.number="influenceCoefficients.engagement.commentVolume.weight"
-                    label="权重"
+                    :model-value="
+                      (influenceCoefficients.engagement.commentVolume.weight * 100).toFixed(1)
+                    "
+                    @update:model-value="
+                      (val) =>
+                        (influenceCoefficients.engagement.commentVolume.weight =
+                          parseFloat(String(val || '0')) / 100)
+                    "
+                    label="权重(%)"
                     type="number"
-                    step="0.1"
+                    step="1"
                     outlined
                     dense
                     class="col"
@@ -448,10 +504,17 @@
                 <div class="text-caption q-mb-xs text-weight-bold">评论增长周期</div>
                 <div class="row q-gutter-xs">
                   <q-input
-                    v-model.number="influenceCoefficients.engagement.commentGrowthCycle.weight"
-                    label="权重"
+                    :model-value="
+                      (influenceCoefficients.engagement.commentGrowthCycle.weight * 100).toFixed(1)
+                    "
+                    @update:model-value="
+                      (val) =>
+                        (influenceCoefficients.engagement.commentGrowthCycle.weight =
+                          parseFloat(String(val || '0')) / 100)
+                    "
+                    label="权重(%)"
                     type="number"
-                    step="0.1"
+                    step="1"
                     outlined
                     dense
                     class="col"
@@ -493,10 +556,17 @@
                   </div>
                   <div class="row q-gutter-xs q-mb-sm">
                     <q-input
-                      v-model.number="influenceCoefficients.categoryWeights.sentiment"
-                      label="认同度权重"
+                      :model-value="
+                        (influenceCoefficients.categoryWeights.sentiment * 100).toFixed(1)
+                      "
+                      @update:model-value="
+                        (val) =>
+                          (influenceCoefficients.categoryWeights.sentiment =
+                            parseFloat(String(val || '0')) / 100)
+                      "
+                      label="认同度权重(%)"
                       type="number"
-                      step="0.1"
+                      step="1"
                       outlined
                       dense
                       class="col"
@@ -527,10 +597,17 @@
                 <div class="text-caption q-mb-xs text-weight-bold">点赞总量</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
-                    v-model.number="influenceCoefficients.sentiment.likeVolume.weight"
-                    label="权重"
+                    :model-value="
+                      (influenceCoefficients.sentiment.likeVolume.weight * 100).toFixed(1)
+                    "
+                    @update:model-value="
+                      (val) =>
+                        (influenceCoefficients.sentiment.likeVolume.weight =
+                          parseFloat(String(val || '0')) / 100)
+                    "
+                    label="权重(%)"
                     type="number"
-                    step="0.1"
+                    step="1"
                     outlined
                     dense
                     class="col"
@@ -558,10 +635,17 @@
                 <div class="text-caption q-mb-xs text-weight-bold">评论同向性</div>
                 <div class="row q-gutter-xs q-mb-sm">
                   <q-input
-                    v-model.number="influenceCoefficients.sentiment.commentAlignment.weight"
-                    label="权重"
+                    :model-value="
+                      (influenceCoefficients.sentiment.commentAlignment.weight * 100).toFixed(1)
+                    "
+                    @update:model-value="
+                      (val) =>
+                        (influenceCoefficients.sentiment.commentAlignment.weight =
+                          parseFloat(String(val || '0')) / 100)
+                    "
+                    label="权重(%)"
                     type="number"
-                    step="0.1"
+                    step="1"
                     outlined
                     dense
                     class="col"
@@ -589,10 +673,17 @@
                 <div class="text-caption q-mb-xs text-weight-bold">评论同向变化</div>
                 <div class="row q-gutter-xs">
                   <q-input
-                    v-model.number="influenceCoefficients.sentiment.alignmentTrend.weight"
-                    label="权重"
+                    :model-value="
+                      (influenceCoefficients.sentiment.alignmentTrend.weight * 100).toFixed(1)
+                    "
+                    @update:model-value="
+                      (val) =>
+                        (influenceCoefficients.sentiment.alignmentTrend.weight =
+                          parseFloat(String(val || '0')) / 100)
+                    "
+                    label="权重(%)"
                     type="number"
-                    step="0.1"
+                    step="1"
                     outlined
                     dense
                     class="col"
@@ -656,74 +747,98 @@
               >
                 <div v-if="col.name === 'visibilityScore'" class="text-center">
                   <div>👁️ 可见度</div>
-                  <div class="text-caption">综合权重</div>
+                  <div class="text-caption">
+                    权重: {{ (influenceCoefficients.categoryWeights.visibility * 100).toFixed(1) }}%
+                  </div>
                 </div>
                 <div v-else-if="col.name === 'contentVolume'" class="text-center">
-                  <div>内容总量</div>
+                  <div>内容发布总量</div>
                   <div class="text-caption">
-                    权重: {{ influenceCoefficients.visibility.contentVolume.weight }}
+                    权重:
+                    {{ (influenceCoefficients.visibility.contentVolume.weight * 100).toFixed(1) }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'contentStability'" class="text-center">
-                  <div>稳定性</div>
+                  <div>内容发布稳定性</div>
                   <div class="text-caption">
-                    权重: {{ influenceCoefficients.visibility.contentStability.weight }}
+                    权重:
+                    {{
+                      (influenceCoefficients.visibility.contentStability.weight * 100).toFixed(1)
+                    }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'domainCoverage'" class="text-center">
-                  <div>领域覆盖</div>
+                  <div>内容发布主要领域覆盖率</div>
                   <div class="text-caption">
-                    权重: {{ influenceCoefficients.visibility.domainCoverage.weight }}
+                    权重:
+                    {{ (influenceCoefficients.visibility.domainCoverage.weight * 100).toFixed(1) }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'engagementScore'" class="text-center">
                   <div>💬 讨论度</div>
-                  <div class="text-caption">综合权重</div>
+                  <div class="text-caption">
+                    权重: {{ (influenceCoefficients.categoryWeights.engagement * 100).toFixed(1) }}%
+                  </div>
                 </div>
                 <div v-else-if="col.name === 'shareVolume'" class="text-center">
-                  <div>转发量</div>
+                  <div>推文转发总量</div>
                   <div class="text-caption">
-                    权重: {{ influenceCoefficients.engagement.shareVolume.weight }}
+                    权重:
+                    {{ (influenceCoefficients.engagement.shareVolume.weight * 100).toFixed(1) }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'shareGrowthCycle'" class="text-center">
                   <div>转发增长周期</div>
                   <div class="text-caption">
-                    权重: {{ influenceCoefficients.engagement.shareGrowthCycle.weight }}
+                    权重:
+                    {{
+                      (influenceCoefficients.engagement.shareGrowthCycle.weight * 100).toFixed(1)
+                    }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'commentVolume'" class="text-center">
-                  <div>评论量</div>
+                  <div>推文评论总量</div>
                   <div class="text-caption">
-                    权重: {{ influenceCoefficients.engagement.commentVolume.weight }}
+                    权重:
+                    {{ (influenceCoefficients.engagement.commentVolume.weight * 100).toFixed(1) }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'commentGrowthCycle'" class="text-center">
                   <div>评论增长周期</div>
                   <div class="text-caption">
-                    权重: {{ influenceCoefficients.engagement.commentGrowthCycle.weight }}
+                    权重:
+                    {{
+                      (influenceCoefficients.engagement.commentGrowthCycle.weight * 100).toFixed(1)
+                    }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'likeVolume'" class="text-center">
-                  <div>点赞量</div>
+                  <div>点赞总量</div>
                   <div class="text-caption">
-                    权重: {{ influenceCoefficients.sentiment.likeVolume.weight }}
+                    权重:
+                    {{ (influenceCoefficients.sentiment.likeVolume.weight * 100).toFixed(1) }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'sentimentScore'" class="text-center">
                   <div>❤️ 认同度</div>
-                  <div class="text-caption">综合权重</div>
+                  <div class="text-caption">
+                    权重: {{ (influenceCoefficients.categoryWeights.sentiment * 100).toFixed(1) }}%
+                  </div>
                 </div>
                 <div v-else-if="col.name === 'commentAlignment'" class="text-center">
-                  <div>同向性</div>
+                  <div>评论同向性</div>
                   <div class="text-caption">
-                    权重: {{ influenceCoefficients.sentiment.commentAlignment.weight }}
+                    权重:
+                    {{
+                      (influenceCoefficients.sentiment.commentAlignment.weight * 100).toFixed(1)
+                    }}%
                   </div>
                 </div>
                 <div v-else-if="col.name === 'alignmentTrend'" class="text-center">
-                  <div>变化趋势</div>
+                  <div>评论同向变化</div>
                   <div class="text-caption">
-                    权重: {{ influenceCoefficients.sentiment.alignmentTrend.weight }}
+                    权重:
+                    {{ (influenceCoefficients.sentiment.alignmentTrend.weight * 100).toFixed(1) }}%
                   </div>
                 </div>
                 <div v-else>
@@ -1575,7 +1690,7 @@ const {
   idList: Array<Spec.IdentityView.Type>;
   useImageMode?: boolean; // 新增：是否使用图片模式
   postCategoryMap?: Map<string, Array<string>>; // 新增：帖子分类数据，类别ID -> 帖子ID列表
-  postAgreementData?: Record<string, number>; // 新增：帖子协议数据，帖子存档ID -> 协议值
+  postAgreementData?: Record<string, number>; // 新增：帖子协议数据，帖子ID -> 协议值
   categoryData?: Array<Spec.Category.Type>; // 新增：分类定义数据
   selectedDates?: string[]; // 新增：用户选择的日期列表
 }>();
@@ -2468,7 +2583,7 @@ const latestPostArchiveList = computed(() => {
       const commentGrowthRate = latestArchive.comment / 5;
 
       // 从上传的认同度数据中获取真实认同度，如果没有则为null
-      const endorsement = postAgreementData?.[latestArchive.id] ?? null;
+      const endorsement = postAgreementData?.[latestArchive.post] ?? null;
 
       return {
         ...latestArchive,
@@ -2843,33 +2958,24 @@ const categoryAgreementStats = computed(() => {
       const identity = identityGroups.get(authorId);
       if (!identity) return;
 
-      // 🔥 [修改] 使用最新存档的同向度数据（按capturedAt排序）
-      const sortedArchives = postView.archive.sort(
-        (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
-      );
+      // 🔥 [修改] 使用帖子ID获取同向度数据
+      const agreementValue = postAgreementData[postView.post.id];
 
-      if (sortedArchives.length > 0) {
-        const latestArchive = sortedArchives[0];
-        if (latestArchive) {
-          const agreementValue = postAgreementData[latestArchive.id];
-
-          if (typeof agreementValue === 'number') {
-            if (agreementValue === -1) {
-              // 🔥 [修改] 过滤掉同向度为-1的数据
-              filteredCount++;
-            } else {
-              // 只保留有效的同向度值
-              validAgreementCount++;
-              if (!identity.categoryAgreements.has(categoryId)) {
-                identity.categoryAgreements.set(categoryId, []);
-              }
-              identity.categoryAgreements.get(categoryId)!.push(agreementValue);
-            }
+      if (typeof agreementValue === 'number') {
+        if (agreementValue === -1) {
+          // 🔥 [修改] 过滤掉同向度为-1的数据
+          filteredCount++;
+        } else {
+          // 只保留有效的同向度值
+          validAgreementCount++;
+          if (!identity.categoryAgreements.has(categoryId)) {
+            identity.categoryAgreements.set(categoryId, []);
           }
+          identity.categoryAgreements.get(categoryId)!.push(agreementValue);
         }
       }
     });
-  }); // 计算每个身份在各分类下的平均同向度
+  });
   const result = Array.from(identityGroups.entries())
     .map(([authorId, identity]) => {
       const row: any = {
