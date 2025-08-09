@@ -93,8 +93,12 @@ export const calculateGrowthCycle = (
       return timeA - timeB;
     });
 
+    console.log(`🔍 [增长周期调试] 帖子 ${postView.post.id} 的 ${metric} 指标:`);
+    console.log(`🔍 [增长周期调试] 存档数量: ${sortedArchives.length}`);
+
     if (sortedArchives.length < 3) {
       // 至少需要3个数据点才能计算增长周期
+      console.log(`🔍 [增长周期调试] 存档数量不足3个，返回null`);
       return null;
     }
 
@@ -111,7 +115,10 @@ export const calculateGrowthCycle = (
     });
 
     const days = Array.from(archivesByDay.keys()).sort();
+    console.log(`🔍 [增长周期调试] 按天分组后天数: ${days.length}, 日期: ${days.join(', ')}`);
+
     if (days.length < 3) {
+      console.log(`🔍 [增长周期调试] 天数不足3天，返回null`);
       return null;
     }
 
@@ -127,11 +134,17 @@ export const calculateGrowthCycle = (
       dailyAverages.push({ day, value: average });
     });
 
+    console.log(
+      `🔍 [增长周期调试] 每日平均值:`,
+      dailyAverages.map((d) => `${d.day}: ${d.value}`),
+    );
+
     // 从第3天开始计算增长率（索引2开始）
     const baseDay = dailyAverages[1]; // 第2天作为基准
     if (!baseDay) return null;
 
     const D2 = baseDay.value;
+    console.log(`🔍 [增长周期调试] 基准值 D2 (第2天): ${D2}`);
 
     for (let i = 2; i < dailyAverages.length; i++) {
       const currentDay = dailyAverages[i];
@@ -146,15 +159,21 @@ export const calculateGrowthCycle = (
       // 计算相对增长率（避免除零）
       const relativeGrowthRate = D2 > 0 ? averageGrowthRate / D2 : 0;
 
+      console.log(
+        `🔍 [增长周期调试] 第${n}天: Dn=${Dn}, 平均增长率=${averageGrowthRate.toFixed(4)}, 相对增长率=${relativeGrowthRate.toFixed(4)}, 阈值=${threshold}`,
+      );
+
       // 当增长率小于阈值时，视为停止增长
       if (Math.abs(relativeGrowthRate) < threshold) {
-        const growthCycle = n - 2;
+        const growthCycle = n; // 以停止增长时该第n天作为增长周期
+        console.log(`🔍 [增长周期调试] 增长停止，返回增长周期: ${growthCycle}`);
         return growthCycle;
       }
     }
 
     // 如果一直在增长，返回最大可计算的周期
-    return dailyAverages.length - 2;
+    console.log(`🔍 [增长周期调试] 一直在增长，返回最大周期: ${dailyAverages.length}`);
+    return dailyAverages.length;
   } catch (error) {
     console.error('计算增长周期时出错:', error);
     return null;
@@ -171,18 +190,31 @@ export const calculateAverageGrowthCycle = (
   postViewList: Array<Spec.PostView.Type>,
   metric: 'like' | 'comment' | 'share' | 'view',
 ): number => {
+  console.log(
+    `📊 [平均增长周期调试] 开始计算 ${metric} 的平均增长周期，帖子数量: ${postViewList.length}`,
+  );
+
   const growthCycles: number[] = [];
 
-  postViewList.forEach((postView) => {
+  postViewList.forEach((postView, index) => {
     const cycle = calculateGrowthCycle(postView, metric, 0.1);
+    console.log(
+      `📊 [平均增长周期调试] 帖子 ${index + 1}/${postViewList.length} (${postView.post.id}): ${cycle}`,
+    );
     if (cycle !== null && cycle > 0) {
       growthCycles.push(cycle);
     }
   });
 
-  if (growthCycles.length === 0) return 0;
+  console.log(`📊 [平均增长周期调试] 有效增长周期数据: [${growthCycles.join(', ')}]`);
+
+  if (growthCycles.length === 0) {
+    console.log(`📊 [平均增长周期调试] 没有有效数据，返回0`);
+    return 0;
+  }
 
   const average = growthCycles.reduce((sum, cycle) => sum + cycle, 0) / growthCycles.length;
+  console.log(`📊 [平均增长周期调试] 平均值: ${average.toFixed(2)}`);
   return Math.round(average * 100) / 100;
 };
 
