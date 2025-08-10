@@ -13,6 +13,9 @@ import {
 import { sortByCreatedAt, getDateStrList, getRangeValue, sortByCapturedAt } from './utils';
 import { parseForQuery } from './transform';
 
+// 导入调试工具
+import { debugLog, debugTime, debugTimeEnd } from 'src/utils/debug';
+
 export type DataSet = {
   identityList: Array<Identity.Type>;
   postList: Array<Post.Type>;
@@ -70,7 +73,7 @@ export const Query = (
   // const { data: parsed, lastCreatedAt, firstCreatedAt } = parseForQuery(PeriodData);
 
   // 🔥 [性能优化] 在Query函数调用时一次性构建所有索引，避免重复计算
-  console.time('🔥 [性能优化] 构建全部数据索引');
+  debugTime('🔥 [性能优化] 构建全部数据索引');
 
   // 解析数据
   const identityList = Identity.Schema.array().parse(parsed.identityList);
@@ -79,7 +82,7 @@ export const Query = (
   const postArchiveList = PostArchive.Schema.array().parse(parsed.postArchiveList);
 
   // 构建 identityArchivesByIdentityId 索引
-  console.time('🔥 [性能优化] 构建 identityArchivesByIdentityId 索引');
+  debugTime('🔥 [性能优化] 构建 identityArchivesByIdentityId 索引');
   const identityArchivesByIdentityId = new Map<string, Array<IdentityArchive.Type>>();
   for (const archive of identityArchiveList) {
     if (!identityArchivesByIdentityId.has(archive.identity)) {
@@ -91,13 +94,13 @@ export const Query = (
   for (const [, archives] of identityArchivesByIdentityId) {
     archives.sort(sortByCapturedAt);
   }
-  console.timeEnd('🔥 [性能优化] 构建 identityArchivesByIdentityId 索引');
-  console.log(
+  debugTimeEnd('🔥 [性能优化] 构建 identityArchivesByIdentityId 索引');
+  debugLog(
     `🔥 [性能优化] identityArchivesByIdentityId 索引包含 ${identityArchivesByIdentityId.size} 个身份`,
   );
 
   // 构建 postArchivesByPostId 索引
-  console.time('🔥 [性能优化] 构建 postArchivesByPostId 索引');
+  debugTime('🔥 [性能优化] 构建 postArchivesByPostId 索引');
   const postArchivesByPostId = new Map<string, Array<PostArchive.Type>>();
   for (const archive of postArchiveList) {
     if (!postArchivesByPostId.has(archive.post)) {
@@ -107,7 +110,7 @@ export const Query = (
   }
 
   // 🔥 [数据补全] 对每个帖子的存档进行缺失日期补全处理
-  console.time('🔥 [数据补全] 补全帖子存档缺失日期');
+  debugTime('🔥 [数据补全] 补全帖子存档缺失日期');
   const ARCHIVE_DAYS_RANGE = archiveFillDay - 1; // N天范围，可根据需要调整
 
   for (const [postId, archives] of postArchivesByPostId) {
@@ -199,19 +202,19 @@ export const Query = (
     // 更新该帖子的存档列表
     postArchivesByPostId.set(postId, supplementedArchives);
   }
-  console.timeEnd('🔥 [数据补全] 补全帖子存档缺失日期');
+  debugTimeEnd('🔥 [数据补全] 补全帖子存档缺失日期');
 
   // 预排序每个帖子的存档
-  console.time('🔥 [性能优化] 预排序帖子存档');
+  debugTime('🔥 [性能优化] 预排序帖子存档');
   for (const [, archives] of postArchivesByPostId) {
     archives.sort(sortByCapturedAt);
   }
-  console.timeEnd('🔥 [性能优化] 预排序帖子存档');
-  console.timeEnd('🔥 [性能优化] 构建 postArchivesByPostId 索引');
-  console.log(`🔥 [性能优化] postArchivesByPostId 索引包含 ${postArchivesByPostId.size} 个帖子`);
+  debugTimeEnd('🔥 [性能优化] 预排序帖子存档');
+  debugTimeEnd('🔥 [性能优化] 构建 postArchivesByPostId 索引');
+  debugLog(`🔥 [性能优化] postArchivesByPostId 索引包含 ${postArchivesByPostId.size} 个帖子`);
 
   // 构建 postsByAuthorId 索引
-  console.time('🔥 [性能优化] 构建 postsByAuthorId 索引');
+  debugTime('🔥 [性能优化] 构建 postsByAuthorId 索引');
   const postsByAuthorId = new Map<string, Array<Post.Type>>();
   for (const post of postList) {
     if (!postsByAuthorId.has(post.author)) {
@@ -219,10 +222,10 @@ export const Query = (
     }
     postsByAuthorId.get(post.author)!.push(post);
   }
-  console.timeEnd('🔥 [性能优化] 构建 postsByAuthorId 索引');
-  console.log(`🔥 [性能优化] postsByAuthorId 索引包含 ${postsByAuthorId.size} 个作者`);
+  debugTimeEnd('🔥 [性能优化] 构建 postsByAuthorId 索引');
+  debugLog(`🔥 [性能优化] postsByAuthorId 索引包含 ${postsByAuthorId.size} 个作者`);
 
-  console.timeEnd('🔥 [性能优化] 构建全部数据索引');
+  debugTimeEnd('🔥 [性能优化] 构建全部数据索引');
 
   const TARGET_LIST: (TargetData & {
     brand: TargetBrandData;
@@ -377,7 +380,7 @@ export const Query = (
             return await Promise.resolve({ ...target.brand });
           },
           async getHotPostTop(limit: number = 10): Promise<Array<PostView.Type>> {
-            console.time('🔥 [性能优化] getHotPostTop');
+            debugTime('🔥 [性能优化] getHotPostTop');
             const result = target.postList
               .sort(() => Math.random() - 0.5)
               .slice(0, limit)
@@ -387,11 +390,11 @@ export const Query = (
                   archive: target.postArchivesByPostId.get(p.id) || [],
                 };
               });
-            console.timeEnd('🔥 [性能优化] getHotPostTop');
+            debugTimeEnd('🔥 [性能优化] getHotPostTop');
             return await Promise.resolve(result);
           },
           async getLastPostTop(limit: number = 10): Promise<Array<PostView.Type>> {
-            console.time('🔥 [性能优化] getLastPostTop');
+            debugTime('🔥 [性能优化] getLastPostTop');
             const result = target.postList
               .sort(() => Math.random() - 0.5)
               .slice(0, limit)
@@ -401,11 +404,11 @@ export const Query = (
                   archive: target.postArchivesByPostId.get(p.id) || [],
                 };
               });
-            console.timeEnd('🔥 [性能优化] getLastPostTop');
+            debugTimeEnd('🔥 [性能优化] getLastPostTop');
             return await Promise.resolve(result);
           },
           async getLastIdentityTop(limit: number = 10): Promise<Array<IdentityView.Type>> {
-            console.time('🔥 [性能优化] getLastIdentityTop');
+            debugTime('🔥 [性能优化] getLastIdentityTop');
             const result = target.identityList
               .sort(() => Math.random() - 0.5)
               .slice(0, limit)
@@ -415,7 +418,7 @@ export const Query = (
                   archive: target.identityArchivesByIdentityId.get(p.id) || [],
                 };
               });
-            console.timeEnd('🔥 [性能优化] getLastIdentityTop');
+            debugTimeEnd('🔥 [性能优化] getLastIdentityTop');
             return await Promise.resolve(result);
           },
           async getNewArchiveCountByPeriod(
@@ -517,22 +520,22 @@ export const Query = (
             return await Promise.resolve(PostView.Schema.array().parse(result));
           },
           async getPostViewList(): Promise<Array<PostView.Type>> {
-            console.time('🔥 [性能优化] getPostViewList');
+            debugTime('🔥 [性能优化] getPostViewList');
             const result = target.postList.map((p) => {
               return {
                 post: p,
                 archive: target.postArchivesByPostId.get(p.id) || [],
               };
             });
-            console.timeEnd('🔥 [性能优化] getPostViewList');
+            debugTimeEnd('🔥 [性能优化] getPostViewList');
             return await Promise.resolve(result);
           },
           async getPostViewById(id: string): Promise<PostView.Type | null> {
-            console.time('🔥 [性能优化] getPostViewById');
+            debugTime('🔥 [性能优化] getPostViewById');
             const post = target.postList.find((i) => i.id === id);
 
             if (post === undefined) {
-              console.timeEnd('🔥 [性能优化] getPostViewById');
+              debugTimeEnd('🔥 [性能优化] getPostViewById');
               return null;
             }
 
@@ -541,26 +544,26 @@ export const Query = (
               archive: target.postArchivesByPostId.get(id) || [],
             };
 
-            console.timeEnd('🔥 [性能优化] getPostViewById');
+            debugTimeEnd('🔥 [性能优化] getPostViewById');
             return await Promise.resolve(PostView.Schema.parse(result));
           },
           async getIdentityViewList(): Promise<Array<IdentityView.Type>> {
-            console.time('🔥 [性能优化] getIdentityViewList');
+            debugTime('🔥 [性能优化] getIdentityViewList');
             const result = target.identityList.map((p) => {
               return {
                 identity: p,
                 archive: target.identityArchivesByIdentityId.get(p.id) || [],
               };
             });
-            console.timeEnd('🔥 [性能优化] getIdentityViewList');
+            debugTimeEnd('🔥 [性能优化] getIdentityViewList');
             return await Promise.resolve(result);
           },
           async getIdentityViewById(id: string): Promise<IdentityView.Type | null> {
-            console.time('🔥 [性能优化] getIdentityViewById');
+            debugTime('🔥 [性能优化] getIdentityViewById');
             const identity = target.identityList.find((i) => i.id === id);
 
             if (identity === undefined) {
-              console.timeEnd('🔥 [性能优化] getIdentityViewById');
+              debugTimeEnd('🔥 [性能优化] getIdentityViewById');
               return null;
             }
 
@@ -569,11 +572,11 @@ export const Query = (
               archive: target.identityArchivesByIdentityId.get(id) || [],
             };
 
-            console.timeEnd('🔥 [性能优化] getIdentityViewById');
+            debugTimeEnd('🔥 [性能优化] getIdentityViewById');
             return await Promise.resolve(IdentityView.Schema.parse(result));
           },
           async getPostViewListByIdentityId(authorId: string): Promise<Array<PostView.Type>> {
-            console.time('🔥 [性能优化] getPostViewListByIdentityId');
+            debugTime('🔥 [性能优化] getPostViewListByIdentityId');
 
             // 使用索引直接获取该身份的所有帖子
             const authorPosts = target.postsByAuthorId.get(authorId) || [];
@@ -589,8 +592,8 @@ export const Query = (
               return apb - apa;
             });
 
-            console.timeEnd('🔥 [性能优化] getPostViewListByIdentityId');
-            console.log(
+            debugTimeEnd('🔥 [性能优化] getPostViewListByIdentityId');
+            debugLog(
               `🔥 [性能优化] getPostViewListByIdentityId 返回 ${result.length} 个帖子 (作者: ${authorId})`,
             );
             return await Promise.resolve(result);
@@ -679,13 +682,13 @@ export const Query = (
           // 	return Promise.resolve(Object.values(userStatistic));
           // },
           async getIdentityStatisticsViewList(): Promise<Array<IdentityStatisticsView.Type>> {
-            console.time('🔥 [性能优化] getIdentityStatisticsViewList - 总耗时');
+            debugTime('🔥 [性能优化] getIdentityStatisticsViewList - 总耗时');
 
-            console.time('🔥 [性能优化] getIdentityViewList');
+            debugTime('🔥 [性能优化] getIdentityViewList');
             const identityList = await this.getIdentityViewList();
-            console.timeEnd('🔥 [性能优化] getIdentityViewList');
+            debugTimeEnd('🔥 [性能优化] getIdentityViewList');
 
-            console.time('🔥 [性能优化] 构建用户统计数据');
+            debugTime('🔥 [性能优化] 构建用户统计数据');
             const userStatistic = identityList.map((iv) => {
               const identityId = iv.identity.id;
               const identityName = iv.archive[iv.archive.length - 1]!.name;
@@ -732,9 +735,9 @@ export const Query = (
               return result;
             });
 
-            console.timeEnd('🔥 [性能优化] 构建用户统计数据');
-            console.timeEnd('🔥 [性能优化] getIdentityStatisticsViewList - 总耗时');
-            console.log(
+            debugTimeEnd('🔥 [性能优化] 构建用户统计数据');
+            debugTimeEnd('🔥 [性能优化] getIdentityStatisticsViewList - 总耗时');
+            debugLog(
               `🔥 [性能优化] getIdentityStatisticsViewList 返回 ${userStatistic.length} 个用户统计`,
             );
 

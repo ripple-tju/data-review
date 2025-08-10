@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import type * as Spec from '../specification';
+import { debugLog, debugError } from './debug';
 
 /**
  * 对数缩放函数
@@ -111,12 +112,12 @@ export const calculateGrowthCycle = (
     });
 
     const days = Array.from(archivesByDay.keys()).sort();
-    console.log(
+    debugLog(
       `🔍 [增长周期调试] 帖子${postView.post.id}的${metric}指标: 按天分组后天数${days.length}, 日期: ${days.join(', ')}`,
     );
 
     if (days.length < 3) {
-      console.log(`🔍 [增长周期调试] 帖子${postView.post.id}: 天数不足3天，返回null`);
+      debugLog(`🔍 [增长周期调试] 帖子${postView.post.id}: 天数不足3天，返回null`);
       return null;
     }
 
@@ -132,7 +133,7 @@ export const calculateGrowthCycle = (
       dailyAverages.push({ day, value: average });
     });
 
-    console.log(
+    debugLog(
       `🔍 [增长周期调试] 帖子${postView.post.id}的每日平均值:`,
       dailyAverages.map((d) => `${d.day}: ${d.value}`),
     );
@@ -142,7 +143,7 @@ export const calculateGrowthCycle = (
     if (!baseDay) return null;
 
     const D2 = baseDay.value;
-    console.log(`🔍 [增长周期调试] 帖子${postView.post.id}: 基准值D2(第2天)=${D2}`);
+    debugLog(`🔍 [增长周期调试] 帖子${postView.post.id}: 基准值D2(第2天)=${D2}`);
 
     for (let i = 2; i < dailyAverages.length; i++) {
       const currentDay = dailyAverages[i];
@@ -157,14 +158,14 @@ export const calculateGrowthCycle = (
       // 计算相对增长率（避免除零）
       const relativeGrowthRate = D2 > 0 ? averageGrowthRate / D2 : 0;
 
-      console.log(
+      debugLog(
         `🔍 [增长周期调试] 帖子${postView.post.id}第${n}天: Dn=${Dn}, 平均增长率=${averageGrowthRate.toFixed(4)}, 相对增长率=${relativeGrowthRate.toFixed(4)}, 阈值=${threshold}`,
       );
 
       // 当增长率小于阈值时，视为停止增长
       if (Math.abs(relativeGrowthRate) < threshold) {
         const growthCycle = n - 1; // 第n天停止增长，则增长周期为n-1天
-        console.log(
+        debugLog(
           `🔍 [增长周期调试] 帖子${postView.post.id}: 第${n}天增长停止，返回增长周期${growthCycle}`,
         );
         return growthCycle;
@@ -172,12 +173,12 @@ export const calculateGrowthCycle = (
     }
 
     // 如果一直在增长，返回最大可计算的周期
-    console.log(
+    debugLog(
       `🔍 [增长周期调试] 帖子${postView.post.id}: 一直在增长，返回最大周期${dailyAverages.length - 1}`,
     );
     return dailyAverages.length - 1; // 一直增长时，增长周期为总天数-1
   } catch (error) {
-    console.error('计算增长周期时出错:', error);
+    debugError('计算增长周期时出错:', error);
     return null;
   }
 };
@@ -192,9 +193,7 @@ export const calculateAverageGrowthCycle = (
   postViewList: Array<Spec.PostView.Type>,
   metric: 'like' | 'comment' | 'share' | 'view',
 ): number => {
-  console.log(
-    `📊 [增长周期分析] 开始计算 ${metric} 的平均增长周期，帖子数量: ${postViewList.length}`,
-  );
+  debugLog(`📊 [增长周期分析] 开始计算 ${metric} 的平均增长周期，帖子数量: ${postViewList.length}`);
 
   const growthCycles: number[] = [];
   const growthCyclesByValue = new Map<
@@ -239,26 +238,26 @@ export const calculateAverageGrowthCycle = (
       archiveCount,
     });
 
-    console.log(
+    debugLog(
       `📊 [增长周期分析] 帖子 ${index + 1}/${postViewList.length} (${postView.post.id}): ${cycle} (${reason}, 存档${archiveCount}个)`,
     );
   });
 
   // 输出增长周期原值分布
-  console.log(`📊 [增长周期分布] 有效增长周期数据: [${growthCycles.join(', ')}]`);
-  console.log(
+  debugLog(`📊 [增长周期分布] 有效增长周期数据: [${growthCycles.join(', ')}]`);
+  debugLog(
     `📊 [增长周期分布] 有效数据统计: ${growthCycles.length}/${postViewList.length} (${((growthCycles.length / postViewList.length) * 100).toFixed(1)}%)`,
   );
 
   // 按增长周期值分组显示
-  console.log(`📊 [增长周期分组] 按增长周期值分组:`);
+  debugLog(`📊 [增长周期分组] 按增长周期值分组:`);
   Array.from(growthCyclesByValue.keys())
     .sort((a, b) => a - b)
     .forEach((cycleValue) => {
       const posts = growthCyclesByValue.get(cycleValue)!;
-      console.log(`📊 [增长周期分组]   ${cycleValue}天: ${posts.length}个帖子`);
+      debugLog(`📊 [增长周期分组]   ${cycleValue}天: ${posts.length}个帖子`);
       posts.forEach((post) => {
-        console.log(`📊 [增长周期分组]     - 帖子${post.postId} (存档${post.archiveCount}个)`);
+        debugLog(`📊 [增长周期分组]     - 帖子${post.postId} (存档${post.archiveCount}个)`);
       });
     });
 
@@ -271,18 +270,18 @@ export const calculateAverageGrowthCycle = (
     }
   });
 
-  console.log(`📊 [增长周期失败统计] 失败原因分析:`);
+  debugLog(`📊 [增长周期失败统计] 失败原因分析:`);
   failureReasons.forEach((count, reason) => {
-    console.log(`📊 [增长周期失败统计]   ${reason}: ${count}个帖子`);
+    debugLog(`📊 [增长周期失败统计]   ${reason}: ${count}个帖子`);
   });
 
   if (growthCycles.length === 0) {
-    console.log(`📊 [增长周期分析] 没有有效数据，返回0`);
+    debugLog(`📊 [增长周期分析] 没有有效数据，返回0`);
     return 0;
   }
 
   const average = growthCycles.reduce((sum, cycle) => sum + cycle, 0) / growthCycles.length;
-  console.log(
+  debugLog(
     `📊 [增长周期分析] 平均值: ${average.toFixed(2)} (基于${growthCycles.length}个有效数据)`,
   );
   return Math.round(average * 100) / 100;
@@ -355,11 +354,11 @@ const calculateVisibilityMetrics = (
   postCategoryMap?: Map<string, Array<string>>,
   domainCoverageConfig: DomainCoverageConfig = DEFAULT_DOMAIN_COVERAGE_CONFIG,
 ) => {
-  console.log('👁️ [可见度计算] 开始计算可见度指标...');
+  debugLog('👁️ [可见度计算] 开始计算可见度指标...');
 
   // 1. 内容发布总量 - 账号在过去一周发布的内容总量（原始值）
   const contentVolume = postViewList.length;
-  console.log(`👁️ [可见度] 内容发布总量: ${contentVolume}`);
+  debugLog(`👁️ [可见度] 内容发布总量: ${contentVolume}`);
 
   // 2. 内容发布稳定性 - 按日分组计算每日发布量的标准差（原始值）
   const dailyPostCounts = calculateDailyPostCounts(postViewList, timeRangeDays);
@@ -368,7 +367,7 @@ const calculateVisibilityMetrics = (
     dailyPostCounts.reduce((sum, count) => sum + Math.pow(count - mean, 2), 0) /
     dailyPostCounts.length;
   const contentStability = Math.sqrt(variance); // 标准差作为原始值
-  console.log(`👁️ [可见度] 内容发布稳定性(标准差): ${contentStability}`);
+  debugLog(`👁️ [可见度] 内容发布稳定性(标准差): ${contentStability}`);
 
   // 3. 内容发布主要领域覆盖率 - 计算实际的覆盖率
   let domainCoverage = 1; // 默认值
@@ -409,17 +408,17 @@ const calculateVisibilityMetrics = (
       // 计算覆盖率（主要领域帖子数 / 有效分类帖子总数）
       domainCoverage = validPostIds.size > 0 ? mainDomainPostIds.size / validPostIds.size : 0;
 
-      console.log(`👁️ [可见度] 主要领域覆盖率计算详情:`);
-      console.log(`👁️   - 主要领域分类ID: [${domainCoverageConfig.mainCategoryIds.join(', ')}]`);
-      console.log(`👁️   - 总帖子数: ${allPostIds.size}`);
-      console.log(`👁️   - 有效分类帖子数(排除分类0): ${validPostIds.size}`);
-      console.log(`👁️   - 主要领域帖子数: ${mainDomainPostIds.size}`);
-      console.log(`👁️   - 领域覆盖率: ${(domainCoverage * 100).toFixed(1)}%`);
+      debugLog(`👁️ [可见度] 主要领域覆盖率计算详情:`);
+      debugLog(`👁️   - 主要领域分类ID: [${domainCoverageConfig.mainCategoryIds.join(', ')}]`);
+      debugLog(`👁️   - 总帖子数: ${allPostIds.size}`);
+      debugLog(`👁️   - 有效分类帖子数(排除分类0): ${validPostIds.size}`);
+      debugLog(`👁️   - 主要领域帖子数: ${mainDomainPostIds.size}`);
+      debugLog(`👁️   - 领域覆盖率: ${(domainCoverage * 100).toFixed(1)}%`);
     } else {
-      console.log(`👁️ [可见度] 没有有效分类的帖子，领域覆盖率设为默认值: ${domainCoverage}`);
+      debugLog(`👁️ [可见度] 没有有效分类的帖子，领域覆盖率设为默认值: ${domainCoverage}`);
     }
   } else {
-    console.log(`👁️ [可见度] 没有提供帖子分类数据，领域覆盖率设为默认值: ${domainCoverage}`);
+    debugLog(`👁️ [可见度] 没有提供帖子分类数据，领域覆盖率设为默认值: ${domainCoverage}`);
   }
 
   return {
@@ -444,7 +443,7 @@ const calculateEngagementMetricsForIdentity = (
   postViewList: Array<Spec.PostView.Type>,
   timeRangeDays: number,
 ) => {
-  console.log('💬 [讨论度计算] 开始计算讨论度指标...');
+  debugLog('💬 [讨论度计算] 开始计算讨论度指标...');
 
   // 获取所有帖子的最新存档数据进行统计 - 按时间排序后取最新的
   const latestArchives = postViewList
@@ -459,7 +458,7 @@ const calculateEngagementMetricsForIdentity = (
     })
     .filter((archive) => archive !== undefined);
 
-  console.log(
+  debugLog(
     `💬 [讨论度计算] 处理了 ${postViewList.length} 个帖子，找到 ${latestArchives.length} 个有效存档`,
   );
 
@@ -475,7 +474,7 @@ const calculateEngagementMetricsForIdentity = (
   // 4. 评论增长周期（原始值，天数）
   const commentGrowthCycle = calculateAverageGrowthCycle(postViewList, 'comment');
 
-  console.log('💬 [讨论度] 统计结果:', {
+  debugLog('💬 [讨论度] 统计结果:', {
     转发总量: shareVolume,
     转发增长周期: shareGrowthCycle,
     评论总量: commentVolume,
@@ -506,7 +505,7 @@ const calculateSentimentMetrics = (
   postViewList: Array<Spec.PostView.Type>,
   postAgreementData: Record<string, number>,
 ) => {
-  console.log('❤️ [认同度计算] 开始计算认同度指标...');
+  debugLog('❤️ [认同度计算] 开始计算认同度指标...');
 
   // 1. 点赞总量（原始值）- 账号在过去一周发布内容的点赞总量
   const latestArchives = postViewList
@@ -531,7 +530,7 @@ const calculateSentimentMetrics = (
 
   // 如果有认同度数据，基于实际数据计算
   if (Object.keys(postAgreementData).length > 0) {
-    console.log('❤️ [认同度] 基于上传的认同度数据计算...');
+    debugLog('❤️ [认同度] 基于上传的认同度数据计算...');
 
     // 获取该身份相关的认同度数据 - 直接使用帖子ID
     const relevantAgreementScores: number[] = [];
@@ -542,7 +541,7 @@ const calculateSentimentMetrics = (
       }
     });
 
-    console.log(`❤️ [认同度] 找到 ${relevantAgreementScores.length} 个相关认同度数据点`);
+    debugLog(`❤️ [认同度] 找到 ${relevantAgreementScores.length} 个相关认同度数据点`);
 
     if (relevantAgreementScores.length > 0) {
       // 使用实际认同度数据计算同向性
@@ -567,17 +566,17 @@ const calculateSentimentMetrics = (
         alignmentTrend = validChanges > 0 ? totalVariation / validChanges : 0; // 变化剧烈程度的平均值
       }
 
-      console.log(
+      debugLog(
         `❤️ [认同度] 平均认同度: ${commentAlignment.toFixed(3)}, 变化趋势: ${alignmentTrend.toFixed(3)}`,
       );
     } else {
-      console.log('❤️ [认同度] 未找到有效的认同度数据，使用默认值0');
+      debugLog('❤️ [认同度] 未找到有效的认同度数据，使用默认值0');
     }
   } else {
-    console.log('❤️ [认同度] 无认同度数据，使用默认值0');
+    debugLog('❤️ [认同度] 无认同度数据，使用默认值0');
   }
 
-  console.log('❤️ [认同度] 统计结果:', {
+  debugLog('❤️ [认同度] 统计结果:', {
     点赞总量: likeVolume,
     评论同向性: commentAlignment,
     同向变化趋势: alignmentTrend,
@@ -717,16 +716,14 @@ export const calculateIdentityInfluence = (
   postCategoryMap?: Map<string, Array<string>>,
   domainCoverageConfig: DomainCoverageConfig = DEFAULT_DOMAIN_COVERAGE_CONFIG,
 ): InfluenceMetrics => {
-  console.log(`📊 [影响力计算] 开始计算身份 "${identityName}" 的影响力...`);
-  console.log(
-    `📊 [影响力计算] 帖子数量: ${postViewList.length}, 分析时间范围: ${timeRangeDays} 天`,
-  );
+  debugLog(`📊 [影响力计算] 开始计算身份 "${identityName}" 的影响力...`);
+  debugLog(`📊 [影响力计算] 帖子数量: ${postViewList.length}, 分析时间范围: ${timeRangeDays} 天`);
 
   let recentPosts: Array<Spec.PostView.Type>;
 
   // 如果提供了selectedDates，则使用这些日期进行筛选
   if (selectedDates.length > 0) {
-    console.log(`📊 [影响力计算] 使用用户选择的日期: ${selectedDates.length} 个日期`);
+    debugLog(`📊 [影响力计算] 使用用户选择的日期: ${selectedDates.length} 个日期`);
     recentPosts = postViewList.filter((postView) => {
       if (!postView.post.createdAt) return false;
       const postDate = dayjs(postView.post.createdAt).format('YYYY-MM-DD');
@@ -734,7 +731,7 @@ export const calculateIdentityInfluence = (
     });
   } else {
     // 否则使用时间范围内的帖子（基于帖子创建时间）
-    console.log(`📊 [影响力计算] 使用默认时间范围: ${timeRangeDays} 天`);
+    debugLog(`📊 [影响力计算] 使用默认时间范围: ${timeRangeDays} 天`);
     const cutoffDate = dayjs().subtract(timeRangeDays, 'day');
     recentPosts = postViewList.filter((postView) => {
       if (!postView.post.createdAt) return false;
@@ -742,20 +739,20 @@ export const calculateIdentityInfluence = (
     });
   }
 
-  console.log(`📊 [影响力计算] 筛选后帖子数量: ${recentPosts.length}`);
+  debugLog(`📊 [影响力计算] 筛选后帖子数量: ${recentPosts.length}`);
 
   // 过滤掉同向度为-1的帖子数据
   const filteredPosts = recentPosts.filter((postView) => {
     const agreementScore = postAgreementData[postView.post.id];
     // 过滤掉同向度为-1的数据
     if (agreementScore === -1) {
-      console.log(`📊 [影响力计算] 过滤同向度为-1的帖子: ${postView.post.id}`);
+      debugLog(`📊 [影响力计算] 过滤同向度为-1的帖子: ${postView.post.id}`);
       return false;
     }
     return true;
   });
 
-  console.log(
+  debugLog(
     `📊 [影响力计算] 过滤同向度为-1后帖子数量: ${filteredPosts.length}/${recentPosts.length}`,
   );
 
@@ -785,7 +782,7 @@ export const calculateIdentityInfluence = (
     overallScore: 0, // 暂时设置为0，将通过用户设置的系数计算
   };
 
-  console.log(`📊 [影响力计算] 身份 "${identityName}" 影响力原始数据计算完成:`, {
+  debugLog(`📊 [影响力计算] 身份 "${identityName}" 影响力原始数据计算完成:`, {
     可见度: result.visibility,
     讨论度: result.engagement,
     认同度: result.sentiment,
@@ -916,7 +913,7 @@ export const calculateInfluenceWithCoefficients = (
   metrics: InfluenceMetrics,
   coefficients: InfluenceCoefficients,
 ): InfluenceMetrics => {
-  console.log('🧮 [新算法] 开始使用对数缩放计算影响力得分...');
+  debugLog('🧮 [新算法] 开始使用对数缩放计算影响力得分...');
 
   // ===== 计算可见度各小项得分 =====
   const contentVolumeScaled = logarithmicScaling(metrics.visibility.contentVolume, {
@@ -1048,7 +1045,7 @@ export const calculateInfluenceWithCoefficients = (
 
   const overallScore = Math.round(overallWeightedSum * 100) / 100;
 
-  console.log('🧮 [新算法] 计算完成:', {
+  debugLog('🧮 [新算法] 计算完成:', {
     可见度: visibilityScore,
     讨论度: engagementScore,
     认同度: sentimentScore,
@@ -1105,7 +1102,7 @@ export const calculateInfluenceRanking = (
   coefficients: InfluenceCoefficients = DEFAULT_INFLUENCE_COEFFICIENTS,
   postCategoryMap?: Map<string, Array<string>>,
 ): InfluenceRankingItem[] => {
-  console.log('🏆 [影响力排名] 开始计算影响力排行榜...');
+  debugLog('🏆 [影响力排名] 开始计算影响力排行榜...');
 
   const rankings: InfluenceRankingItem[] = identityGroups.map((group, index) => {
     // 先计算原始数据
@@ -1138,9 +1135,9 @@ export const calculateInfluenceRanking = (
     item.rank = index + 1;
   });
 
-  console.log('🏆 [影响力排名] 排行榜计算完成:');
+  debugLog('🏆 [影响力排名] 排行榜计算完成:');
   rankings.slice(0, 5).forEach((item) => {
-    console.log(`🏆 第${item.rank}名: ${item.name} (综合得分: ${item.influence.overallScore})`);
+    debugLog(`🏆 第${item.rank}名: ${item.name} (综合得分: ${item.influence.overallScore})`);
   });
 
   return rankings;

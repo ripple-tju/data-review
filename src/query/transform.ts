@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { debugLog, debugError, debugTime, debugTimeEnd } from '../utils/debug';
 
 import { v4 } from 'uuid';
 import { Identity, IdentityArchive, Post, PostArchive } from 'src/specification';
@@ -8,7 +9,7 @@ import { sortByCreatedAt, getRangeValue } from './utils';
 // 	eager: true,
 // 	as: 'url',
 // });
-// console.log(avatarImgModules);
+// debugLog(avatarImgModules);
 // import { avatarImgModules } from 'src/backend/transform';
 
 const IdentityWithUUID = Identity.Schema.extend({
@@ -68,7 +69,7 @@ function parseRawData(PeriodData: unknown) {
       try {
         return RawPeriodData.parse(i);
       } catch (e) {
-        console.error('Invalid data', e, i);
+        debugError('Invalid data', e, i);
         return null;
       }
     })
@@ -247,7 +248,7 @@ export function parseForQuery(PeriodData: unknown) {
   const parsedData = parseRawData(PeriodData);
   const transformedData = transformData(parsedData);
 
-  console.time('divideByDay');
+  debugTime('divideByDay');
   const sorted = parsedData
     .map((i) => ({ ...i, createdAt: new Date(i.capturedAt) }))
     .sort(sortByCreatedAt);
@@ -256,7 +257,7 @@ export function parseForQuery(PeriodData: unknown) {
   const lastCreatedAt = sorted.at(0)?.createdAt;
 
   const data = parseData(transformedData);
-  console.log(
+  debugLog(
     'Data parsed successfully',
     data,
     firstCreatedAt,
@@ -268,7 +269,7 @@ export function parseForQuery(PeriodData: unknown) {
       },
     ),
   );
-  console.timeEnd('divideByDay');
+  debugTimeEnd('divideByDay');
 
   return { data, firstCreatedAt, lastCreatedAt };
 }

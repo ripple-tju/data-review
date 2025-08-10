@@ -4,11 +4,14 @@ import { Identity, IdentityArchive, Post, PostArchive } from 'src/specification'
 // import { generateMock } from '@anatine/zod-mock';
 import { sortByCreatedAt, getRangeValue } from './utils';
 import { IDENTITY_LIST } from 'src/specification/IdentityData';
+
+// 导入调试工具
+import { debugLog, debugError, debugTime, debugTimeEnd } from 'src/utils/debug';
 // export const avatarImgModules = import.meta.glob('assets/avatars/*.{jpg,png}', {
 // 	eager: true,
 // 	as: 'url',
 // });
-// console.log(avatarImgModules);
+// debugLog(avatarImgModules);
 // import { avatarImgModules } from 'src/backend/transform';
 
 export const RippleFormat = z.object({
@@ -44,7 +47,7 @@ function parseRawData(PeriodData: unknown) {
       try {
         return RippleFormat.parse(i);
       } catch (e) {
-        console.error('Invalid data', e, i);
+        debugError('Invalid data', e, i);
         return null;
       }
     })
@@ -209,7 +212,7 @@ export function parseForQuery(PeriodData: unknown) {
   const parsedData = parseRawData(PeriodData);
   const transformedData = transformData(parsedData);
 
-  console.time('divideByDay');
+  debugTime('divideByDay');
   const sorted = parsedData
     .map((i) => ({ ...i, createdAt: new Date(i.capturedAt) }))
     .sort(sortByCreatedAt);
@@ -218,7 +221,7 @@ export function parseForQuery(PeriodData: unknown) {
   const lastCreatedAt = sorted.at(0)?.createdAt;
 
   const data = parseData(transformedData);
-  console.log(
+  debugLog(
     'Data parsed successfully',
     data,
     firstCreatedAt,
@@ -230,21 +233,21 @@ export function parseForQuery(PeriodData: unknown) {
       },
     ),
   );
-  console.timeEnd('divideByDay');
+  debugTimeEnd('divideByDay');
 
   return { data, firstCreatedAt, lastCreatedAt };
 }
 
 export function parseRippleForQuery(sliceData: unknown) {
-  console.time('parseRippleForQuery:parseRawData');
+  debugTime('parseRippleForQuery:parseRawData');
   const parsedData = parseRawData(sliceData);
-  console.timeEnd('parseRippleForQuery:parseRawData');
+  debugTimeEnd('parseRippleForQuery:parseRawData');
 
-  console.time('parseRippleForQuery:transformData');
+  debugTime('parseRippleForQuery:transformData');
   const transformedData = transformData(parsedData);
-  console.timeEnd('parseRippleForQuery:transformData');
+  debugTimeEnd('parseRippleForQuery:transformData');
 
-  console.time('parseRippleForQuery:divideByDay');
+  debugTime('parseRippleForQuery:divideByDay');
   const sorted = parsedData
     .map((i) => ({ ...i, createdAt: new Date(i.capturedAt) }))
     .sort(sortByCreatedAt);
@@ -253,7 +256,7 @@ export function parseRippleForQuery(sliceData: unknown) {
   const lastCreatedAt = sorted.at(0)?.createdAt;
 
   const data = parseData(transformedData);
-  console.log(
+  debugLog(
     'Data parsed successfully',
     data,
     firstCreatedAt,
@@ -265,7 +268,7 @@ export function parseRippleForQuery(sliceData: unknown) {
       },
     ),
   );
-  console.timeEnd('parseRippleForQuery:divideByDay');
+  debugTimeEnd('parseRippleForQuery:divideByDay');
 
   return { data, firstCreatedAt, lastCreatedAt };
 }

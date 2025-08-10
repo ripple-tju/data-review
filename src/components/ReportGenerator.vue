@@ -236,6 +236,9 @@ import AppPostListStatistics from 'src/pages/components/PostListStatistics.vue';
 import * as Spec from 'src/specification';
 import { QueryInterface } from 'src/query';
 
+// 导入调试工具
+import { debugLog } from 'src/utils/debug';
+
 interface AnalysisResults {
   filteredAllPostView: Array<Spec.PostView.Type>;
   filteredPostViewListGroupByIdentity: Array<{
@@ -284,7 +287,7 @@ watch(
 
 // 身份统计组件渲染完成的回调
 const onIdentityStatsRendered = (index: number) => {
-  console.log(`📊 [ReportGenerator] 身份统计组件 ${index} 渲染完成`);
+  debugLog(`📊 [ReportGenerator] 身份统计组件 ${index} 渲染完成`);
 
   // 清除之前的超时
   if (renderingTimeout.value) {
@@ -297,9 +300,9 @@ const onIdentityStatsRendered = (index: number) => {
     index < props.analysisResults.filteredPostViewListGroupByIdentity.length - 1
   ) {
     currentRenderingIndex.value = index + 1;
-    console.log(`📊 [ReportGenerator] 开始渲染下一个组件，索引: ${index + 1}`);
+    debugLog(`📊 [ReportGenerator] 开始渲染下一个组件，索引: ${index + 1}`);
   } else {
-    console.log('📊 [ReportGenerator] 所有身份统计组件渲染完成');
+    debugLog('📊 [ReportGenerator] 所有身份统计组件渲染完成');
   }
 };
 

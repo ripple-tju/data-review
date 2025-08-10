@@ -893,6 +893,16 @@ import { Categories } from 'src/specification/Category';
 import { calculateInfluenceRanking } from 'src/utils/influenceCalculator';
 import type { InfluenceRankingItem } from 'src/utils/influenceCalculator';
 
+// 导入调试工具
+import {
+  debugLog,
+  debugWarn,
+  debugError,
+  debugTime,
+  debugTimeEnd,
+  debugPerformance,
+} from 'src/utils/debug';
+
 const query = ref<QueryInterface>(Query(parseRippleForQuery([])));
 const idList = ref<Array<Spec.IdentityView.Type>>([]);
 const allPostView = ref<Array<Spec.PostView.Type>>([]);
@@ -1024,19 +1034,19 @@ const getTopicBasicInfo = (topicName: string) => {
 
 // 根据主题筛选的结果
 const topicFilteredResults = computed(() => {
-  console.log('🔍 [主题筛选] 计算 topicFilteredResults...');
-  console.log('🔍 [主题筛选] analysisResults:', !!analysisResults.value);
-  console.log('🔍 [主题筛选] selectedTopic:', selectedTopic.value);
+  debugLog('🔍 [主题筛选] 计算 topicFilteredResults...');
+  debugLog('🔍 [主题筛选] analysisResults:', !!analysisResults.value);
+  debugLog('🔍 [主题筛选] selectedTopic:', selectedTopic.value);
 
   if (!analysisResults.value || !selectedTopic.value) {
-    console.log('🔍 [主题筛选] 返回 null - 缺少必要条件');
+    debugLog('🔍 [主题筛选] 返回 null - 缺少必要条件');
     return null;
   }
 
   const topic = savedTopics.value.find((t) => t.name === selectedTopic.value);
-  console.log('🔍 [主题筛选] 找到的主题:', topic);
+  debugLog('🔍 [主题筛选] 找到的主题:', topic);
   if (!topic) {
-    console.log('🔍 [主题筛选] 返回 null - 未找到主题');
+    debugLog('🔍 [主题筛选] 返回 null - 未找到主题');
     return null;
   }
 
@@ -1045,9 +1055,9 @@ const topicFilteredResults = computed(() => {
     return null;
   }
 
-  console.log('🎯 [主题筛选] 开始按主题筛选帖子数据...');
-  console.log('🎯 [主题筛选] 选中的关键词:', Array.from(selectedTopicWords));
-  console.log('🎯 [主题筛选] 关键词关系:', topicKeywordRelation.value);
+  debugLog('🎯 [主题筛选] 开始按主题筛选帖子数据...');
+  debugLog('🎯 [主题筛选] 选中的关键词:', Array.from(selectedTopicWords));
+  debugLog('🎯 [主题筛选] 关键词关系:', topicKeywordRelation.value);
 
   // 为每个关键词获取包含它的帖子ID集合
   const wordPostIdsMap = new Map<string, Set<string>>();
@@ -1088,7 +1098,7 @@ const topicFilteredResults = computed(() => {
     }
 
     finalRelevantPostIds = relevantPostIds || new Set<string>();
-    console.log('🎯 [主题筛选] AND关系 - 同时包含所有关键词的帖子数量:', finalRelevantPostIds.size);
+    debugLog('🎯 [主题筛选] AND关系 - 同时包含所有关键词的帖子数量:', finalRelevantPostIds.size);
   } else {
     // OR关系：包含任意一个关键词的帖子都会被选中（并集）
     finalRelevantPostIds = new Set<string>();
@@ -1099,7 +1109,7 @@ const topicFilteredResults = computed(() => {
       }
     }
 
-    console.log('🎯 [主题筛选] OR关系 - 包含任意关键词的帖子数量:', finalRelevantPostIds.size);
+    debugLog('🎯 [主题筛选] OR关系 - 包含任意关键词的帖子数量:', finalRelevantPostIds.size);
   }
 
   // 筛选帖子
@@ -1107,7 +1117,7 @@ const topicFilteredResults = computed(() => {
     finalRelevantPostIds.has(postView.post.id),
   );
 
-  console.log('🎯 [主题筛选] 筛选后帖子数量:', filteredAllPostView.length);
+  debugLog('🎯 [主题筛选] 筛选后帖子数量:', filteredAllPostView.length);
 
   return {
     filteredAllPostView,
@@ -1124,7 +1134,7 @@ const loadSavedTopics = () => {
       updateTopicValidity();
     }
   } catch (error) {
-    console.warn('加载保存的主题失败:', error);
+    debugWarn('加载保存的主题失败:', error);
   }
 };
 
@@ -1132,7 +1142,7 @@ const saveTopicsToStorage = () => {
   try {
     localStorage.setItem('dataReview_savedTopics', JSON.stringify(savedTopics.value));
   } catch (error) {
-    console.warn('保存主题到本地存储失败:', error);
+    debugWarn('保存主题到本地存储失败:', error);
   }
 };
 
@@ -1145,7 +1155,7 @@ const updateTopicValidity = () => {
     topic.isValid = topic.words.some((word) => availableWords.has(word));
   });
 
-  console.log(`🔍 [主题管理] 更新主题有效性，可用词汇: ${availableWords.size} 个`);
+  debugLog(`🔍 [主题管理] 更新主题有效性，可用词汇: ${availableWords.size} 个`);
 };
 
 const updateWordOptions = () => {
@@ -1159,7 +1169,7 @@ const updateWordOptions = () => {
       length: word.length, // 词汇长度
     }));
 
-  console.log(`🔄 [主题分析] 从反向索引获取词汇，共 ${wordStats.length} 个词汇`);
+  debugLog(`🔄 [主题分析] 从反向索引获取词汇，共 ${wordStats.length} 个词汇`);
 
   // 排序：先按长度降序，再按出现次数降序
   const sortedWords = wordStats
@@ -1177,9 +1187,9 @@ const updateWordOptions = () => {
   // 初始显示排名前30的词汇
   filteredWordOptions.value = wordOptions.value.slice(0, 30);
 
-  console.log(`🎯 [主题分析] 词汇排序完成，显示前30个高质量词汇`);
+  debugLog(`🎯 [主题分析] 词汇排序完成，显示前30个高质量词汇`);
   if (wordOptions.value.length > 0) {
-    console.log(
+    debugLog(
       `🏆 [主题分析] 排名前5的词汇:`,
       wordOptions.value
         .slice(0, 5)
@@ -1278,7 +1288,7 @@ const createTopic = () => {
   newTopicName.value = '';
   selectedWords.value = [];
 
-  console.log('✅ [主题管理] 创建新主题:', newTopic);
+  debugLog('✅ [主题管理] 创建新主题:', newTopic);
 };
 
 const deleteTopic = (topicId: string) => {
@@ -1295,7 +1305,7 @@ const deleteTopic = (topicId: string) => {
         selectedTopic.value = '';
       }
 
-      console.log('🗑️ [主题管理] 删除主题:', topicId);
+      debugLog('🗑️ [主题管理] 删除主题:', topicId);
     }
   }
 };
@@ -1315,8 +1325,8 @@ const getCategoryFilteredPostView = (posts: Array<Spec.PostView.Type>) => {
     return posts;
   }
 
-  console.log('📊 [分类筛选] 开始按分类筛选帖子数据...');
-  console.log('📊 [分类筛选] 选中的分类:', selectedCategoryIds.value);
+  debugLog('📊 [分类筛选] 开始按分类筛选帖子数据...');
+  debugLog('📊 [分类筛选] 选中的分类:', selectedCategoryIds.value);
 
   // 获取所有选中分类对应的帖子ID
   const selectedPostIds = new Set<string>();
@@ -1327,18 +1337,18 @@ const getCategoryFilteredPostView = (posts: Array<Spec.PostView.Type>) => {
     }
   });
 
-  console.log('📊 [分类筛选] 找到的帖子ID数量:', selectedPostIds.size);
+  debugLog('📊 [分类筛选] 找到的帖子ID数量:', selectedPostIds.size);
 
   // 筛选帖子
   const filteredPosts = posts.filter((postView) => selectedPostIds.has(postView.post.id));
 
-  console.log('📊 [分类筛选] 筛选后帖子数量:', filteredPosts.length);
+  debugLog('📊 [分类筛选] 筛选后帖子数量:', filteredPosts.length);
   return filteredPosts;
 };
 
 // 🔥 [优化] 计算筛选后的帖子数据 - 按身份、分类、日期筛选
 const getFilteredPostView = () => {
-  console.log('📊 [数据筛选] 开始计算筛选后的帖子数据...');
+  debugLog('📊 [数据筛选] 开始计算筛选后的帖子数据...');
 
   // 获取基础筛选数据（按身份筛选）
   let filteredAllPostView = allPostView.value.filter((postView) =>
@@ -1362,13 +1372,13 @@ const getFilteredPostView = () => {
     });
   }
 
-  console.log(`📊 [数据筛选] 帖子数据筛选完成，结果: ${filteredAllPostView.length} 个帖子`);
+  debugLog(`📊 [数据筛选] 帖子数据筛选完成，结果: ${filteredAllPostView.length} 个帖子`);
   return filteredAllPostView;
 };
 
 // 🔥 [优化] 计算筛选后的分组数据 - 按帖子创建时间筛选
 const getFilteredGroupByIdentity = () => {
-  console.log('📊 [数据筛选] 开始计算筛选后的分组数据...');
+  debugLog('📊 [数据筛选] 开始计算筛选后的分组数据...');
 
   const filteredPostViewListGroupByIdentity = [];
 
@@ -1391,7 +1401,7 @@ const getFilteredGroupByIdentity = () => {
       );
 
       if (existingGroup) {
-        console.log(
+        debugLog(
           `📊 [数据筛选] 使用缓存数据为身份 "${existingGroup.name}" (${selectedId})，帖子数量: ${existingGroup.postViewList.length}`,
         );
 
@@ -1422,7 +1432,7 @@ const getFilteredGroupByIdentity = () => {
     }
   }
 
-  console.log(
+  debugLog(
     `📊 [数据筛选] 分组数据筛选完成，结果: ${filteredPostViewListGroupByIdentity.length} 个分组`,
   );
   return filteredPostViewListGroupByIdentity;
@@ -1491,10 +1501,10 @@ const processSelectedData = () => {
   isProcessingAnalysis.value = true;
 
   try {
-    const analysisStart = performance.now();
-    console.log('🔍 [身份分析] 开始处理选择的身份数据...');
-    console.log('🔍 [身份分析] 选择的身份ID:', selectedIdentityIds.value);
-    console.log('🔍 [日期分析] 选择的日期:', selectedDates.value);
+    const analysisStart = debugPerformance.now();
+    debugLog('🔍 [身份分析] 开始处理选择的身份数据...');
+    debugLog('🔍 [身份分析] 选择的身份ID:', selectedIdentityIds.value);
+    debugLog('🔍 [日期分析] 选择的日期:', selectedDates.value);
 
     // 使用 computed 计算筛选后的数据，避免重复计算
     const filteredAllPostView = getFilteredPostView();
@@ -1506,12 +1516,12 @@ const processSelectedData = () => {
       filteredPostViewListGroupByIdentity,
     };
 
-    const analysisEnd = performance.now();
-    console.log(`🔍 [身份分析] 数据分析完成，耗时: ${(analysisEnd - analysisStart).toFixed(2)}ms`);
-    console.log(`🔍 [身份分析] 筛选后帖子数量: ${filteredAllPostView.length}`);
-    console.log(`🔍 [身份分析] 筛选后身份组数量: ${filteredPostViewListGroupByIdentity.length}`);
+    const analysisEnd = debugPerformance.now();
+    debugLog(`🔍 [身份分析] 数据分析完成，耗时: ${(analysisEnd - analysisStart).toFixed(2)}ms`);
+    debugLog(`🔍 [身份分析] 筛选后帖子数量: ${filteredAllPostView.length}`);
+    debugLog(`🔍 [身份分析] 筛选后身份组数量: ${filteredPostViewListGroupByIdentity.length}`);
   } catch (error) {
-    console.error('身份数据分析失败:', error);
+    debugError('身份数据分析失败:', error);
   } finally {
     isProcessingAnalysis.value = false;
   }
@@ -1531,7 +1541,7 @@ const filteredDateStats = computed(() => {
     return [];
   }
 
-  console.log('📅 [日期分析] 开始分析筛选后的帖子日期统计...');
+  debugLog('📅 [日期分析] 开始分析筛选后的帖子日期统计...');
 
   // 收集选择身份的帖子数据（基于帖子创建时间）
   const filteredPosts: Array<Spec.PostView.Type> = [];
@@ -1562,7 +1572,7 @@ const filteredDateStats = computed(() => {
     })
     .sort((a, b) => a.date.localeCompare(b.date)); // 按日期排序
 
-  console.log('📅 [日期分析] 筛选后帖子日期统计分析完成:', {
+  debugLog('📅 [日期分析] 筛选后帖子日期统计分析完成:', {
     totalDays: stats.length,
     totalPosts: filteredPosts.length,
     selectedIdentities: selectedIdentityIds.value.length,
@@ -1580,7 +1590,7 @@ const analyzeDateStats = () => {
     return;
   }
 
-  console.log('📅 [日期分析] 开始分析帖子日期统计...');
+  debugLog('📅 [日期分析] 开始分析帖子日期统计...');
 
   // 使用 divideByDay 按帖子创建日期分组，使用默认的日期提取函数
   const postsByDate = divideByDay(allPostView.value, (postView) =>
@@ -1621,7 +1631,7 @@ const analyzeDateStats = () => {
     selectedDates.value = [];
   }
 
-  console.log('📅 [日期分析] 帖子日期统计分析完成:', {
+  debugLog('📅 [日期分析] 帖子日期统计分析完成:', {
     totalDays: stats.length,
     totalPosts: allPostView.value.length,
     dateRange: dateRange.value,
@@ -1665,7 +1675,7 @@ watch(
     if (newIds.length > 0) {
       // 当身份选择变化时，默认选择所有可用日期
       selectedDates.value = filteredDateStats.value.map((stat) => stat.date);
-      console.log('🔄 [身份筛选] 身份选择发生变化，已更新日期选择');
+      debugLog('🔄 [身份筛选] 身份选择发生变化，已更新日期选择');
     } else {
       // 如果没有选择身份，清空日期选择和分析结果
       selectedDates.value = [];
@@ -1684,7 +1694,7 @@ watch(
       const firstGroup = newGroups[0];
       if (firstGroup && firstGroup.name) {
         selectedIdentityForView.value = firstGroup.name;
-        console.log(`🎯 [自动选择] 自动选择第一个身份用于查看: ${firstGroup.name}`);
+        debugLog(`🎯 [自动选择] 自动选择第一个身份用于查看: ${firstGroup.name}`);
       }
     }
   },
@@ -1695,10 +1705,10 @@ watch(
 watch(
   selectedCategoryIds,
   (newCategoryIds: string[]) => {
-    console.log('🔄 [分类筛选] 分类选择发生变化:', newCategoryIds);
+    debugLog('🔄 [分类筛选] 分类选择发生变化:', newCategoryIds);
     // 如果有选中的身份，重新处理数据
     if (selectedIdentityIds.value.length > 0) {
-      console.log('🔄 [分类筛选] 重新计算分析结果...');
+      debugLog('🔄 [分类筛选] 重新计算分析结果...');
       processSelectedData();
     }
   },
@@ -1709,9 +1719,9 @@ watch(
 watch(
   selectedDates,
   (newDates: string[]) => {
-    console.log('🔄 [日期筛选] 日期选择发生变化:', newDates);
+    debugLog('🔄 [日期筛选] 日期选择发生变化:', newDates);
     // 日期选择变化时，需要用户手动点击"开始数据统计分析"按钮
-    console.log('[Date Filter] Please click Start Data Analysis button to re-analyze data');
+    debugLog('[Date Filter] Please click Start Data Analysis button to re-analyze data');
   },
   { immediate: false },
 );
@@ -1720,7 +1730,7 @@ watch(
 watch(
   cutwordCache,
   () => {
-    console.log('🔄 [主题分析] 分词缓存发生变化，更新词汇选项...');
+    debugLog('🔄 [主题分析] 分词缓存发生变化，更新词汇选项...');
     updateTopicValidity();
   },
   { immediate: false, deep: true },
@@ -1776,7 +1786,7 @@ const getFieldValue = (postView: Spec.PostView.Type, fieldPath: string): string 
         return '';
     }
   } catch (error) {
-    console.error(`获取字段 ${fieldPath} 值时出错:`, error);
+    debugError(`获取字段 ${fieldPath} 值时出错:`, error);
     return '';
   }
 };
@@ -1792,8 +1802,8 @@ const escapeCsvField = (field: string): string => {
 const exportToCsv = () => {
   if (!analysisResults.value) return;
 
-  const exportStart = performance.now();
-  console.log('📊 [CSV导出] 开始导出CSV文件...');
+  const exportStart = debugPerformance.now();
+  debugLog('📊 [CSV导出] 开始导出CSV文件...');
 
   // 获取选中的字段
   const selectedFields = Object.entries(exportFields.value)
@@ -1843,9 +1853,9 @@ const exportToCsv = () => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 
-  const exportEnd = performance.now();
-  console.log(`📊 [CSV导出] CSV导出完成，耗时: ${(exportEnd - exportStart).toFixed(2)}ms`);
-  console.log(
+  const exportEnd = debugPerformance.now();
+  debugLog(`📊 [CSV导出] CSV导出完成，耗时: ${(exportEnd - exportStart).toFixed(2)}ms`);
+  debugLog(
     `📊 [CSV导出] 导出了 ${analysisResults.value.filteredAllPostView.length} 条记录，${selectedFields.length} 个字段`,
   );
 
@@ -1914,8 +1924,8 @@ const onAgreementFileChange = (file: File | null) => {
 
 // 处理上传的数据
 const processUploadedData = async () => {
-  const startTime = performance.now();
-  console.log('🚀 [性能分析] 开始处理上传数据');
+  const startTime = debugPerformance.now();
+  debugLog('🚀 [性能分析] 开始处理上传数据');
 
   if (!archiveFile.value) {
     uploadStatus.value = {
@@ -1930,14 +1940,14 @@ const processUploadedData = async () => {
 
   try {
     // 读取存档数据文件
-    const fileReadStart = performance.now();
-    console.log('📁 [性能分析] 开始读取存档数据文件...');
+    const fileReadStart = debugPerformance.now();
+    debugLog('📁 [性能分析] 开始读取存档数据文件...');
     const archiveData = await readFileAsJSON(archiveFile.value);
-    const fileReadEnd = performance.now();
-    console.log(
+    const fileReadEnd = debugPerformance.now();
+    debugLog(
       `📁 [性能分析] 存档数据文件读取完成，耗时: ${(fileReadEnd - fileReadStart).toFixed(2)}ms`,
     );
-    console.log(
+    debugLog(
       `📊 [性能分析] 存档数据大小: ${JSON.stringify(archiveData).length} 字符，${archiveData.length} 条记录`,
     );
 
@@ -1948,34 +1958,34 @@ const processUploadedData = async () => {
     } = { cutWordCache: [], reverseIndex: {} };
     if (cutwordFile.value) {
       try {
-        const cutwordReadStart = performance.now();
-        console.log('📁 [性能分析] 开始读取分词缓存文件...');
+        const cutwordReadStart = debugPerformance.now();
+        debugLog('📁 [性能分析] 开始读取分词缓存文件...');
         const rawData = await readFileAsJSON(cutwordFile.value);
 
         // 使用新格式数据
         if (rawData && rawData.cutWordCache && rawData.reverseIndex) {
-          console.log('✅ [数据格式] 加载新格式分词数据');
+          debugLog('✅ [数据格式] 加载新格式分词数据');
           cutwordData = rawData;
         } else {
-          console.warn('⚠️ [数据格式] 数据格式不正确，使用默认空值');
+          debugWarn('⚠️ [数据格式] 数据格式不正确，使用默认空值');
           cutwordData = { cutWordCache: [], reverseIndex: {} };
         }
 
-        const cutwordReadEnd = performance.now();
-        console.log(
+        const cutwordReadEnd = debugPerformance.now();
+        debugLog(
           `📁 [性能分析] 分词缓存文件读取完成，耗时: ${(cutwordReadEnd - cutwordReadStart).toFixed(2)}ms`,
         );
-        console.log(`📊 [性能分析] 分词缓存大小: ${cutwordData.cutWordCache.length} 条记录`);
+        debugLog(`📊 [性能分析] 分词缓存大小: ${cutwordData.cutWordCache.length} 条记录`);
       } catch (error) {
-        console.warn('分词缓存文件读取失败，将使用空缓存:', error);
+        debugWarn('分词缓存文件读取失败，将使用空缓存:', error);
       }
     }
 
     // 读取推文分类索引文件（如果有）
     if (categoryIndexFile.value) {
       try {
-        const categoryIndexReadStart = performance.now();
-        console.log('📁 [性能分析] 开始读取推文分类索引文件...');
+        const categoryIndexReadStart = debugPerformance.now();
+        debugLog('📁 [性能分析] 开始读取推文分类索引文件...');
         const categoryIndexData: Record<string, string> = await readFileAsJSON(
           categoryIndexFile.value,
         );
@@ -1991,15 +2001,15 @@ const processUploadedData = async () => {
 
         postCategoryMap.value = categoryMap;
 
-        const categoryIndexReadEnd = performance.now();
-        console.log(
+        const categoryIndexReadEnd = debugPerformance.now();
+        debugLog(
           `📁 [性能分析] 推文分类索引文件读取完成，耗时: ${(categoryIndexReadEnd - categoryIndexReadStart).toFixed(2)}ms`,
         );
-        console.log(
+        debugLog(
           `📊 [性能分析] 推文分类索引数据: ${Object.keys(categoryIndexData).length} 个推文，${categoryMap.size} 个分类`,
         );
       } catch (error) {
-        console.warn('推文分类索引文件读取失败:', error);
+        debugWarn('推文分类索引文件读取失败:', error);
         postCategoryMap.value = new Map();
       }
     }
@@ -2007,30 +2017,30 @@ const processUploadedData = async () => {
     // 读取推文分类数据文件（如果有）
     if (categoryDataFile.value) {
       try {
-        const categoryDataReadStart = performance.now();
-        console.log('📁 [性能分析] 开始读取推文分类数据文件...');
+        const categoryDataReadStart = debugPerformance.now();
+        debugLog('📁 [性能分析] 开始读取推文分类数据文件...');
         const categoryDataFromFile = await readFileAsJSON(categoryDataFile.value);
 
         // 验证数据格式是否为 Array<Category>
         if (Array.isArray(categoryDataFromFile)) {
           categoryData.value = categoryDataFromFile;
-          console.log('📊 [分类数据] 推文分类数据验证通过');
-          console.log(`📊 [分类数据] 分类数量: ${categoryDataFromFile.length}`);
-          console.log(
+          debugLog('📊 [分类数据] 推文分类数据验证通过');
+          debugLog(`📊 [分类数据] 分类数量: ${categoryDataFromFile.length}`);
+          debugLog(
             '📊 [分类数据] 分类列表:',
             categoryDataFromFile.map((cat) => `${cat.id}: ${cat.name}`).join(', '),
           );
         } else {
-          console.warn('推文分类数据格式不正确，期望 Array<Category>');
+          debugWarn('推文分类数据格式不正确，期望 Array<Category>');
           categoryData.value = [];
         }
 
-        const categoryDataReadEnd = performance.now();
-        console.log(
+        const categoryDataReadEnd = debugPerformance.now();
+        debugLog(
           `📁 [性能分析] 推文分类数据文件读取完成，耗时: ${(categoryDataReadEnd - categoryDataReadStart).toFixed(2)}ms`,
         );
       } catch (error) {
-        console.warn('推文分类数据文件读取失败:', error);
+        debugWarn('推文分类数据文件读取失败:', error);
         categoryData.value = [];
       }
     }
@@ -2038,39 +2048,37 @@ const processUploadedData = async () => {
     // 读取推文认同度文件（如果有）
     if (agreementFile.value) {
       try {
-        const agreementReadStart = performance.now();
-        console.log('📁 [性能分析] 开始读取推文认同度文件...');
+        const agreementReadStart = debugPerformance.now();
+        debugLog('📁 [性能分析] 开始读取推文认同度文件...');
         const agreementData: Record<string, number> = await readFileAsJSON(agreementFile.value);
 
         postAgreementData.value = agreementData;
 
-        const agreementReadEnd = performance.now();
-        console.log(
+        const agreementReadEnd = debugPerformance.now();
+        debugLog(
           `📁 [性能分析] 推文认同度文件读取完成，耗时: ${(agreementReadEnd - agreementReadStart).toFixed(2)}ms`,
         );
-        console.log(
-          `📊 [性能分析] 推文认同度数据: ${Object.keys(agreementData).length} 个推文存档`,
-        );
+        debugLog(`📊 [性能分析] 推文认同度数据: ${Object.keys(agreementData).length} 个推文存档`);
       } catch (error) {
-        console.warn('推文认同度文件读取失败:', error);
+        debugWarn('推文认同度文件读取失败:', error);
         postAgreementData.value = {};
       }
     }
 
     // 处理数据
-    const processStart = performance.now();
-    console.log('⚙️ [性能分析] 开始处理数据...');
+    const processStart = debugPerformance.now();
+    debugLog('⚙️ [性能分析] 开始处理数据...');
     // const dataToProcess = archiveData.slice(0, 10000);
     const dataToProcess = archiveData;
-    console.log(`📊 [性能分析] 实际处理数据量: ${dataToProcess.length} 条记录`);
+    debugLog(`📊 [性能分析] 实际处理数据量: ${dataToProcess.length} 条记录`);
 
     await processData(dataToProcess, cutwordData);
 
-    const processEnd = performance.now();
-    console.log(`⚙️ [性能分析] 数据处理完成，耗时: ${(processEnd - processStart).toFixed(2)}ms`);
+    const processEnd = debugPerformance.now();
+    debugLog(`⚙️ [性能分析] 数据处理完成，耗时: ${(processEnd - processStart).toFixed(2)}ms`);
 
-    const totalTime = performance.now() - startTime;
-    console.log(
+    const totalTime = debugPerformance.now() - startTime;
+    debugLog(
       `✅ [性能分析] 整个流程完成，总耗时: ${totalTime.toFixed(2)}ms (${(totalTime / 1000).toFixed(2)}秒)`,
     );
 
@@ -2082,7 +2090,7 @@ const processUploadedData = async () => {
     // 重置分析结果，让用户重新选择
     analysisResults.value = null;
   } catch (error) {
-    console.error('Data processing error:', error);
+    debugError('Data processing error:', error);
     uploadStatus.value = {
       type: 'error',
       message: `数据处理失败: ${error instanceof Error ? error.message : '未知错误'}`,
@@ -2094,65 +2102,59 @@ const processUploadedData = async () => {
 
 // 加载默认示例数据
 const loadDefaultData = async () => {
-  const startTime = performance.now();
-  console.log('🚀 [性能分析] 开始加载默认数据');
+  const startTime = debugPerformance.now();
+  debugLog('🚀 [性能分析] 开始加载默认数据');
 
   isProcessing.value = true;
   uploadStatus.value = null;
 
   try {
-    const fetchStart = performance.now();
-    console.log('🌐 [性能分析] 开始获取默认存档数据...');
+    const fetchStart = debugPerformance.now();
+    debugLog('🌐 [性能分析] 开始获取默认存档数据...');
     const test = await fetch('/data/default.json')
       .then((response) => response.json())
       .catch((error) => {
-        console.error('Error fetching data:', error);
+        debugError('Error fetching data:', error);
         throw new Error('无法加载默认存档数据');
       });
-    const fetchEnd = performance.now();
-    console.log(
-      `🌐 [性能分析] 默认存档数据获取完成，耗时: ${(fetchEnd - fetchStart).toFixed(2)}ms`,
-    );
+    const fetchEnd = debugPerformance.now();
+    debugLog(`🌐 [性能分析] 默认存档数据获取完成，耗时: ${(fetchEnd - fetchStart).toFixed(2)}ms`);
 
-    const cacheStart = performance.now();
-    console.log('🌐 [性能分析] 开始获取默认分词缓存...');
+    const cacheStart = debugPerformance.now();
+    debugLog('🌐 [性能分析] 开始获取默认分词缓存...');
     const testCache = (await fetch('/data/default-jieba.json')
       .then((response) => response.json())
       .catch((error) => {
-        console.error('Error fetching cache:', error);
+        debugError('Error fetching cache:', error);
         return []; // 如果缓存加载失败，使用空数组
       })) as Array<{
       id: Spec.PostArchive.Type['id'];
       cut: Array<string>;
     }>;
-    const cacheEnd = performance.now();
-    console.log(
-      `🌐 [性能分析] 默认分词缓存获取完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`,
-    );
+    const cacheEnd = debugPerformance.now();
+    debugLog(`🌐 [性能分析] 默认分词缓存获取完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`);
 
-    const processStart = performance.now();
-    console.log('⚙️ [性能分析] 开始处理默认数据...');
+    const processStart = debugPerformance.now();
+    debugLog('⚙️ [性能分析] 开始处理默认数据...');
     await processOldData(test, testCache);
 
     // 为默认数据设置空的分类和认同度数据
     postCategoryMap.value = new Map();
     postAgreementData.value = {};
-    console.log('📝 [数据初始化] 推文分类和认同度数据已初始化为空值');
+    debugLog('📝 [数据初始化] 推文分类和认同度数据已初始化为空值');
 
-    const processEnd = performance.now();
-    console.log(
-      `⚙️ [性能分析] 默认数据处理完成，耗时: ${(processEnd - processStart).toFixed(2)}ms`,
-    );
+    const processEnd = debugPerformance.now();
+    debugLog(`⚙️ [性能分析] 默认数据处理完成，耗时: ${(processEnd - processStart).toFixed(2)}ms`);
 
-    const queryStart = performance.now();
-    console.log('📋 [性能分析] 开始查询帖子视图...');
+    const queryStart = debugPerformance.now();
+    debugLog('📋 [性能分析] 开始查询帖子视图...');
     const b = await query.value.Target('fb').getPostViewList();
-    const queryEnd = performance.now();
-    console.log(`📋 [性能分析] 帖子视图查询完成，耗时: ${(queryEnd - queryStart).toFixed(2)}ms`);
-    console.log('Default data loaded:', b);
+    const queryEnd = debugPerformance.now();
+    debugLog(`📋 [性能分析] 帖子视图查询完成，耗时: ${(queryEnd - queryStart).toFixed(2)}ms`);
+    debugLog('Default data loaded:', b);
 
-    const totalTime = performance.now() - startTime;
-    console.log(
+    const totalTime = debugPerformance.now() - startTime;
+    debugLog(
       `✅ [性能分析] 默认数据加载完成，总耗时: ${totalTime.toFixed(2)}ms (${(totalTime / 1000).toFixed(2)}秒)`,
     );
 
@@ -2166,11 +2168,11 @@ const loadDefaultData = async () => {
 
     // 🔥 [主题分析] 更新词汇选项（如果有分词缓存）
     if (cutwordCache.value.cutWordCache.length > 0) {
-      console.log('🔄 [主题分析] 更新词汇选项...');
+      debugLog('🔄 [主题分析] 更新词汇选项...');
       updateWordOptions();
     }
   } catch (error) {
-    console.error('Default data loading error:', error);
+    debugError('Default data loading error:', error);
     uploadStatus.value = {
       type: 'error',
       message: `默认数据加载失败: ${error instanceof Error ? error.message : '未知错误'}`,
@@ -2188,57 +2190,55 @@ const processData = async (
     reverseIndex: Record<string, Array<string>>;
   },
 ) => {
-  console.log('🔧 [性能分析] 进入 processData 函数');
+  debugLog('🔧 [性能分析] 进入 processData 函数');
 
   // 设置分词缓存（使用新格式）
-  const cacheStart = performance.now();
-  console.log('💾 [性能分析] 开始设置分词缓存...');
-  console.log(`💾 [分词缓存] cutWordCache 数量: ${cutwordData.cutWordCache.length}`);
-  console.log(
-    `💾 [分词缓存] reverseIndex 词汇数量: ${Object.keys(cutwordData.reverseIndex).length}`,
-  );
+  const cacheStart = debugPerformance.now();
+  debugLog('💾 [性能分析] 开始设置分词缓存...');
+  debugLog(`💾 [分词缓存] cutWordCache 数量: ${cutwordData.cutWordCache.length}`);
+  debugLog(`💾 [分词缓存] reverseIndex 词汇数量: ${Object.keys(cutwordData.reverseIndex).length}`);
 
   cutwordCache.value = cutwordData;
-  const cacheEnd = performance.now();
-  console.log(`💾 [性能分析] 分词缓存设置完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`);
+  const cacheEnd = debugPerformance.now();
+  debugLog(`💾 [性能分析] 分词缓存设置完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`);
 
   // 解析并设置查询
-  const parseStart = performance.now();
-  console.log('🔍 [性能分析] 开始解析数据...');
+  const parseStart = debugPerformance.now();
+  debugLog('🔍 [性能分析] 开始解析数据...');
   const parsedData = parseRippleForQuery(archiveData);
-  const parseEnd = performance.now();
-  console.log(`🔍 [性能分析] 数据解析完成，耗时: ${(parseEnd - parseStart).toFixed(2)}ms`);
+  const parseEnd = debugPerformance.now();
+  debugLog(`🔍 [性能分析] 数据解析完成，耗时: ${(parseEnd - parseStart).toFixed(2)}ms`);
 
-  const queryStart = performance.now();
-  console.log('📋 [性能分析] 开始创建查询对象...');
+  const queryStart = debugPerformance.now();
+  debugLog('📋 [性能分析] 开始创建查询对象...');
   query.value = Query(parsedData);
-  const queryEnd = performance.now();
-  console.log(`📋 [性能分析] 查询对象创建完成，耗时: ${(queryEnd - queryStart).toFixed(2)}ms`);
+  const queryEnd = debugPerformance.now();
+  debugLog(`📋 [性能分析] 查询对象创建完成，耗时: ${(queryEnd - queryStart).toFixed(2)}ms`);
 
   // 获取身份列表和帖子列表
-  const identityStart = performance.now();
-  console.log('👤 [性能分析] 开始获取身份列表...');
+  const identityStart = debugPerformance.now();
+  debugLog('👤 [性能分析] 开始获取身份列表...');
   idList.value = await query.value.Target('fb').getIdentityViewList();
-  const identityEnd = performance.now();
-  console.log(
+  const identityEnd = debugPerformance.now();
+  debugLog(
     `👤 [性能分析] 身份列表获取完成，耗时: ${(identityEnd - identityStart).toFixed(2)}ms，获得 ${idList.value.length} 个身份`,
   );
 
-  const postStart = performance.now();
-  console.log('📝 [性能分析] 开始获取帖子列表...');
+  const postStart = debugPerformance.now();
+  debugLog('📝 [性能分析] 开始获取帖子列表...');
   allPostView.value = await query.value.Target('fb').getPostViewList();
-  console.log('allPostView.value', allPostView.value);
-  const postEnd = performance.now();
-  console.log(
+  debugLog('allPostView.value', allPostView.value);
+  const postEnd = debugPerformance.now();
+  debugLog(
     `📝 [性能分析] 帖子列表获取完成，耗时: ${(postEnd - postStart).toFixed(2)}ms，获得 ${allPostView.value.length} 个帖子`,
   );
 
   // 按身份分组帖子
-  const groupStart = performance.now();
-  console.log('📊 [性能分析] 开始按身份分组帖子...');
+  const groupStart = debugPerformance.now();
+  debugLog('📊 [性能分析] 开始按身份分组帖子...');
   postViewListGroupByIdentity.value = await Promise.all(
     idList.value.map(async (id, index) => {
-      const groupItemStart = performance.now();
+      const groupItemStart = debugPerformance.now();
 
       // 获取身份的最新存档名称
       let identityName = 'Unknown';
@@ -2253,23 +2253,23 @@ const processData = async (
         name: identityName,
         postViewList: await query.value.Target('fb').getPostViewListByIdentityId(id.identity.id),
       };
-      const groupItemEnd = performance.now();
-      console.log(
+      const groupItemEnd = debugPerformance.now();
+      debugLog(
         `📊 [性能分析] 身份 ${index + 1}/${idList.value.length} (${result.name}) 分组完成，耗时: ${(groupItemEnd - groupItemStart).toFixed(2)}ms，获得 ${result.postViewList.length} 个帖子`,
       );
       return result;
     }),
   );
-  const groupEnd = performance.now();
-  console.log(`📊 [性能分析] 按身份分组完成，总耗时: ${(groupEnd - groupStart).toFixed(2)}ms`);
+  const groupEnd = debugPerformance.now();
+  debugLog(`📊 [性能分析] 按身份分组完成，总耗时: ${(groupEnd - groupStart).toFixed(2)}ms`);
 
-  console.log('✅ [性能分析] processData 函数执行完成');
+  debugLog('✅ [性能分析] processData 函数执行完成');
 
   // 分析日期统计
   analyzeDateStats();
 
   // 🔥 [主题分析] 更新词汇选项
-  console.log('🔄 [主题分析] 更新词汇选项...');
+  debugLog('🔄 [主题分析] 更新词汇选项...');
   updateWordOptions();
 };
 
@@ -2278,7 +2278,7 @@ const processOldData = async (
   archiveData: any,
   cutwordData: Array<{ id: string; cut: Array<string> }>,
 ) => {
-  console.log('🔧 [性能分析] 进入 processOldData 函数');
+  debugLog('🔧 [性能分析] 进入 processOldData 函数');
 
   // 转换旧格式为新格式
   const normalizedCutwordData = {
@@ -2290,48 +2290,48 @@ const processOldData = async (
   };
 
   // 设置分词缓存
-  const cacheStart = performance.now();
-  console.log('💾 [性能分析] 开始设置分词缓存...');
+  const cacheStart = debugPerformance.now();
+  debugLog('💾 [性能分析] 开始设置分词缓存...');
   cutwordCache.value = normalizedCutwordData;
-  const cacheEnd = performance.now();
-  console.log(`💾 [性能分析] 分词缓存设置完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`);
+  const cacheEnd = debugPerformance.now();
+  debugLog(`💾 [性能分析] 分词缓存设置完成，耗时: ${(cacheEnd - cacheStart).toFixed(2)}ms`);
 
   // 解析并设置查询
-  const parseStart = performance.now();
-  console.log('🔍 [性能分析] 开始解析旧格式数据...');
+  const parseStart = debugPerformance.now();
+  debugLog('🔍 [性能分析] 开始解析旧格式数据...');
   const parsedData = parseForQuery(archiveData);
-  const parseEnd = performance.now();
-  console.log(`🔍 [性能分析] 旧格式数据解析完成，耗时: ${(parseEnd - parseStart).toFixed(2)}ms`);
+  const parseEnd = debugPerformance.now();
+  debugLog(`🔍 [性能分析] 旧格式数据解析完成，耗时: ${(parseEnd - parseStart).toFixed(2)}ms`);
 
-  const queryStart = performance.now();
-  console.log('📋 [性能分析] 开始创建查询对象...');
+  const queryStart = debugPerformance.now();
+  debugLog('📋 [性能分析] 开始创建查询对象...');
   query.value = Query(parsedData);
-  const queryEnd = performance.now();
-  console.log(`📋 [性能分析] 查询对象创建完成，耗时: ${(queryEnd - queryStart).toFixed(2)}ms`);
+  const queryEnd = debugPerformance.now();
+  debugLog(`📋 [性能分析] 查询对象创建完成，耗时: ${(queryEnd - queryStart).toFixed(2)}ms`);
 
   // 获取身份列表和帖子列表
-  const identityStart = performance.now();
-  console.log('👤 [性能分析] 开始获取身份列表...');
+  const identityStart = debugPerformance.now();
+  debugLog('👤 [性能分析] 开始获取身份列表...');
   idList.value = await query.value.Target('fb').getIdentityViewList();
-  const identityEnd = performance.now();
-  console.log(
+  const identityEnd = debugPerformance.now();
+  debugLog(
     `👤 [性能分析] 身份列表获取完成，耗时: ${(identityEnd - identityStart).toFixed(2)}ms，获得 ${idList.value.length} 个身份`,
   );
 
-  const postStart = performance.now();
-  console.log('📝 [性能分析] 开始获取帖子列表...');
+  const postStart = debugPerformance.now();
+  debugLog('📝 [性能分析] 开始获取帖子列表...');
   allPostView.value = await query.value.Target('fb').getPostViewList();
-  const postEnd = performance.now();
-  console.log(
+  const postEnd = debugPerformance.now();
+  debugLog(
     `📝 [性能分析] 帖子列表获取完成，耗时: ${(postEnd - postStart).toFixed(2)}ms，获得 ${allPostView.value.length} 个帖子`,
   );
 
   // 按身份分组帖子
-  const groupStart = performance.now();
-  console.log('📊 [性能分析] 开始按身份分组帖子...');
+  const groupStart = debugPerformance.now();
+  debugLog('📊 [性能分析] 开始按身份分组帖子...');
   postViewListGroupByIdentity.value = await Promise.all(
     idList.value.map(async (id, index) => {
-      const groupItemStart = performance.now();
+      const groupItemStart = debugPerformance.now();
 
       // 获取身份的最新存档名称
       let identityName = 'Unknown';
@@ -2346,17 +2346,17 @@ const processOldData = async (
         name: identityName,
         postViewList: await query.value.Target('fb').getPostViewListByIdentityId(id.identity.id),
       };
-      const groupItemEnd = performance.now();
-      console.log(
+      const groupItemEnd = debugPerformance.now();
+      debugLog(
         `📊 [性能分析] 身份 ${index + 1}/${idList.value.length} (${result.name}) 分组完成，耗时: ${(groupItemEnd - groupItemStart).toFixed(2)}ms，获得 ${result.postViewList.length} 个帖子`,
       );
       return result;
     }),
   );
-  const groupEnd = performance.now();
-  console.log(`📊 [性能分析] 按身份分组完成，总耗时: ${(groupEnd - groupStart).toFixed(2)}ms`);
+  const groupEnd = debugPerformance.now();
+  debugLog(`📊 [性能分析] 按身份分组完成，总耗时: ${(groupEnd - groupStart).toFixed(2)}ms`);
 
-  console.log('✅ [性能分析] processOldData 函数执行完成');
+  debugLog('✅ [性能分析] processOldData 函数执行完成');
 
   // 分析日期统计
   analyzeDateStats();
@@ -2366,10 +2366,10 @@ const processOldData = async (
 // 移除主动清理，让浏览器自动管理上下文，避免干扰 ECharts-GL 的内部状态
 const handleTabSwitch = (newTab: string, oldTab: string) => {
   if (oldTab && newTab !== oldTab) {
-    console.log(`🔄 [标签切换] 从 ${oldTab} 切换到 ${newTab}`);
+    debugLog(`🔄 [标签切换] 从 ${oldTab} 切换到 ${newTab}`);
     // 简单的延迟，让当前标签页的渲染完全停止
     setTimeout(() => {
-      console.log('🎯 [标签切换] 切换完成，依赖浏览器自动管理 WebGL 上下文');
+      debugLog('🎯 [标签切换] 切换完成，依赖浏览器自动管理 WebGL 上下文');
     }, 100);
   }
 };
@@ -2379,7 +2379,7 @@ watch(activeTab, handleTabSwitch);
 
 // 组件卸载时的清理
 onUnmounted(() => {
-  console.log('🚪 [组件卸载] 组件卸载，依赖浏览器自动清理 WebGL 上下文');
+  debugLog('🚪 [组件卸载] 组件卸载，依赖浏览器自动清理 WebGL 上下文');
 });
 
 onMounted(() => {
@@ -2387,11 +2387,11 @@ onMounted(() => {
   // await loadDefaultData();
 
   // 🔥 [主题分析] 加载保存的主题
-  console.log('🔄 [主题分析] 组件挂载，加载保存的主题...');
+  debugLog('🔄 [主题分析] 组件挂载，加载保存的主题...');
   loadSavedTopics();
 
   // 🔥 [主题分析] 初始化词汇选项
-  console.log('🔄 [主题分析] 初始化词汇选项...');
+  debugLog('🔄 [主题分析] 初始化词汇选项...');
   updateWordOptions();
 });
 </script>

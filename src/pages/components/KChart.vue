@@ -52,6 +52,9 @@ import 'echarts-wordcloud'; // 引入词云图支持
 import type { EChartsOption } from 'echarts';
 import { useQuasar } from 'quasar';
 
+// 导入调试工具
+import { debugLog, debugWarn, debugError } from 'src/utils/debug';
+
 const props = defineProps<{
   title: string;
   option: any; // 支持包括3D图表在内的所有ECharts选项
@@ -85,7 +88,7 @@ const initChart = () => {
       // 如果不是图片模式，图表初始化完成后发射 rendered 事件
       nextTick(() => {
         emit('rendered');
-      }).catch(console.error);
+      }).catch(debugError);
     }
   }
 };
@@ -193,9 +196,9 @@ const generateChartImage = () => {
             chartInstance.value.dispose();
             chartInstance.value = null;
 
-            console.log('📊 [KChart] 图表已转换为图片，WebGL上下文已释放');
+            debugLog('📊 [KChart] 图表已转换为图片，WebGL上下文已释放');
           } catch (error) {
-            console.error('📊 [KChart] 图片生成失败:', error);
+            debugError('📊 [KChart] 图片生成失败:', error);
             // 即使生成失败，也要清理图表实例
             if (chartInstance.value) {
               chartInstance.value.dispose();
@@ -209,7 +212,7 @@ const generateChartImage = () => {
         }
       })
       .catch((error) => {
-        console.error('📊 [KChart] 等待渲染失败:', error);
+        debugError('📊 [KChart] 等待渲染失败:', error);
         // 确保清理图表实例
         if (chartInstance.value) {
           chartInstance.value.dispose();
@@ -296,7 +299,7 @@ const copyChart = async () => {
       timeout: 2000,
     });
   } catch (error) {
-    console.error('复制到剪贴板失败:', error);
+    debugError('复制到剪贴板失败:', error);
 
     // 显示错误通知
     $q.notify({
