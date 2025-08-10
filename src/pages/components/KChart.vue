@@ -143,7 +143,9 @@ const generateChartImage = () => {
             Array.isArray(option.series) &&
             option.series.some(
               (series: any) =>
-                series.type && (series.type.includes('3D') || series.type === 'scatter3D'),
+                series &&
+                series.type &&
+                (series.type.includes('3D') || series.type === 'scatter3D'),
             );
 
           if (has3DSeries && attempts < 5) {
@@ -154,7 +156,7 @@ const generateChartImage = () => {
           // 4. 对于词云图，检查是否有wordCloud类型
           const hasWordCloud =
             Array.isArray(option.series) &&
-            option.series.some((series: any) => series.type === 'wordCloud');
+            option.series.some((series: any) => series && series.type === 'wordCloud');
 
           if (hasWordCloud && attempts < 3) {
             setTimeout(checkRender, 600);
