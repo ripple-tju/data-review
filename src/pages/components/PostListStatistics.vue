@@ -2048,14 +2048,7 @@ import dayjs from 'dayjs';
 import AppKChart from './KChart.vue';
 import { QueryInterface } from 'src/query';
 import { computed, ref, onMounted, nextTick, watch } from 'vue';
-import {
-  debugLog,
-  debugWarn,
-  debugError,
-  debugTime,
-  debugTimeEnd,
-  debugPerformance,
-} from 'src/utils/debug';
+import { debugWarn, debugError } from 'src/utils/debug';
 import * as Spec from 'src/specification';
 import { divideByDay } from 'src/query/utils';
 import type { EChartsOption } from 'echarts';
@@ -2927,13 +2920,9 @@ const totalChartsCount = 13; // 当前组件中的图表总数（包括分类相
 // 图表渲染完成的回调
 const onChartRendered = () => {
   renderedChartsCount.value++;
-  debugLog(
-    `📊 [PostListStatistics] 图表渲染完成: ${renderedChartsCount.value}/${totalChartsCount}`,
-  );
 
   // 如果所有图表都已渲染完成，发射 rendered 事件
   if (renderedChartsCount.value >= totalChartsCount) {
-    debugLog('📊 [PostListStatistics] 所有图表渲染完成，发射 rendered 事件');
     emit('rendered');
   }
 };
@@ -3140,17 +3129,12 @@ const calcPercentageGrowth = (latest: number, earliest: number, dayCount: number
   //   );
   // }
   if (Number.isNaN(growth)) {
-    debugLog(
-      `Negative growth detected: latest=${latest}, earliest=${earliest}, dayCount=${dayCount}`,
-    );
+    // Negative growth detected
   }
   return growth.toFixed(3);
 };
 
 const latestPostArchiveList = computed(() => {
-  const startTime = debugPerformance.now();
-  debugLog('🔄 [PostStatistics] 开始计算 latestPostArchiveList...');
-
   const result = postViewList
     .map((post) => {
       // 按 capturedAt 时间降序排序，获取最新的存档
@@ -3207,10 +3191,6 @@ const latestPostArchiveList = computed(() => {
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
 
-  const endTime = debugPerformance.now();
-  debugLog(
-    `🔄 [PostStatistics] latestPostArchiveList 计算完成，耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 条记录`,
-  );
   return result;
 });
 
@@ -3240,9 +3220,6 @@ const postStatsSummary = computed(() => {
 
 // 身份排行计算 - 使用新的影响力计算算法
 const identityRankingList = computed(() => {
-  const startTime = debugPerformance.now();
-  debugLog('🔄 [PostStatistics] 开始计算 identityRankingList (新算法)...');
-
   // 按身份分组帖子
   const identityGroups = new Map<string, Array<Spec.PostView.Type>>();
 
@@ -3253,8 +3230,6 @@ const identityRankingList = computed(() => {
     }
     identityGroups.get(authorId)!.push(postView);
   });
-
-  debugLog('identityGroups: ', identityGroups);
 
   // 转换为影响力计算所需的格式
   const identityGroupsArray = Array.from(identityGroups.entries()).map(
@@ -3329,25 +3304,6 @@ const identityRankingList = computed(() => {
     alignmentTrend: item.influence.sentiment.alignmentTrend,
     alignmentTrendScore: item.influence.sentiment.alignmentTrendScore,
   }));
-
-  const endTime = debugPerformance.now();
-  debugLog(
-    `🔄 [PostStatistics] identityRankingList (新算法) 计算完成，耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 个身份`,
-  );
-
-  // 输出前5名的详细信息
-  result.slice(0, 5).forEach((item, index) => {
-    debugLog(`🏆 第${index + 1}名: ${item.authorName}`, {
-      综合影响力: item.influenceScore,
-      可见度: item.visibilityScore,
-      讨论度: item.engagementScore,
-      认同度: item.sentimentScore,
-      内容量: item.contentVolume,
-      稳定性: item.contentStability,
-      转发增长周期: item.shareGrowthCycle,
-      评论增长周期: item.commentGrowthCycle,
-    });
-  });
 
   return result;
 });
@@ -3561,8 +3517,6 @@ const categoryAgreementStats = computed(() => {
     return [];
   }
 
-  debugLog('🔄 [分类同向度] 开始计算分类同向度统计...');
-
   // 按身份分组统计
   const identityGroups = new Map<
     string,
@@ -3577,12 +3531,22 @@ const categoryAgreementStats = computed(() => {
   let validAgreementCount = 0;
   let filteredCount = 0;
 
+  console.log('🏷️ 开始分类同向度统计计算...');
+  const startTime = performance.now();
+
+  // 🚀 [性能优化] 建立idList的快速查找映射，避免重复的find操作
+  const initStartTime = performance.now();
+  const identityViewMap = new Map<string, Spec.IdentityView.Type>();
+  idList.forEach((identityView) => {
+    identityViewMap.set(identityView.identity.id, identityView);
+  });
+
   // 初始化身份分组
   postViewList.forEach((postView) => {
     const authorId = postView.post.author;
     if (!identityGroups.has(authorId)) {
-      // 获取作者名称
-      const identity = idList.find((id) => id.identity.id === authorId);
+      // 🚀 [性能优化] 使用Map快速查找身份信息，复杂度从O(n)降至O(1)
+      const identity = identityViewMap.get(authorId);
       let authorName = 'Unknown';
       if (identity && identity.archive && identity.archive.length > 0) {
         const sortedArchive = identity.archive.sort(
@@ -3597,12 +3561,28 @@ const categoryAgreementStats = computed(() => {
       });
     }
   });
+  const initEndTime = performance.now();
+  console.log(
+    `👥 身份初始化完成 - 用时: ${(initEndTime - initStartTime).toFixed(2)}ms, 身份数: ${identityGroups.size}`,
+  );
+
+  // 🚀 [性能优化] 创建postView的快速查找映射，避免重复遍历
+  const postViewMapStartTime = performance.now();
+  const postViewMap = new Map<string, any>();
+  postViewList.forEach((postView) => {
+    postViewMap.set(postView.post.id, postView);
+  });
+  const postViewMapEndTime = performance.now();
+  console.log(
+    `🗂️ PostView映射创建完成 - 用时: ${(postViewMapEndTime - postViewMapStartTime).toFixed(2)}ms, 映射数: ${postViewMap.size}`,
+  );
 
   // 收集每个身份在各分类下的同向度数据
+  const dataProcessingStartTime = performance.now();
   postCategoryMap.forEach((postIds, categoryId) => {
     postIds.forEach((postId) => {
-      // 找到对应的 postView
-      const postView = postViewList.find((p) => p.post.id === postId);
+      // 🚀 [性能优化] 使用Map快速查找，复杂度从O(n)降至O(1)
+      const postView = postViewMap.get(postId);
       if (!postView) return;
 
       totalPosts++;
@@ -3628,6 +3608,13 @@ const categoryAgreementStats = computed(() => {
       }
     });
   });
+  const dataProcessingEndTime = performance.now();
+  console.log(
+    `📊 数据处理完成 - 用时: ${(dataProcessingEndTime - dataProcessingStartTime).toFixed(2)}ms, 总帖子: ${totalPosts}, 有效同向度: ${validAgreementCount}, 过滤数: ${filteredCount}`,
+  );
+
+  // 计算最终结果
+  const resultCalculationStartTime = performance.now();
   const result = Array.from(identityGroups.entries())
     .map(([authorId, identity]) => {
       const row: any = {
@@ -3659,12 +3646,16 @@ const categoryAgreementStats = computed(() => {
     })
     .filter((row) => row.averageAgreement > 0); // 只保留有同向度数据的身份
 
-  debugLog(
-    `🔄 [分类同向度] 计算完成，共 ${result.length} 个身份，${availableCategories.value.length} 个分类`,
+  const resultCalculationEndTime = performance.now();
+  console.log(
+    `🧮 结果计算完成 - 用时: ${(resultCalculationEndTime - resultCalculationStartTime).toFixed(2)}ms, 结果数量: ${result.length}`,
   );
-  debugLog(
-    `📊 [分类同向度] 数据统计: 总帖子${totalPosts}个，有效同向度${validAgreementCount}个，过滤-1数据${filteredCount}个`,
+
+  const endTime = performance.now();
+  console.log(
+    `🏷️ 分类同向度统计总耗时: ${(endTime - startTime).toFixed(2)}ms (vs 原来的 11,927ms) - 性能提升: ${(11927 / (endTime - startTime)).toFixed(1)}x`,
   );
+
   return result;
 });
 
@@ -3707,21 +3698,12 @@ const categoryAgreementColumns = computed(() => {
 });
 
 const latestPostArchiveCutWordList = computed(() => {
-  const startTime = debugPerformance.now();
-  debugLog('🔄 [PostStatistics] 开始计算 latestPostArchiveCutWordList...');
-
   // 🔥 [性能优化] 将cutWordCache转换为Map索引，避免O(n²)查找
-  const indexBuildStart = debugPerformance.now();
   const cutWordMap = new Map<string, Array<string>>();
   for (const item of cutWordCache.cutWordCache) {
     cutWordMap.set(item.id, item.wordList);
   }
-  const indexBuildEnd = debugPerformance.now();
-  debugLog(
-    `🔥 [性能优化] cutWordCache索引构建耗时: ${(indexBuildEnd - indexBuildStart).toFixed(2)}ms，索引了 ${cutWordMap.size} 个条目`,
-  );
 
-  const mapStart = debugPerformance.now();
   const result = latestPostArchiveList.value.map((post) => {
     // 🔥 [性能优化] 使用Map直接查找，O(1)时间复杂度，添加空值检查
     const cut = post.id ? cutWordMap.get(post.id) || [] : [];
@@ -3730,27 +3712,12 @@ const latestPostArchiveCutWordList = computed(() => {
       cut,
     };
   });
-  const mapEnd = debugPerformance.now();
-  debugLog(`🔥 [性能优化] 数据映射耗时: ${(mapEnd - mapStart).toFixed(2)}ms`);
 
-  const endTime = debugPerformance.now();
-  debugLog(
-    `🔄 [PostStatistics] latestPostArchiveCutWordList 计算完成，总耗时: ${(endTime - startTime).toFixed(2)}ms，处理了 ${result.length} 条记录`,
-  );
   return result;
 });
 
 const wordOccurrence = computed(() => {
-  const startTime = debugPerformance.now();
-  debugLog('🔄 [PostStatistics] 开始计算 wordOccurrence...');
-  debugTime('wordOccurrence');
-
-  const flatMapStart = debugPerformance.now();
   const words = latestPostArchiveCutWordList.value.flatMap((post) => post.cut);
-  const flatMapEnd = debugPerformance.now();
-  debugLog(
-    `🔄 [PostStatistics] 词汇展平完成，耗时: ${(flatMapEnd - flatMapStart).toFixed(2)}ms，获得 ${words.length} 个词汇`,
-  );
 
   // 🔥 [性能优化] 预编译正则表达式，避免重复编译
   const punctuationRegex =
@@ -4009,7 +3976,6 @@ const wordOccurrence = computed(() => {
     'okay',
   ]);
 
-  const filterStart = debugPerformance.now();
   const filteredWords = words.filter((word) => {
     // 🔥 [性能优化] 快速基本检查（最常见的过滤条件优先）
     if (word.length <= 1) return false;
@@ -4029,37 +3995,18 @@ const wordOccurrence = computed(() => {
 
     return true;
   });
-  const filterEnd = debugPerformance.now();
-  debugLog(
-    `🔄 [PostStatistics] 词汇过滤完成，耗时: ${(filterEnd - filterStart).toFixed(2)}ms，剩余 ${filteredWords.length} 个有效词汇`,
-  );
 
   // 🔥 [性能优化] 使用Map手动统计词频，比Object.groupBy更高效
-  const groupStart = debugPerformance.now();
   const wordCountMap = new Map<string, number>();
   for (const word of filteredWords) {
     const count = wordCountMap.get(word) || 0;
     wordCountMap.set(word, count + 1);
   }
-  const groupEnd = debugPerformance.now();
-  debugLog(
-    '🔥 [性能优化] 词汇分组完成，耗时:',
-    (groupEnd - groupStart).toFixed(2) + 'ms，获得',
-    wordCountMap.size,
-    '个不同词汇',
-  );
 
-  const mapStart = debugPerformance.now();
   const result = Array.from(wordCountMap.entries()).map(([word, count]) => ({
     word,
     count,
   }));
-  const mapEnd = debugPerformance.now();
-  debugLog(`🔄 [PostStatistics] 词频统计完成，耗时: ${(mapEnd - mapStart).toFixed(2)}ms`);
-
-  debugTimeEnd('wordOccurrence');
-  const totalTime = debugPerformance.now() - startTime;
-  debugLog(`🔄 [PostStatistics] wordOccurrence 计算完成，总耗时: ${totalTime.toFixed(2)}ms`);
 
   return result;
 });
@@ -4078,7 +4025,6 @@ const postCountByDay = computed(() => {
 });
 
 const totalStatsDivided = computed(() => {
-  debugLog('postViewDivideByDay.value', postViewDivideByDay.value);
   return postViewDivideByDay.value.map((day) => {
     const date = day.date;
     const stat = day.itemList.reduce(

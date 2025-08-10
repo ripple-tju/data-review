@@ -53,7 +53,7 @@ import type { EChartsOption } from 'echarts';
 import { useQuasar } from 'quasar';
 
 // 导入调试工具
-import { debugLog, debugWarn, debugError } from 'src/utils/debug';
+import { debugWarn, debugError } from 'src/utils/debug';
 
 const props = defineProps<{
   title: string;
@@ -197,8 +197,6 @@ const generateChartImage = () => {
             // 销毁图表实例以释放WebGL上下文
             chartInstance.value.dispose();
             chartInstance.value = null;
-
-            debugLog('📊 [KChart] 图表已转换为图片，WebGL上下文已释放');
           } catch (error) {
             debugError('📊 [KChart] 图片生成失败:', error);
             // 即使生成失败，也要清理图表实例
