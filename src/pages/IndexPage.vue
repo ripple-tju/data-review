@@ -1737,8 +1737,8 @@ const getAuthorNameById = (authorId: string): string => {
 
 const getFieldValue = (postView: Spec.PostView.Type, fieldPath: string): string => {
   try {
-    // 获取最新的存档数据
-    const latestArchive = postView.archive[postView.archive.length - 1];
+    // 🔥 [修复] 获取最新的存档数据 - archive数组是按capturedAt降序排列的，所以最新的在索引0
+    const latestArchive = postView.archive[0]; // 修复：使用索引0而不是length-1
 
     switch (fieldPath) {
       case 'post.id':

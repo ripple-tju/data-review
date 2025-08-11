@@ -691,14 +691,16 @@ export const Query = (
             debugTime('🔥 [性能优化] 构建用户统计数据');
             const userStatistic = identityList.map((iv) => {
               const identityId = iv.identity.id;
-              const identityName = iv.archive[iv.archive.length - 1]!.name;
+              // 🔥 [修复] identityArchive也是按capturedAt降序排列的，最新的在索引0
+              const identityName = iv.archive[0]!.name;
 
               // 直接使用索引获取该身份的帖子列表，避免 O(n) 查找
               const authorPosts = target.postsByAuthorId.get(identityId) || [];
 
               const postViewListWithLatestArchive = authorPosts.map((post) => {
                 const postArchives = target.postArchivesByPostId.get(post.id) || [];
-                const latestArchive = postArchives[postArchives.length - 1];
+                // 🔥 [修复] postArchive也是按capturedAt降序排列的，最新的在索引0
+                const latestArchive = postArchives[0];
 
                 return {
                   post,
@@ -719,7 +721,8 @@ export const Query = (
               );
 
               const result: IdentityStatisticsView.Type = {
-                capturedAt: iv.archive[iv.archive.length - 1]!.createdAt,
+                // 🔥 [修复] 使用最新的identity archive信息
+                capturedAt: iv.archive[0]!.createdAt,
                 createdAt: iv.identity.createdAt,
                 authorId: identityId,
                 authorName: identityName,

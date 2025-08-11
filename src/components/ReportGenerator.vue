@@ -327,8 +327,8 @@ const getIdentityStats = (identity: { name: string; postViewList: Array<Spec.Pos
   let totalComment = 0;
 
   identity.postViewList.forEach((postView) => {
-    // 获取最新的存档数据
-    const latestArchive = postView.archive[postView.archive.length - 1];
+    // 🔥 [修复] 获取最新的存档数据 - archive数组是按capturedAt降序排列的，最新的在索引0
+    const latestArchive = postView.archive[0];
     if (latestArchive) {
       totalLike += latestArchive.like || 0;
       totalShare += latestArchive.share || 0;
@@ -524,7 +524,8 @@ const wordCloudOption = computed(() => {
   // 收集所有帖子内容
   const allContent = props.analysisResults.filteredAllPostView
     .map((postView) => {
-      const latestArchive = postView.archive[postView.archive.length - 1];
+      // 🔥 [修复] 获取最新的存档数据 - archive数组是按capturedAt降序排列的，最新的在索引0
+      const latestArchive = postView.archive[0];
       return latestArchive?.content || '';
     })
     .join(' ');
