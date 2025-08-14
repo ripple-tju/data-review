@@ -5057,17 +5057,27 @@ const categoryDistributionOption = computed<EChartsOption>(() => {
     categoryStats.set(category.id, 0);
   });
 
-  // 统计各分类下的帖子数量
+  // 🔥 [修复] 创建筛选后的帖子ID集合，确保只统计当前筛选的帖子
+  const filteredPostIds = new Set(postViewList.map(post => post.post.id));
+
+  // 统计各分类下的帖子数量（只统计筛选后的帖子）
   postCategoryMap.forEach((postIds, categoryId) => {
     if (categoryStats.has(categoryId)) {
-      categoryStats.set(categoryId, postIds.length);
+      // 🔥 [修复] 只计算同时在分类中且在筛选结果中的帖子数量
+      const filteredCategoryPostCount = postIds.filter(postId => filteredPostIds.has(postId)).length;
+      categoryStats.set(categoryId, filteredCategoryPostCount);
     }
   });
 
-  // 计算未分类的帖子数量
+  // 计算未分类的帖子数量（只计算筛选后的帖子）
   const categorizedPostIds = new Set<string>();
   postCategoryMap.forEach((postIds) => {
-    postIds.forEach((postId) => categorizedPostIds.add(postId));
+    postIds.forEach((postId) => {
+      // 🔥 [修复] 只有在筛选结果中的帖子才算作已分类
+      if (filteredPostIds.has(postId)) {
+        categorizedPostIds.add(postId);
+      }
+    });
   });
   const uncategorizedCount = postViewList.length - categorizedPostIds.size;
 
