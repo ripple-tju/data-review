@@ -5058,13 +5058,15 @@ const categoryDistributionOption = computed<EChartsOption>(() => {
   });
 
   // 🔥 [修复] 创建筛选后的帖子ID集合，确保只统计当前筛选的帖子
-  const filteredPostIds = new Set(postViewList.map(post => post.post.id));
+  const filteredPostIds = new Set(postViewList.map((post) => post.post.id));
 
   // 统计各分类下的帖子数量（只统计筛选后的帖子）
   postCategoryMap.forEach((postIds, categoryId) => {
     if (categoryStats.has(categoryId)) {
       // 🔥 [修复] 只计算同时在分类中且在筛选结果中的帖子数量
-      const filteredCategoryPostCount = postIds.filter(postId => filteredPostIds.has(postId)).length;
+      const filteredCategoryPostCount = postIds.filter((postId) =>
+        filteredPostIds.has(postId),
+      ).length;
       categoryStats.set(categoryId, filteredCategoryPostCount);
     }
   });
@@ -5252,7 +5254,9 @@ const combinedCategoryDistributionOption = computed<EChartsOption>(() => {
   // 统计各分类的数据
   postCategoryMap.forEach((postIds, categoryId) => {
     if (categoryPostStats.has(categoryId)) {
-      categoryPostStats.set(categoryId, postIds.length);
+      // 🔥 [修复] 只统计筛选后的推文数量，与其他指标保持一致
+      const filteredPostIds = postIds.filter((postId) => postMap.has(postId));
+      categoryPostStats.set(categoryId, filteredPostIds.length);
 
       const shareTotal = postIds.reduce((sum, postId) => {
         const post = postMap.get(postId);
